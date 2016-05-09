@@ -130,7 +130,6 @@ func (G *Game) genPawnMoves(toMove, notToMove Color, add func(Move)) {
 	pieces := G.board.BitBoard[toMove][Pawn] &^ pawns_spawn[notToMove] //&^ = AND_NOT
 	for pieces != 0 {
 		from := bitscan(pieces)
-
 		//advances:
 		advance := pawn_advances[toMove][from] &^ G.board.Occupied(BothColors)
 		if advance != 0 {
@@ -143,7 +142,6 @@ func (G *Game) genPawnMoves(toMove, notToMove Color, add func(Move)) {
 				add(NewMove(Square(from), Square(to)))
 			}
 		}
-
 		//captures:
 		var enpas uint64
 		if G.history.enPassant != nil {

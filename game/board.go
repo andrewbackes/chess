@@ -143,6 +143,7 @@ func (b *Board) MakeMove(m Move) {
 
 	if movingPiece.Type == Pawn {
 		// Handle en Passant capture:
+		// TODO: if efficiency is every a concern, the use of OnSquare() can be improved.
 		if int(to)-int(from)%8 != 0 && b.OnSquare(to).Type == None {
 			if movingPiece.Color == White {
 				b.BitBoard[Black][Pawn] ^= (1 << (to - 8))
@@ -150,7 +151,6 @@ func (b *Board) MakeMove(m Move) {
 				b.BitBoard[White][Pawn] ^= (1 << (to + 8))
 			}
 		}
-
 		// Handle Promotions:
 		promotesTo := promotedPiece(m)
 		if promotesTo != NoPiece {

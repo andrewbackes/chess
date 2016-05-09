@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/andrewbackes/chess.svg?branch=master)](https://travis-ci.org/andrewbackes/chess)
+[![Go Report Card](https://goreportcard.com/badge/github.com/andrewbackes/chess)](https://goreportcard.com/report/github.com/andrewbackes/chess) [![Build Status](https://travis-ci.org/andrewbackes/chess.svg?branch=master)](https://travis-ci.org/andrewbackes/chess)
 
 # chess
 Multipurpose chess package for Go/Golang.

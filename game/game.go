@@ -14,6 +14,7 @@
 package game
 
 import (
+	"strings"
 	"time"
 )
 
@@ -71,41 +72,58 @@ func (G *Game) PlayerToMove() Color {
 	return Color(len(G.history.move) % 2)
 }
 
+// MakeTimedMove does the same thing as MakeMove but also adds the duration
+// of the move to the player's clock. If the player goes over time, then
+// the TimedOut game status is returned. In that case, the move is not
+// added to the game history.
 func (G *Game) MakeTimedMove(m Move, timeTaken time.Duration) GameStatus {
 	color := G.PlayerToMove()
 	G.control[color].clock += timeTaken
-	status := G.MakeMove(m)
 	if G.control[color].clock > G.control[color].Time {
-		status = map[Color]GameStatus{White: WhiteTimedOut, Black: BlackTimedOut}[color]
+		return map[Color]GameStatus{White: WhiteTimedOut, Black: BlackTimedOut}[color]
 	}
-	return status
+	return G.MakeMove(m)
 }
 
-// MakeMove applies the specified move to the game board and adjusts any
-// reprecusions. Possible reprecusions include en passant and castling.
-// The status of the game after this move is made is returned.
+// MakeMove makes the specified move on the game board. Game state information
+// such as the en passant square, castling rights, 50 move rule count are also adjusted.
+// The game status after the given move is made is returned.
 func (G *Game) MakeMove(m Move) GameStatus {
+	defer func() { G.history.move = append(G.history.move, m) }()
 	G.history.fen = append(G.history.fen, G.FEN())
-	G.history.move = append(G.history.move, m)
-	G.history.fiftyMoveCount++
 	from, to := getSquares(m)
 	movingPiece := G.board.OnSquare(from)
-	if G.illegalMove(movingPiece, from, to) {
+	capturedPiece := G.board.OnSquare(to)
+	if G.illegalMove(movingPiece, m) {
 		return G.illegalMoveStatus()
 	}
-
-	capturedPiece := G.board.OnSquare(to)
-	if capturedPiece.Type != None || movingPiece.Type == Pawn {
-		G.history.fiftyMoveCount = 0
-	}
-	G.handleCastlingRights(movingPiece, from, to)
-	G.handleEnPassant(movingPiece, from, to)
+	G.adjustMoveCounter(movingPiece, capturedPiece)
+	G.adjustCastlingRights(movingPiece, from, to)
+	G.adjustEnPassant(movingPiece, from, to)
 	G.board.MakeMove(m)
+	return G.gameStatus()
+}
+
+func (G *Game) gameStatus() GameStatus {
+	activeColor := G.PlayerToMove()
+	check, stale := G.isInCheck(activeColor), len(G.LegalMoves()) == 0
+	if stale && check {
+		return []GameStatus{WhiteCheckmated, BlackCheckmated}[activeColor]
+	}
+	if stale {
+		return Stalemate
+	}
+	if G.history.fiftyMoveCount == 50 {
+		return FiftyMoveRule
+	}
 	return InProgress
 }
 
-func (G *Game) illegalMove(movingPiece Piece, from, to Square) bool {
-	if movingPiece.Color == Neither || movingPiece.Type == None {
+func (G *Game) illegalMove(p Piece, m Move) bool {
+	if p.Color == Neither || p.Type == None {
+		return true
+	}
+	if _, legal := G.LegalMoves()[m]; !legal {
 		return true
 	}
 	return false
@@ -118,7 +136,15 @@ func (G *Game) illegalMoveStatus() GameStatus {
 	return BlackIllegalMove
 }
 
-func (G *Game) handleEnPassant(movingPiece Piece, from, to Square) {
+func (G *Game) adjustMoveCounter(movingPiece, capturedPiece Piece) {
+	if capturedPiece.Type != None || movingPiece.Type == Pawn {
+		G.history.fiftyMoveCount = 0
+	} else {
+		G.history.fiftyMoveCount++
+	}
+}
+
+func (G *Game) adjustEnPassant(movingPiece Piece, from, to Square) {
 	if movingPiece.Type == Pawn {
 		G.history.enPassant = nil
 		if int(from)-int(to) == 16 || int(from)-int(to) == -16 {
@@ -130,7 +156,7 @@ func (G *Game) handleEnPassant(movingPiece Piece, from, to Square) {
 	}
 }
 
-func (G *Game) handleCastlingRights(movingPiece Piece, from, to Square) {
+func (G *Game) adjustCastlingRights(movingPiece Piece, from, to Square) {
 	for side := ShortSide; side <= LongSide; side++ {
 		if movingPiece.Type == King || //King moves
 			(movingPiece.Type == Rook && from == Square([2][2]uint8{{H1, A1}, {H8, A8}}[movingPiece.Color][side])) {
@@ -140,4 +166,80 @@ func (G *Game) handleCastlingRights(movingPiece Piece, from, to Square) {
 			G.history.castlingRights[[]Color{Black, White}[movingPiece.Color]][side] = false
 		}
 	}
+}
+
+func (G *Game) insufficientMaterial() bool {
+	/*
+		BUG!
+		TODO:
+		  	-(Any number of additional bishops of either color on the same color of square due to underpromotion do not affect the situation.)
+	*/
+
+	loneKing := []bool{
+		G.board.Occupied(White)&G.board.BitBoard[White][King] == G.board.Occupied(White),
+		G.board.Occupied(Black)&G.board.BitBoard[Black][King] == G.board.Occupied(Black)}
+
+	if !loneKing[White] && !loneKing[Black] {
+		return false
+	}
+
+	for color := White; color <= Black; color++ {
+		otherColor := []Color{Black, White}[color]
+		if loneKing[color] {
+			// King vs King:
+			if loneKing[otherColor] {
+				return true
+			}
+			// King vs King & Knight
+			if popcount(G.board.BitBoard[otherColor][Knight]) == 1 {
+				mask := G.board.BitBoard[otherColor][King] | G.board.BitBoard[otherColor][Knight]
+				occuppied := G.board.Occupied(otherColor)
+				if occuppied&mask == occuppied {
+					return true
+				}
+			}
+			// King vs King & Bishop
+			if popcount(G.board.BitBoard[otherColor][Bishop]) == 1 {
+				mask := G.board.BitBoard[otherColor][King] | G.board.BitBoard[otherColor][Bishop]
+				occuppied := G.board.Occupied(otherColor)
+				if occuppied&mask == occuppied {
+					return true
+				}
+			}
+		}
+		// King vs King & oppoSite bishop
+		kingBishopMask := G.board.BitBoard[color][King] | G.board.BitBoard[color][Bishop]
+		if (G.board.Occupied(color)&kingBishopMask == G.board.Occupied(color)) && (popcount(G.board.BitBoard[color][Bishop]) == 1) {
+			mask := G.board.BitBoard[otherColor][King] | G.board.BitBoard[otherColor][Bishop]
+			occuppied := G.board.Occupied(otherColor)
+			if (occuppied&mask == occuppied) && (popcount(G.board.BitBoard[otherColor][Bishop]) == 1) {
+				color1 := bitscan(G.board.BitBoard[color][Bishop]) % 2
+				color2 := bitscan(G.board.BitBoard[otherColor][Bishop]) % 2
+				if color1 == color2 {
+					return true
+				}
+			}
+		}
+
+	}
+	return false
+}
+
+// TODO(andrewbackes): threeFold detection should not have to go through all of the move history.
+func (G *Game) threeFold() bool {
+	for i := 0; i < len(G.history.fen); i++ {
+		fen := G.history.fen[i]
+		fenSplit := strings.Split(fen, " ")
+		fenPrefix := fenSplit[0] + " " + fenSplit[1] + " " + fenSplit[2] + " " + fenSplit[3]
+		for j := i + 1; j < len(G.history.fen); j++ {
+			if strings.HasPrefix(G.history.fen[j], fenPrefix) {
+				for k := j + 1; k < len(G.history.fen); k++ {
+					if strings.HasPrefix(G.history.fen[k], fenPrefix) {
+						return true
+					}
+				}
+			}
+		}
+	}
+	return false
 }

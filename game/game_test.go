@@ -8,7 +8,6 @@ import (
 // TestNewGame just makes sure we can get a new game.
 func TestNewGame(t *testing.T) {
 	NewGame()
-	//t.Log(g.board.String())
 }
 
 func TestNewTimedGame(t *testing.T) {
@@ -18,4 +17,13 @@ func TestNewTimedGame(t *testing.T) {
 	}
 	control := [2]TimeControl{standard, standard}
 	NewTimedGame(control)
+}
+
+func TestNonexistentMove(t *testing.T) {
+	g := NewGame()
+	mv := Move("e4e5")
+	status := g.MakeMove(mv)
+	if status != WhiteIllegalMove {
+		t.Error("Got: ", status, " Wanted: ", WhiteIllegalMove)
+	}
 }

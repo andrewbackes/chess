@@ -6,7 +6,7 @@ func (G *Game) LegalMoves() map[Move]struct{} {
 	toMove := G.PlayerToMove()
 	for mv := range ml {
 		temp := *G
-		temp.MakeMove(mv)
+		temp.board.MakeMove(mv)
 		if temp.isInCheck(toMove) == false {
 			legalMoves[mv] = struct{}{}
 		}
@@ -20,13 +20,16 @@ func (G *Game) isInCheck(toMove Color) bool {
 	return G.isAttacked(kingsq, notToMove)
 }
 
+// PsuedoLegalMoves returns all moves that a player can make but ignores legality.
+// Moves that put the active color into check are included. Castling moves through
+// an attacked square are not included.
 func (G *Game) PsuedoLegalMoves() map[Move]struct{} {
 	moves := make(map[Move]struct{})
 	add := func(m Move) {
 		moves[m] = struct{}{}
 	}
 	toMove := G.PlayerToMove()
-	notToMove := []Color{Black, White}[toMove] // too bad !toMove doesnt work =(
+	notToMove := Color((toMove + 1) % 2)
 	G.genPawnMoves(toMove, notToMove, add)
 	G.genKnightMoves(toMove, notToMove, add)
 	G.genDiagnalMoves(toMove, notToMove, add)

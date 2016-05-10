@@ -40,7 +40,6 @@ func TestMovePawn(t *testing.T) {
 	}
 }
 
-/*
 func TestMoveKnight(t *testing.T) {
 	beforeMove := NewBoard()
 	afterMove := NewBoard()
@@ -51,4 +50,3 @@ func TestMoveKnight(t *testing.T) {
 		t.Fail()
 	}
 }
-*/

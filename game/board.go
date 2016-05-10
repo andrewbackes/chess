@@ -194,6 +194,10 @@ func parseBoard(position string) *Board {
 	return &b
 }
 
+func (b *Board) put(p Piece, s Square) {
+	b.BitBoard[p.Color][p.Type] |= (1 << s)
+}
+
 func (b *Board) printBitBoards() {
 	for c := range b.BitBoard {
 		for j := range b.BitBoard[c] {

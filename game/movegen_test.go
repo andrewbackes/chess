@@ -14,3 +14,14 @@ func TestRootMoves(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestPerftSuite(t *testing.T) {
+	f := "perftsuite.epd"
+	d := 1
+	if testing.Short() {
+		d = 1
+	}
+	if err := PerftSuite(f, d); err != nil {
+		t.Error(err)
+	}
+}

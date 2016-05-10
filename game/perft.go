@@ -2,6 +2,7 @@ package game
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -14,11 +15,11 @@ import (
 
 *******************************************************************************/
 
-func perft(G *Game, depth int) (nodes, checks, castles, mates, captures, promotions, enpassant uint64) {
+func perft(G *Game, depth int) (nodes, checks, castles, mates, captures, promotions, enpassant uint64, err error) {
 	var moveCount uint64
 
 	if depth == 0 {
-		return 1, 0, 0, 0, 0, 0, 0
+		return 1, 0, 0, 0, 0, 0, 0, nil
 	}
 
 	toMove := G.PlayerToMove()
@@ -29,12 +30,15 @@ func perft(G *Game, depth int) (nodes, checks, castles, mates, captures, promoti
 
 	for mv := range ml {
 		temp := G
-		temp.MakeMove(mv)
-
+		status := temp.MakeMove(mv)
+		if status != InProgress {
+			err = errors.New(fmt.Sprint("game not marked as in progress (", status, ")"))
+			return
+		}
 		if temp.isInCheck(toMove) == false {
 			//Count it for mate:
 			moveCount++
-			n, c, cstl, m, cap, p, enp := perft(temp, depth-1)
+			n, c, cstl, m, cap, p, enp, er := perft(temp, depth-1)
 			nodes += n
 			checks += c + toInt(temp.isInCheck(notToMove))
 			castles += cstl + toInt(isCastle(G, mv))
@@ -42,13 +46,17 @@ func perft(G *Game, depth int) (nodes, checks, castles, mates, captures, promoti
 			captures += cap + toInt(isCapture(G, mv))
 			promotions += p + toInt(isPromotion(G, mv))
 			enpassant += enp + toInt(isEnPassant(G, mv))
+			if er != nil {
+				err = er
+				return
+			}
 		}
 	}
 	if moveCount == 0 && isChecked {
 		mates++
 	}
 
-	return nodes, checks, castles, mates, captures, promotions, enpassant
+	return nodes, checks, castles, mates, captures, promotions, enpassant, err
 
 }
 
@@ -58,11 +66,11 @@ func perft(G *Game, depth int) (nodes, checks, castles, mates, captures, promoti
 
 *******************************************************************************/
 
-func PerftSuite(filename string, maxdepth int) {
+func PerftSuite(filename string, maxdepth int) error {
 
 	f, err := os.Open(filename)
 	if err != nil {
-		fmt.Println("Error opening file")
+		return err
 	}
 	scanner := bufio.NewScanner(f)
 
@@ -89,7 +97,10 @@ func PerftSuite(filename string, maxdepth int) {
 	f.Close()
 
 	for i, t := range test {
-		G, _ := FromFEN(t.fen)
+		G, err := FromFEN(t.fen)
+		if err != nil {
+			return err
+		}
 		fmt.Print("FEN ", i+1, ": ")
 		for depth, nodes := range t.nodes {
 			/*
@@ -100,13 +111,19 @@ func PerftSuite(filename string, maxdepth int) {
 			if depth > maxdepth {
 				break
 			}
-			fmt.Print("D", depth, ": ")
-			perftNodes, _, _, _, _, _, _ := perft(G, depth)
-			fmt.Print(map[bool]string{true: "pass. ", false: "FAIL. "}[(perftNodes == nodes)])
+			fmt.Print(" D", depth, ": ")
+			perftNodes, _, _, _, _, _, _, err := perft(G, depth)
+			if err != nil {
+				fmt.Println(err)
+			}
+			fmt.Print(map[bool]string{
+				true:  "pass. ",
+				false: "FAIL. " + fmt.Sprint(perftNodes, "!=", nodes),
+			}[(perftNodes == nodes)])
 		}
 		fmt.Print("\n")
 	}
-
+	return nil
 }
 
 /*******************************************************************************
@@ -127,7 +144,7 @@ func divide(G *Game, depth int) {
 		if temp.isInCheck(toMove) == false {
 			//Count it for mate:
 			moveCount++
-			n, _, _, _, _, _, _ := perft(&temp, depth-1)
+			n, _, _, _, _, _, _, _ := perft(&temp, depth-1)
 			fmt.Println(mv, ":", n)
 			nodes += n
 		}

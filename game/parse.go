@@ -6,11 +6,6 @@ import (
 	"strings"
 )
 
-func ParseMove(s string) Move {
-	// Todo: convert the different notation types.
-	return Move(s)
-}
-
 func parseMoveHistory(activeColor, moveCount, fiftyMoveCount string) (*GameHistory, error) {
 	h := GameHistory{}
 	unknownMove := Move("")

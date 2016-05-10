@@ -1,5 +1,6 @@
 package game
 
+// LegalMoves returns only the legal moves that can be made.
 func (G *Game) LegalMoves() map[Move]struct{} {
 	legalMoves := make(map[Move]struct{})
 	ml := G.PsuedoLegalMoves()

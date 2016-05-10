@@ -56,7 +56,7 @@ func (G *Game) ParseMove(san string) (Move, error) {
 
 	matched := r.FindStringSubmatch(san)
 	if len(matched) == 0 {
-		return Move(san), errors.New("Error parsing move from engine: '" + san + "'")
+		return Move(san), errors.New("could not parse '" + san + "'")
 	}
 
 	piece := matched[1]
@@ -77,7 +77,7 @@ func (G *Game) ParseMove(san string) (Move, error) {
 		//fmt.Println(G.FEN())
 		//fmt.Println(san)
 		//G.PrintHUD()
-		return Move(san), errors.New("Error finding source square of move: '" + san + "'.")
+		return Move(san), errors.New("could not find source square of '" + san + "'")
 	}
 
 	// Some engines dont tell you to promote to queen, so assume so in that case:

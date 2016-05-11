@@ -45,7 +45,7 @@ func TestPerftSuite(t *testing.T) {
 			}
 		}()
 	}
-	if err := PerftSuite(f, d, true); err != nil {
+	if err := PerftSuite(f, d, false); err != nil {
 		t.Error(err)
 	}
 }

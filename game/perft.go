@@ -3,6 +3,7 @@ package game
 import (
 	"bufio"
 
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -16,11 +17,11 @@ import (
 
 *******************************************************************************/
 
-func perft(G *Game, depth int) (nodes, checks, castles, mates, captures, promotions, enpassant uint64, err error) {
+func perft(G *Game, depth int) (nodes, checks, castles, mates, captures, promotions, enpassant uint64) {
 	var moveCount uint64
 
 	if depth == 0 {
-		return 1, 0, 0, 0, 0, 0, 0, nil
+		return 1, 0, 0, 0, 0, 0, 0
 	}
 
 	toMove := G.PlayerToMove()
@@ -35,7 +36,7 @@ func perft(G *Game, depth int) (nodes, checks, castles, mates, captures, promoti
 		if temp.isInCheck(toMove) == false {
 			//Count it for mate:
 			moveCount++
-			n, c, cstl, m, cap, p, enp, er := perft(&temp, depth-1)
+			n, c, cstl, m, cap, p, enp := perft(&temp, depth-1)
 			nodes += n
 			checks += c + toInt(temp.isInCheck(notToMove))
 			castles += cstl + toInt(isCastle(G, mv))
@@ -43,17 +44,13 @@ func perft(G *Game, depth int) (nodes, checks, castles, mates, captures, promoti
 			captures += cap + toInt(isCapture(G, mv))
 			promotions += p + toInt(isPromotion(G, mv))
 			enpassant += enp + toInt(isEnPassant(G, mv))
-			if er != nil {
-				err = er
-				return
-			}
 		}
 	}
 	if moveCount == 0 && isChecked {
 		mates++
 	}
 
-	return nodes, checks, castles, mates, captures, promotions, enpassant, err
+	return nodes, checks, castles, mates, captures, promotions, enpassant
 
 }
 
@@ -105,7 +102,7 @@ func PerftSuite(filename string, maxdepth int, failFast bool) error {
 				break
 			}
 			fmt.Print("\tD", depth, ": ")
-			perftNodes, _, _, _, _, _, _, err := perft(G, depth)
+			perftNodes, checks, castles, mates, captures, promotions, enpassant := perft(G, depth)
 			passed := perftNodes == nodes
 			fmt.Print(map[bool]string{
 				true:  "pass. ",
@@ -114,7 +111,15 @@ func PerftSuite(filename string, maxdepth int, failFast bool) error {
 			lapsed := time.Since(start)
 			fmt.Print(lapsed, " ")
 			if !passed {
-				fmt.Print(perftNodes, "!=", nodes)
+				fmt.Println(perftNodes, "!=", nodes)
+				fmt.Println("checks:\t", checks,
+					"\ncastles:\t", castles,
+					"\nmates:\t", mates,
+					"\ncaptures:\t", captures,
+					"\npromotions:\t", promotions,
+					"\nenpassant:\t", enpassant)
+
+				err = errors.New("incorrect node count")
 				if failFast {
 					return err
 				}
@@ -144,7 +149,7 @@ func divide(G *Game, depth int) {
 		if temp.isInCheck(toMove) == false {
 			//Count it for mate:
 			moveCount++
-			n, _, _, _, _, _, _, _ := perft(&temp, depth-1)
+			n, _, _, _, _, _, _ := perft(&temp, depth-1)
 			fmt.Println(mv, ":", n)
 			nodes += n
 		}

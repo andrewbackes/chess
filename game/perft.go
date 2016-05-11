@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 /*******************************************************************************
@@ -29,7 +30,7 @@ func perft(G *Game, depth int) (nodes, checks, castles, mates, captures, promoti
 	ml := G.LegalMoves()
 
 	for mv := range ml {
-		temp := G
+		temp := *G
 		status := temp.MakeMove(mv)
 		if status != InProgress {
 			err = errors.New(fmt.Sprint("game not marked as in progress (", status, ")"))
@@ -38,7 +39,7 @@ func perft(G *Game, depth int) (nodes, checks, castles, mates, captures, promoti
 		if temp.isInCheck(toMove) == false {
 			//Count it for mate:
 			moveCount++
-			n, c, cstl, m, cap, p, enp, er := perft(temp, depth-1)
+			n, c, cstl, m, cap, p, enp, er := perft(&temp, depth-1)
 			nodes += n
 			checks += c + toInt(temp.isInCheck(notToMove))
 			castles += cstl + toInt(isCastle(G, mv))
@@ -66,7 +67,7 @@ func perft(G *Game, depth int) (nodes, checks, castles, mates, captures, promoti
 
 *******************************************************************************/
 
-func PerftSuite(filename string, maxdepth int) error {
+func PerftSuite(filename string, maxdepth int, failFast bool) error {
 
 	f, err := os.Open(filename)
 	if err != nil {
@@ -101,29 +102,32 @@ func PerftSuite(filename string, maxdepth int) error {
 		if err != nil {
 			return err
 		}
-		fmt.Print("FEN ", i+1, ": ")
+		fmt.Print("FEN ", i+1, ": \n")
 		for depth, nodes := range t.nodes {
-			/*
-				if nodes >= 100000000 {
-					break
-				}
-			*/
+			start := time.Now()
 			if depth > maxdepth {
 				break
 			}
-			fmt.Print(" D", depth, ": ")
+			fmt.Print("\tD", depth, ": ")
 			perftNodes, _, _, _, _, _, _, err := perft(G, depth)
-			if err != nil {
-				fmt.Println(err)
-			}
+			passed := perftNodes == nodes
 			fmt.Print(map[bool]string{
 				true:  "pass. ",
-				false: "FAIL. " + fmt.Sprint(perftNodes, "!=", nodes),
-			}[(perftNodes == nodes)])
+				false: "FAIL. ",
+			}[passed])
+			lapsed := time.Since(start)
+			fmt.Print(lapsed, " ")
+			if !passed {
+				fmt.Print(perftNodes, "!=", nodes)
+				if failFast {
+					return err
+				}
+			}
+			fmt.Println()
 		}
 		fmt.Print("\n")
 	}
-	return nil
+	return err
 }
 
 /*******************************************************************************

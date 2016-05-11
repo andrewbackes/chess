@@ -17,11 +17,11 @@ func TestRootMoves(t *testing.T) {
 
 func TestPerftSuite(t *testing.T) {
 	f := "perftsuite.epd"
-	d := 1
+	d := 6
 	if testing.Short() {
-		d = 1
+		d = 3
 	}
-	if err := PerftSuite(f, d); err != nil {
+	if err := PerftSuite(f, d, true); err != nil {
 		t.Error(err)
 	}
 }

@@ -18,20 +18,6 @@ import (
 	"time"
 )
 
-type TimeControl struct {
-	Time      time.Duration
-	BonusTime time.Duration
-	Moves     int64
-	Repeating bool
-	clock     time.Duration
-	movesLeft int64
-}
-
-func (t *TimeControl) Reset() {
-	t.clock = t.Time
-	t.movesLeft = t.Moves
-}
-
 func NewTimedGame(control [2]TimeControl) *Game {
 	g := NewGame()
 	g.control = control
@@ -89,18 +75,19 @@ func (G *Game) MakeTimedMove(m Move, timeTaken time.Duration) GameStatus {
 // such as the en passant square, castling rights, 50 move rule count are also adjusted.
 // The game status after the given move is made is returned.
 func (G *Game) MakeMove(m Move) GameStatus {
-	defer func() { G.history.move = append(G.history.move, m) }()
-	G.history.fen = append(G.history.fen, G.FEN())
 	from, to := getSquares(m)
 	movingPiece := G.board.OnSquare(from)
 	capturedPiece := G.board.OnSquare(to)
 	if G.illegalMove(movingPiece, m) {
+		defer func() { G.history.move = append(G.history.move, m) }()
 		return G.illegalMoveStatus()
 	}
 	G.adjustMoveCounter(movingPiece, capturedPiece)
 	G.adjustCastlingRights(movingPiece, from, to)
 	G.adjustEnPassant(movingPiece, from, to)
 	G.board.MakeMove(m)
+	G.history.move = append(G.history.move, m)
+	G.history.fen = append(G.history.fen, G.FEN())
 	return G.gameStatus()
 }
 
@@ -115,6 +102,9 @@ func (G *Game) gameStatus() GameStatus {
 	}
 	if G.history.fiftyMoveCount == 50 {
 		return FiftyMoveRule
+	}
+	if G.threeFold() {
+		return Threefold
 	}
 	return InProgress
 }

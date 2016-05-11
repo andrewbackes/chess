@@ -1,7 +1,9 @@
 package game
 
 import (
+	"fmt"
 	"testing"
+	"time"
 )
 
 // TestNewGame just makes sure we can get a new game.
@@ -20,6 +22,23 @@ func TestPerftSuite(t *testing.T) {
 	d := 6
 	if testing.Short() {
 		d = 3
+	} else {
+		t := time.NewTicker(time.Minute)
+		stop := make(chan struct{})
+		defer func() {
+			t.Stop()
+			close(stop)
+		}()
+		go func() {
+			for {
+				select {
+				case <-t.C:
+					fmt.Print(".")
+				case <-stop:
+					break
+				}
+			}
+		}()
 	}
 	if err := PerftSuite(f, d, true); err != nil {
 		t.Error(err)

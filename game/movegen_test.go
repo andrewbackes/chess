@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -21,7 +22,7 @@ func TestRootMoves(t *testing.T) {
 func TestPerftSuite(t *testing.T) {
 	f := "perftsuite.epd"
 	d := 5
-	if os.Getenv("TEST_FULL_PERFT_SUITE") != "" {
+	if strings.ToLower(os.Getenv("TEST_FULL_PERFT_SUITE")) == "true" {
 		d = 6
 	}
 	if testing.Short() {

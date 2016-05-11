@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"os"
 	"testing"
 	"time"
 )
@@ -19,7 +20,10 @@ func TestRootMoves(t *testing.T) {
 
 func TestPerftSuite(t *testing.T) {
 	f := "perftsuite.epd"
-	d := 6
+	d := 5
+	if os.Getenv("TEST_FULL_PERFT_SUITE") != "" {
+		d = 6
+	}
 	if testing.Short() {
 		d = 3
 	} else {

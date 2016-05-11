@@ -2,7 +2,7 @@ package game
 
 import (
 	"bufio"
-	"errors"
+
 	"fmt"
 	"os"
 	"strconv"
@@ -31,11 +31,7 @@ func perft(G *Game, depth int) (nodes, checks, castles, mates, captures, promoti
 
 	for mv := range ml {
 		temp := *G
-		status := temp.MakeMove(mv)
-		if status != InProgress {
-			err = errors.New(fmt.Sprint("game not marked as in progress (", status, ")"))
-			return
-		}
+		temp.MakeMove(mv)
 		if temp.isInCheck(toMove) == false {
 			//Count it for mate:
 			moveCount++

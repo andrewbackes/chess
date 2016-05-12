@@ -94,6 +94,7 @@ func TestTimedOut(t *testing.T) {
 	}
 }
 
+// TODO(andrewbackes): add more advanced insufficient material checks.
 func TestInsufMaterial(t *testing.T) {
 	fens := []string{
 		"8/8/4kb2/8/8/3K4/8/8 w - - 0 1",

@@ -18,12 +18,24 @@ import (
 	"time"
 )
 
-func NewTimedGame(control [2]TimeControl) *Game {
-	g := NewGame()
-	g.control = control
-	return g
+type Game struct {
+	tags    map[string]string
+	control [2]TimeControl
+	board   Board
+	history GameHistory
+	status  GameStatus
 }
 
+type GameHistory struct {
+	fen            []string
+	move           []Move
+	fiftyMoveCount uint64
+	enPassant      *Square
+	castlingRights [2][2]bool
+}
+
+// NewGame returns a fresh game with all of the pieces in the
+// opening position.
 func NewGame() *Game {
 	return &Game{
 		control: [2]TimeControl{},
@@ -37,25 +49,31 @@ func NewGame() *Game {
 	}
 }
 
-type GameHistory struct {
-	fen            []string
-	move           []Move
-	fiftyMoveCount uint64
-	enPassant      *Square
-	castlingRights [2][2]bool
-}
-
-type Game struct {
-	tags    map[string]string
-	control [2]TimeControl
-	board   Board
-	history GameHistory
-	status  GameStatus
+// NewTimedGame does the same thing as NewGame() but sets the
+// time control to what is specified.
+func NewTimedGame(control [2]TimeControl) *Game {
+	g := NewGame()
+	g.control = control
+	return g
 }
 
 // PlayerToMove returns the color of the player whos turn it is.
 func (G *Game) PlayerToMove() Color {
 	return Color(len(G.history.move) % 2)
+}
+
+// QuickMove makes the specified move without checking the legality
+// of the move or the status of the game post move.
+func (G *Game) QuickMove(m Move) {
+	from, to := getSquares(m)
+	movingPiece := G.board.OnSquare(from)
+	capturedPiece := G.board.OnSquare(to)
+	G.adjustMoveCounter(movingPiece, capturedPiece)
+	G.adjustCastlingRights(movingPiece, from, to)
+	G.adjustEnPassant(movingPiece, from, to)
+	G.board.MakeMove(m)
+	G.history.move = append(G.history.move, m)
+	G.history.fen = append(G.history.fen, G.FEN())
 }
 
 // MakeTimedMove does the same thing as MakeMove but also adds the duration
@@ -100,11 +118,11 @@ func (G *Game) gameStatus() GameStatus {
 	if stale {
 		return Stalemate
 	}
-	if G.history.fiftyMoveCount == 50 {
-		return FiftyMoveRule
-	}
 	if G.threeFold() {
 		return Threefold
+	}
+	if G.history.fiftyMoveCount >= 100 { // we keep track of it in half moves, start at 0
+		return FiftyMoveRule
 	}
 	return InProgress
 }

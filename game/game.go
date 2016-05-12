@@ -124,6 +124,9 @@ func (G *Game) gameStatus() GameStatus {
 	if G.history.fiftyMoveCount >= 100 { // we keep track of it in half moves, start at 0
 		return FiftyMoveRule
 	}
+	if G.insufficientMaterial() {
+		return InsufficientMaterial
+	}
 	return InProgress
 }
 

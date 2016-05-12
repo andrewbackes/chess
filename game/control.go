@@ -4,6 +4,7 @@ import (
 	"time"
 )
 
+// TODO(andrewbackes): new TimeControl from parsed string. ex: 40/40
 type TimeControl struct {
 	Time      time.Duration
 	BonusTime time.Duration

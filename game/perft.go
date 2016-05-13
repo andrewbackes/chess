@@ -24,7 +24,7 @@ func perft(G *Game, depth int) (nodes, checks, castles, mates, captures, promoti
 		return 1, 0, 0, 0, 0, 0, 0
 	}
 
-	toMove := G.PlayerToMove()
+	toMove := G.ActiveColor()
 	notToMove := []Color{Black, White}[toMove]
 
 	isChecked := G.isInCheck(toMove)
@@ -126,7 +126,7 @@ func divide(G *Game, depth int) {
 	fmt.Println("Depth", depth)
 	var nodes, moveCount uint64
 	ml := G.LegalMoves()
-	toMove := G.PlayerToMove()
+	toMove := G.ActiveColor()
 	for mv := range ml {
 		temp := *G
 		temp.MakeMove(mv)

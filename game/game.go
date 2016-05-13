@@ -71,8 +71,8 @@ func (G *Game) MoveHistory() []Move {
 	return G.history.move
 }
 
-// PlayerToMove returns the color of the player whos turn it is.
-func (G *Game) PlayerToMove() Color {
+// ActiveColor returns the color of the player whos turn it is.
+func (G *Game) ActiveColor() Color {
 	return Color(len(G.history.move) % 2)
 }
 
@@ -98,7 +98,7 @@ func (G *Game) QuickMove(m Move) {
 // TODO(andrewbackes): add bonus time
 // TODO(andrewbackes): reset clock if move limit reached
 func (G *Game) MakeTimedMove(m Move, timeTaken time.Duration) GameStatus {
-	color := G.PlayerToMove()
+	color := G.ActiveColor()
 	G.control[color].clock -= timeTaken
 	if G.control[color].clock <= 0 {
 		return map[Color]GameStatus{White: WhiteTimedOut, Black: BlackTimedOut}[color]
@@ -133,7 +133,7 @@ func (G *Game) MakeMove(m Move) GameStatus {
 }
 
 func (G *Game) gameStatus() GameStatus {
-	activeColor := G.PlayerToMove()
+	activeColor := G.ActiveColor()
 	check, stale := G.isInCheck(activeColor), len(G.LegalMoves()) == 0
 	if stale && check {
 		return []GameStatus{WhiteCheckmated, BlackCheckmated}[activeColor]
@@ -164,7 +164,7 @@ func (G *Game) illegalMove(p Piece, m Move) bool {
 }
 
 func (G *Game) illegalMoveStatus() GameStatus {
-	if G.PlayerToMove() == White {
+	if G.ActiveColor() == White {
 		return WhiteIllegalMove
 	}
 	return BlackIllegalMove

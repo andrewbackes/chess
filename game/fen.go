@@ -28,7 +28,7 @@ func (G *Game) FEN() string {
 		board = strings.Replace(board, strings.Repeat(" ", i), strconv.Itoa(i), -1)
 	}
 	// Player to move:
-	turn := []string{"w", "b"}[G.PlayerToMove()]
+	turn := []string{"w", "b"}[G.ActiveColor()]
 	// Castling Rights:
 	var rights string
 	castles := [][]string{{"K", "Q"}, {"k", "q"}}

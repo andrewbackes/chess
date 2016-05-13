@@ -4,7 +4,7 @@ package game
 func (G *Game) LegalMoves() map[Move]struct{} {
 	legalMoves := make(map[Move]struct{})
 	ml := G.PsuedoLegalMoves()
-	toMove := G.PlayerToMove()
+	toMove := G.ActiveColor()
 	for mv := range ml {
 		temp := *G
 		temp.board.MakeMove(mv)
@@ -29,7 +29,7 @@ func (G *Game) PsuedoLegalMoves() map[Move]struct{} {
 	add := func(m Move) {
 		moves[m] = struct{}{}
 	}
-	toMove := G.PlayerToMove()
+	toMove := G.ActiveColor()
 	notToMove := Color((toMove + 1) % 2)
 	G.genPawnMoves(toMove, notToMove, add)
 	G.genKnightMoves(toMove, notToMove, add)

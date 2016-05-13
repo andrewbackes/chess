@@ -25,13 +25,13 @@ func TestNonexistentMove(t *testing.T) {
 	}
 }
 
-func TestPlayerToMove(t *testing.T) {
+func TestActiveColor(t *testing.T) {
 	g := NewGame()
-	if g.PlayerToMove() != White {
+	if g.ActiveColor() != White {
 		t.Error("it's white to move")
 	}
 	g.MakeMove("e2e4")
-	if g.PlayerToMove() != Black {
+	if g.ActiveColor() != Black {
 		t.Error("it's black to move")
 	}
 }

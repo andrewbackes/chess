@@ -23,7 +23,7 @@ func (G *Game) ParseMove(san string) (Move, error) {
 	if san == "0000" {
 		return Move(san), nil
 	}
-	color := G.PlayerToMove()
+	color := G.ActiveColor()
 	// Check for castling:
 	if san == "O-O" {
 		return Move([]string{"e1g1", "e8g8"}[color]), nil
@@ -121,7 +121,7 @@ func (G *Game) originOfPiece(piece, destination, fromFile, fromRank string) (str
 	}
 
 	// Get all the squares that have our piece on it from the move list:
-	color := G.PlayerToMove()
+	color := G.ActiveColor()
 	var eligableSquares []string
 	bits := G.board.bitBoard[color][pieceMap[piece]]
 	for bits != 0 {

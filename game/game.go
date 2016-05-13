@@ -61,6 +61,11 @@ func NewTimedGame(control [2]TimeControl) *Game {
 	return g
 }
 
+// Board returns the Board object used for the game.
+func (G *Game) Board() *Board {
+	return &G.board
+}
+
 // MoveHistory returns a slice of every move made so far in the game.
 func (G *Game) MoveHistory() []Move {
 	return G.history.move

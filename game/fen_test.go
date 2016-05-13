@@ -44,8 +44,8 @@ func TestFENenPassant(t *testing.T) {
 func TestFENCastlingRights(t *testing.T) {
 	fen := "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2"
 	g, _ := FromFEN(fen)
-	if !g.history.castlingRights[White][ShortSide] || !g.history.castlingRights[Black][ShortSide] ||
-		!g.history.castlingRights[White][LongSide] || !g.history.castlingRights[Black][LongSide] {
+	if !g.history.castlingRights[White][shortSide] || !g.history.castlingRights[Black][shortSide] ||
+		!g.history.castlingRights[White][longSide] || !g.history.castlingRights[Black][longSide] {
 		t.Fail()
 	}
 }

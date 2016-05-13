@@ -109,7 +109,7 @@ func (G *Game) genKingMoves(toMove, notToMove Color, add func(Move)) {
 			destinations ^= (1 << to)
 		}
 		// Castles:
-		if G.history.castlingRights[toMove][ShortSide] == true {
+		if G.history.castlingRights[toMove][shortSide] == true {
 			if Square(bsr(east[from]&G.board.occupied(Both))) == []Square{H1, H8}[toMove] {
 				if (G.isAttacked([]Square{F1, F8}[toMove], notToMove) == false) &&
 					(G.isAttacked([]Square{G1, G8}[toMove], notToMove) == false) &&
@@ -118,7 +118,7 @@ func (G *Game) genKingMoves(toMove, notToMove Color, add func(Move)) {
 				}
 			}
 		}
-		if G.history.castlingRights[toMove][LongSide] == true {
+		if G.history.castlingRights[toMove][longSide] == true {
 			if Square(bsf(west[from]&G.board.occupied(Both))) == []Square{A1, A8}[toMove] {
 				if (G.isAttacked([]Square{D1, D8}[toMove], notToMove) == false) &&
 					(G.isAttacked([]Square{C1, C8}[toMove], notToMove) == false) &&

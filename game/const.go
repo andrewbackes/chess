@@ -55,8 +55,8 @@ const (
 )
 
 const (
-	ShortSide, KingSide uint = 0, 0
-	LongSide, QueenSide uint = 1, 1
+	shortSide, kingSide uint = 0, 0
+	longSide, queenSide uint = 1, 1
 )
 
 // Square on the board.

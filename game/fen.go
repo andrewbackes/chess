@@ -33,7 +33,7 @@ func (G *Game) FEN() string {
 	var rights string
 	castles := [][]string{{"K", "Q"}, {"k", "q"}}
 	for c := White; c <= Black; c++ {
-		for side := ShortSide; side <= LongSide; side++ {
+		for side := shortSide; side <= longSide; side++ {
 			if G.history.castlingRights[c][side] {
 				rights += castles[c][side]
 			}

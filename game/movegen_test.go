@@ -21,12 +21,12 @@ func TestRootMoves(t *testing.T) {
 
 func TestPerftSuite(t *testing.T) {
 	f := "perftsuite.epd"
-	d := 4
+	d := 3
 	if strings.ToLower(os.Getenv("TEST_FULL_PERFT_SUITE")) == "true" {
 		d = 6
 	}
 	if testing.Short() {
-		d = 3
+		d = 1
 	} else {
 		t := time.NewTicker(time.Minute)
 		stop := make(chan struct{})

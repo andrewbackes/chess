@@ -64,7 +64,7 @@ type Square uint8
 
 // Squares on the board.
 const (
-	H1 = iota
+	H1 Square = iota
 	G1
 	F1
 	E1

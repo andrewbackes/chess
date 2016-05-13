@@ -60,11 +60,11 @@ func (b *Board) Reset() {
 		//Pawns first:
 		b.bitBoard[color][Pawn] = 255 << (8 + (color * 8 * 5))
 		//Then the rest of the pieces:
-		b.bitBoard[color][Knight] = (1 << (B1 + (color * 8 * 7))) ^ (1 << (G1 + (color * 8 * 7)))
-		b.bitBoard[color][Bishop] = (1 << (C1 + (color * 8 * 7))) ^ (1 << (F1 + (color * 8 * 7)))
-		b.bitBoard[color][Rook] = (1 << (A1 + (color * 8 * 7))) ^ (1 << (H1 + (color * 8 * 7)))
-		b.bitBoard[color][Queen] = (1 << (D1 + (color * 8 * 7)))
-		b.bitBoard[color][King] = (1 << (E1 + (color * 8 * 7)))
+		b.bitBoard[color][Knight] = (1 << (B1 + Square(color*8*7))) ^ (1 << (G1 + Square(color*8*7)))
+		b.bitBoard[color][Bishop] = (1 << (C1 + Square(color*8*7))) ^ (1 << (F1 + Square(color*8*7)))
+		b.bitBoard[color][Rook] = (1 << (A1 + Square(color*8*7))) ^ (1 << (H1 + Square(color*8*7)))
+		b.bitBoard[color][Queen] = (1 << (D1 + Square(color*8*7)))
+		b.bitBoard[color][King] = (1 << (E1 + Square(color*8*7)))
 	}
 }
 
@@ -109,10 +109,10 @@ func (b *Board) MakeMove(m Move) {
 
 	// Castle:
 	if movingPiece.Type == King {
-		if from == Square(E1+56*uint8(movingPiece.Color)) && (to == Square(G1+56*uint8(movingPiece.Color))) {
-			b.bitBoard[movingPiece.Color][Rook] ^= (1 << (H1 + 56*uint8(movingPiece.Color))) | (1 << (F1 + 56*uint8(movingPiece.Color)))
-		} else if from == Square(E1+56*uint8(movingPiece.Color)) && to == Square(C1+56*uint8(movingPiece.Color)) {
-			b.bitBoard[movingPiece.Color][Rook] ^= (1 << (A1 + 56*uint8(movingPiece.Color))) | (1 << (D1 + 56*uint8(movingPiece.Color)))
+		if from == (E1+Square(56*uint8(movingPiece.Color))) && (to == G1+Square(56*uint8(movingPiece.Color))) {
+			b.bitBoard[movingPiece.Color][Rook] ^= (1 << (H1 + Square(56*movingPiece.Color))) | (1 << (F1 + Square(56*movingPiece.Color)))
+		} else if from == E1+Square(56*uint8(movingPiece.Color)) && (to == C1+Square(56*uint8(movingPiece.Color))) {
+			b.bitBoard[movingPiece.Color][Rook] ^= (1 << (A1 + Square(56*(movingPiece.Color)))) | (1 << (D1 + Square(56*(movingPiece.Color))))
 		}
 	}
 

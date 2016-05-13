@@ -182,10 +182,10 @@ func (G *Game) adjustEnPassant(movingPiece Piece, from, to Square) {
 func (G *Game) adjustCastlingRights(movingPiece Piece, from, to Square) {
 	for side := ShortSide; side <= LongSide; side++ {
 		if movingPiece.Type == King || //King moves
-			(movingPiece.Type == Rook && from == Square([2][2]uint8{{H1, A1}, {H8, A8}}[movingPiece.Color][side])) {
+			(movingPiece.Type == Rook && from == [2][2]Square{{H1, A1}, {H8, A8}}[movingPiece.Color][side]) {
 			G.history.castlingRights[movingPiece.Color][side] = false
 		}
-		if to == Square([2][2]uint8{{H8, A8}, {H1, A1}}[movingPiece.Color][side]) {
+		if to == [2][2]Square{{H8, A8}, {H1, A1}}[movingPiece.Color][side] {
 			G.history.castlingRights[[]Color{Black, White}[movingPiece.Color]][side] = false
 		}
 	}

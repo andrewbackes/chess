@@ -18,7 +18,7 @@ func (G *Game) LegalMoves() map[Move]struct{} {
 func (G *Game) isInCheck(toMove Color) bool {
 	notToMove := []Color{Black, White}[toMove]
 	kingsq := bitscan(G.board.bitBoard[toMove][King])
-	return G.isAttacked(kingsq, notToMove)
+	return G.isAttacked(Square(kingsq), notToMove)
 }
 
 // PsuedoLegalMoves returns all moves that a player can make but ignores legality.
@@ -110,20 +110,20 @@ func (G *Game) genKingMoves(toMove, notToMove Color, add func(Move)) {
 		}
 		// Castles:
 		if G.history.castlingRights[toMove][ShortSide] == true {
-			if bsr(east[from]&G.board.occupied(Both)) == []uint{H1, H8}[toMove] {
-				if (G.isAttacked([]uint{F1, F8}[toMove], notToMove) == false) &&
-					(G.isAttacked([]uint{G1, G8}[toMove], notToMove) == false) &&
-					(G.isAttacked([]uint{E1, E8}[toMove], notToMove) == false) {
-					add(NewMove(Square(from), Square([]uint{G1, G8}[toMove])))
+			if Square(bsr(east[from]&G.board.occupied(Both))) == []Square{H1, H8}[toMove] {
+				if (G.isAttacked([]Square{F1, F8}[toMove], notToMove) == false) &&
+					(G.isAttacked([]Square{G1, G8}[toMove], notToMove) == false) &&
+					(G.isAttacked([]Square{E1, E8}[toMove], notToMove) == false) {
+					add(NewMove(Square(from), []Square{G1, G8}[toMove]))
 				}
 			}
 		}
 		if G.history.castlingRights[toMove][LongSide] == true {
-			if bsf(west[from]&G.board.occupied(Both)) == []uint{A1, A8}[toMove] {
-				if (G.isAttacked([]uint{D1, D8}[toMove], notToMove) == false) &&
-					(G.isAttacked([]uint{C1, C8}[toMove], notToMove) == false) &&
-					(G.isAttacked([]uint{E1, E8}[toMove], notToMove) == false) {
-					add(NewMove(Square(from), Square([]uint{C1, C8}[toMove])))
+			if Square(bsf(west[from]&G.board.occupied(Both))) == []Square{A1, A8}[toMove] {
+				if (G.isAttacked([]Square{D1, D8}[toMove], notToMove) == false) &&
+					(G.isAttacked([]Square{C1, C8}[toMove], notToMove) == false) &&
+					(G.isAttacked([]Square{E1, E8}[toMove], notToMove) == false) {
+					add(NewMove(Square(from), []Square{C1, C8}[toMove]))
 				}
 			}
 		}
@@ -180,7 +180,7 @@ func (G *Game) genPawnMoves(toMove, notToMove Color, add func(Move)) {
 	}
 }
 
-func (G *Game) isAttacked(square uint, byWho Color) bool {
+func (G *Game) isAttacked(square Square, byWho Color) bool {
 	defender := []Color{Black, White}[byWho]
 
 	// other king attacks:

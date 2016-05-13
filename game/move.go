@@ -6,6 +6,11 @@ import (
 	"strings"
 )
 
+// NewMove returns a Move object based on the given from & to squares.
+func NewMove(from, to Square) Move {
+	return Move(getAlg(from) + getAlg(to))
+}
+
 // ParseMove takes a move written in standard algebraic notation (SAN)
 // to a Pure Coordinate Notation (PCN) Move.
 //
@@ -118,7 +123,7 @@ func (G *Game) originOfPiece(piece, destination, fromFile, fromRank string) (str
 	// Get all the squares that have our piece on it from the move list:
 	color := G.PlayerToMove()
 	var eligableSquares []string
-	bits := G.board.BitBoard[color][pieceMap[piece]]
+	bits := G.board.bitBoard[color][pieceMap[piece]]
 	for bits != 0 {
 		bit := bitscan(bits)
 		sq := getAlg(Square(bit))

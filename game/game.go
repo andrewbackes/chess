@@ -199,8 +199,8 @@ func (G *Game) insufficientMaterial() bool {
 	*/
 
 	loneKing := []bool{
-		G.board.Occupied(White)&G.board.BitBoard[White][King] == G.board.Occupied(White),
-		G.board.Occupied(Black)&G.board.BitBoard[Black][King] == G.board.Occupied(Black)}
+		G.board.occupied(White)&G.board.bitBoard[White][King] == G.board.occupied(White),
+		G.board.occupied(Black)&G.board.bitBoard[Black][King] == G.board.occupied(Black)}
 
 	if !loneKing[White] && !loneKing[Black] {
 		return false
@@ -214,30 +214,30 @@ func (G *Game) insufficientMaterial() bool {
 				return true
 			}
 			// King vs King & Knight
-			if popcount(G.board.BitBoard[otherColor][Knight]) == 1 {
-				mask := G.board.BitBoard[otherColor][King] | G.board.BitBoard[otherColor][Knight]
-				occuppied := G.board.Occupied(otherColor)
+			if popcount(G.board.bitBoard[otherColor][Knight]) == 1 {
+				mask := G.board.bitBoard[otherColor][King] | G.board.bitBoard[otherColor][Knight]
+				occuppied := G.board.occupied(otherColor)
 				if occuppied&mask == occuppied {
 					return true
 				}
 			}
 			// King vs King & Bishop
-			if popcount(G.board.BitBoard[otherColor][Bishop]) == 1 {
-				mask := G.board.BitBoard[otherColor][King] | G.board.BitBoard[otherColor][Bishop]
-				occuppied := G.board.Occupied(otherColor)
+			if popcount(G.board.bitBoard[otherColor][Bishop]) == 1 {
+				mask := G.board.bitBoard[otherColor][King] | G.board.bitBoard[otherColor][Bishop]
+				occuppied := G.board.occupied(otherColor)
 				if occuppied&mask == occuppied {
 					return true
 				}
 			}
 		}
 		// King vs King & oppoSite bishop
-		kingBishopMask := G.board.BitBoard[color][King] | G.board.BitBoard[color][Bishop]
-		if (G.board.Occupied(color)&kingBishopMask == G.board.Occupied(color)) && (popcount(G.board.BitBoard[color][Bishop]) == 1) {
-			mask := G.board.BitBoard[otherColor][King] | G.board.BitBoard[otherColor][Bishop]
-			occuppied := G.board.Occupied(otherColor)
-			if (occuppied&mask == occuppied) && (popcount(G.board.BitBoard[otherColor][Bishop]) == 1) {
-				color1 := bitscan(G.board.BitBoard[color][Bishop]) % 2
-				color2 := bitscan(G.board.BitBoard[otherColor][Bishop]) % 2
+		kingBishopMask := G.board.bitBoard[color][King] | G.board.bitBoard[color][Bishop]
+		if (G.board.occupied(color)&kingBishopMask == G.board.occupied(color)) && (popcount(G.board.bitBoard[color][Bishop]) == 1) {
+			mask := G.board.bitBoard[otherColor][King] | G.board.bitBoard[otherColor][Bishop]
+			occuppied := G.board.occupied(otherColor)
+			if (occuppied&mask == occuppied) && (popcount(G.board.bitBoard[otherColor][Bishop]) == 1) {
+				color1 := bitscan(G.board.bitBoard[color][Bishop]) % 2
+				color2 := bitscan(G.board.bitBoard[otherColor][Bishop]) % 2
 				if color1 == color2 {
 					return true
 				}

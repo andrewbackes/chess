@@ -50,3 +50,7 @@ func TestMoveKnight(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestPutOnOccSquare(t *testing.T) {
+
+}

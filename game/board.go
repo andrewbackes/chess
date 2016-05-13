@@ -172,6 +172,10 @@ func parseBoard(position string) *Board {
 
 // Put places a piece on the square.
 func (b *Board) Put(p Piece, s Square) {
+	pc := b.OnSquare(s)
+	if pc.Type != None {
+		b.bitBoard[pc.Color][pc.Type] ^= (1 << s)
+	}
 	b.bitBoard[p.Color][p.Type] |= (1 << s)
 }
 

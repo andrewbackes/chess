@@ -18,26 +18,24 @@ import (
 	"time"
 )
 
-type TimeControl struct {
-	Time      time.Duration
-	BonusTime time.Duration
-	Moves     int64
-	Repeating bool
-	clock     time.Duration
-	movesLeft int64
+type Game struct {
+	tags    map[string]string
+	control [2]TimeControl
+	board   Board
+	history GameHistory
+	status  GameStatus
 }
 
-func (t *TimeControl) Reset() {
-	t.clock = t.Time
-	t.movesLeft = t.Moves
+type GameHistory struct {
+	fen            []string
+	move           []Move
+	fiftyMoveCount uint64
+	enPassant      *Square
+	castlingRights [2][2]bool
 }
 
-func NewTimedGame(control [2]TimeControl) *Game {
-	g := NewGame()
-	g.control = control
-	return g
-}
-
+// NewGame returns a fresh game with all of the pieces in the
+// opening position.
 func NewGame() *Game {
 	return &Game{
 		control: [2]TimeControl{},
@@ -51,20 +49,12 @@ func NewGame() *Game {
 	}
 }
 
-type GameHistory struct {
-	fen            []string
-	move           []Move
-	fiftyMoveCount uint64
-	enPassant      *Square
-	castlingRights [2][2]bool
-}
-
-type Game struct {
-	tags    map[string]string
-	control [2]TimeControl
-	board   Board
-	history GameHistory
-	status  GameStatus
+// NewTimedGame does the same thing as NewGame() but sets the
+// time control to what is specified.
+func NewTimedGame(control [2]TimeControl) *Game {
+	g := NewGame()
+	g.control = control
+	return g
 }
 
 // PlayerToMove returns the color of the player whos turn it is.
@@ -72,10 +62,27 @@ func (G *Game) PlayerToMove() Color {
 	return Color(len(G.history.move) % 2)
 }
 
+// QuickMove makes the specified move without checking the legality
+// of the move or the status of the game post move.
+func (G *Game) QuickMove(m Move) {
+	from, to := getSquares(m)
+	movingPiece := G.board.OnSquare(from)
+	capturedPiece := G.board.OnSquare(to)
+	G.adjustMoveCounter(movingPiece, capturedPiece)
+	G.adjustCastlingRights(movingPiece, from, to)
+	G.adjustEnPassant(movingPiece, from, to)
+	G.board.MakeMove(m)
+	G.history.move = append(G.history.move, m)
+	G.history.fen = append(G.history.fen, G.FEN())
+}
+
 // MakeTimedMove does the same thing as MakeMove but also adds the duration
 // of the move to the player's clock. If the player goes over time, then
 // the TimedOut game status is returned. In that case, the move is not
 // added to the game history.
+//
+// TODO(andrewbackes): add bonus time
+// TODO(andrewbackes): reset clock if move limit reached
 func (G *Game) MakeTimedMove(m Move, timeTaken time.Duration) GameStatus {
 	color := G.PlayerToMove()
 	G.control[color].clock += timeTaken
@@ -89,18 +96,19 @@ func (G *Game) MakeTimedMove(m Move, timeTaken time.Duration) GameStatus {
 // such as the en passant square, castling rights, 50 move rule count are also adjusted.
 // The game status after the given move is made is returned.
 func (G *Game) MakeMove(m Move) GameStatus {
-	defer func() { G.history.move = append(G.history.move, m) }()
-	G.history.fen = append(G.history.fen, G.FEN())
 	from, to := getSquares(m)
 	movingPiece := G.board.OnSquare(from)
 	capturedPiece := G.board.OnSquare(to)
 	if G.illegalMove(movingPiece, m) {
+		defer func() { G.history.move = append(G.history.move, m) }()
 		return G.illegalMoveStatus()
 	}
 	G.adjustMoveCounter(movingPiece, capturedPiece)
 	G.adjustCastlingRights(movingPiece, from, to)
 	G.adjustEnPassant(movingPiece, from, to)
 	G.board.MakeMove(m)
+	G.history.move = append(G.history.move, m)
+	G.history.fen = append(G.history.fen, G.FEN())
 	return G.gameStatus()
 }
 
@@ -113,8 +121,14 @@ func (G *Game) gameStatus() GameStatus {
 	if stale {
 		return Stalemate
 	}
-	if G.history.fiftyMoveCount == 50 {
+	if G.threeFold() {
+		return Threefold
+	}
+	if G.history.fiftyMoveCount >= 100 { // we keep track of it in half moves, start at 0
 		return FiftyMoveRule
+	}
+	if G.insufficientMaterial() {
+		return InsufficientMaterial
 	}
 	return InProgress
 }

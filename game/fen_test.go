@@ -1,6 +1,7 @@
 package game
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -45,6 +46,25 @@ func TestFENCastlingRights(t *testing.T) {
 	g, _ := FromFEN(fen)
 	if !g.history.castlingRights[White][ShortSide] || !g.history.castlingRights[Black][ShortSide] ||
 		!g.history.castlingRights[White][LongSide] || !g.history.castlingRights[Black][LongSide] {
+		t.Fail()
+	}
+}
+
+func TestFENWhitesMove(t *testing.T) {
+	g := NewGame()
+	fen := g.FEN()
+	player := strings.Split(fen, " ")[1]
+	if player != "w" {
+		t.Fail()
+	}
+}
+
+func TestFENBlacksMove(t *testing.T) {
+	g := NewGame()
+	g.MakeMove(Move("e2e4"))
+	fen := g.FEN()
+	player := strings.Split(fen, " ")[1]
+	if player != "b" {
 		t.Fail()
 	}
 }

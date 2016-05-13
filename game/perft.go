@@ -62,7 +62,7 @@ func perft(G *Game, depth int) (nodes, checks, castles, mates, captures, promoti
 
 func perftSuite(filename string, maxdepth int, failFast bool) error {
 
-	test, err := LoadPerftSuite(filename)
+	test, err := loadPerftSuite(filename)
 	if err != nil {
 		return err
 	}
@@ -186,12 +186,12 @@ func toInt(b bool) uint64 {
 	return 0
 }
 
-type Test struct {
+type epdTest struct {
 	fen   string
 	nodes []uint64
 }
 
-func LoadPerftSuite(filename string) ([]Test, error) {
+func loadPerftSuite(filename string) ([]epdTest, error) {
 
 	f, err := os.Open(filename)
 	if err != nil {
@@ -199,12 +199,12 @@ func LoadPerftSuite(filename string) ([]Test, error) {
 	}
 	scanner := bufio.NewScanner(f)
 
-	var test []Test
+	var test []epdTest
 	for scanner.Scan() {
 		line := scanner.Text()
 		words := strings.Split(line, ";")
 
-		var newTest Test
+		var newTest epdTest
 		newTest.fen = words[0]
 		newTest.nodes = append(newTest.nodes, 1) // depth 0 = 1 node
 

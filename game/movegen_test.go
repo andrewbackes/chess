@@ -1,6 +1,5 @@
 package game
 
-
 import (
 	"fmt"
 	"os"
@@ -19,7 +18,6 @@ func TestRootMoves(t *testing.T) {
 		t.Fail()
 	}
 }
-
 
 func TestPerftSuite(t *testing.T) {
 	f := "perftsuite.epd"
@@ -51,7 +49,7 @@ func TestPerftSuite(t *testing.T) {
 		t.Error(err)
 	}
 }
-*/
+
 /*
 func TestPerftSuitePos(t *testing.T) {
 	f := "perftsuite.epd"

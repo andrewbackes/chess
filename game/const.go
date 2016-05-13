@@ -59,30 +59,6 @@ const (
 	LongSide, QueenSide uint = 1, 1
 )
 
-const (
-	CHECKMATE             string = "Checkmate"
-	RESIGNED              string = "Resigned"
-	STALEMATE             string = "Stalemate"
-	FIFTY_MOVE            string = "50 Move Rule"
-	THREE_FOLD            string = "Three fold repetition"
-	INSUFFICIENT_MATERIAL string = "Insufficient material"
-	ILLEGAL_MOVE          string = "Illegal move"
-	TIMED_OUT             string = "Out of time"
-	STOPPED_RESPONDING    string = "Timed out"
-)
-
-var ENDING_CONDITIONS = []string{
-	CHECKMATE,
-	RESIGNED,
-	STALEMATE,
-	FIFTY_MOVE,
-	THREE_FOLD,
-	INSUFFICIENT_MATERIAL,
-	ILLEGAL_MOVE,
-	TIMED_OUT,
-	STOPPED_RESPONDING,
-}
-
 // Square on the board.
 type Square uint8
 

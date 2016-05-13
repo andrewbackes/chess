@@ -19,15 +19,16 @@ import (
 	"time"
 )
 
+// Game represents a chess game.
 type Game struct {
 	tags    map[string]string
 	control [2]TimeControl
 	board   Board
-	history GameHistory
+	history gameHistory
 	status  GameStatus
 }
 
-type GameHistory struct {
+type gameHistory struct {
 	fen            []string
 	move           []Move
 	fiftyMoveCount uint64
@@ -42,7 +43,7 @@ func NewGame() *Game {
 		control: [2]TimeControl{},
 		tags:    make(map[string]string),
 		board:   NewBoard(),
-		history: GameHistory{
+		history: gameHistory{
 			fen:            make([]string, 0),
 			move:           make([]Move, 0),
 			castlingRights: [2][2]bool{{true, true}, {true, true}},
@@ -58,6 +59,11 @@ func NewTimedGame(control [2]TimeControl) *Game {
 	g.control[White].Reset()
 	g.control[Black].Reset()
 	return g
+}
+
+// MoveHistory returns a slice of every move made so far in the game.
+func (G *Game) MoveHistory() []Move {
+	return G.history.move
 }
 
 // PlayerToMove returns the color of the player whos turn it is.

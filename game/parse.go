@@ -6,8 +6,8 @@ import (
 	"strings"
 )
 
-func parseMoveHistory(activeColor, moveCount, fiftyMoveCount string) (*GameHistory, error) {
-	h := GameHistory{}
+func parseMoveHistory(activeColor, moveCount, fiftyMoveCount string) (*gameHistory, error) {
+	h := gameHistory{}
 	unknownMove := Move("")
 	fullMoves, err := strconv.ParseUint(moveCount, 10, 0)
 	if err != nil {

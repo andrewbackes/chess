@@ -59,7 +59,7 @@ func getAlg(s Square) string {
 	return r
 }
 
-func BSF(b uint64) uint {
+func bsf(b uint64) uint {
 	for i := uint(0); i < 64; i++ {
 		if (b & (1 << i)) != 0 {
 			return i
@@ -68,7 +68,7 @@ func BSF(b uint64) uint {
 	return 64
 }
 
-func BSR(b uint64) uint {
+func bsr(b uint64) uint {
 	for i := uint(63); i > 0; i-- {
 		if (b & (1 << i)) != 0 {
 			return i

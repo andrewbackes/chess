@@ -58,7 +58,7 @@ func (G *Game) genDiagnalMoves(toMove, notToMove Color, add func(Move)) {
 	// Bishops/Queens:
 	pieces := G.board.bitBoard[toMove][Bishop] | G.board.bitBoard[toMove][Queen]
 	direction := [4][65]uint64{ne, nw, se, sw}
-	scan := [4]func(uint64) uint{BSF, BSF, BSR, BSR}
+	scan := [4]func(uint64) uint{bsf, bsf, bsr, bsr}
 	for pieces != 0 {
 		from := bitscan(pieces)
 		for i := 0; i < 4; i++ {
@@ -80,7 +80,7 @@ func (G *Game) genStraightMoves(toMove, notToMove Color, add func(Move)) {
 	// Rooks/Queens:
 	pieces := G.board.bitBoard[toMove][Rook] | G.board.bitBoard[toMove][Queen]
 	direction := [4][65]uint64{north, west, south, east}
-	scan := [4]func(uint64) uint{BSF, BSF, BSR, BSR}
+	scan := [4]func(uint64) uint{bsf, bsf, bsr, bsr}
 	for pieces != 0 {
 		from := bitscan(pieces)
 		for i := 0; i < 4; i++ {
@@ -110,7 +110,7 @@ func (G *Game) genKingMoves(toMove, notToMove Color, add func(Move)) {
 		}
 		// Castles:
 		if G.history.castlingRights[toMove][ShortSide] == true {
-			if BSR(east[from]&G.board.occupied(Both)) == []uint{H1, H8}[toMove] {
+			if bsr(east[from]&G.board.occupied(Both)) == []uint{H1, H8}[toMove] {
 				if (G.isAttacked([]uint{F1, F8}[toMove], notToMove) == false) &&
 					(G.isAttacked([]uint{G1, G8}[toMove], notToMove) == false) &&
 					(G.isAttacked([]uint{E1, E8}[toMove], notToMove) == false) {
@@ -119,7 +119,7 @@ func (G *Game) genKingMoves(toMove, notToMove Color, add func(Move)) {
 			}
 		}
 		if G.history.castlingRights[toMove][LongSide] == true {
-			if BSF(west[from]&G.board.occupied(Both)) == []uint{A1, A8}[toMove] {
+			if bsf(west[from]&G.board.occupied(Both)) == []uint{A1, A8}[toMove] {
 				if (G.isAttacked([]uint{D1, D8}[toMove], notToMove) == false) &&
 					(G.isAttacked([]uint{C1, C8}[toMove], notToMove) == false) &&
 					(G.isAttacked([]uint{E1, E8}[toMove], notToMove) == false) {
@@ -199,7 +199,7 @@ func (G *Game) isAttacked(square uint, byWho Color) bool {
 	}
 	// diagonal attacks:
 	direction := [4][65]uint64{nw, ne, sw, se}
-	scan := [4]func(uint64) uint{BSF, BSF, BSR, BSR}
+	scan := [4]func(uint64) uint{bsf, bsf, bsr, bsr}
 	for i := 0; i < 4; i++ {
 		blockerIndex := scan[i](direction[i][square] & G.board.occupied(Both))
 		if (1<<blockerIndex)&(G.board.bitBoard[byWho][Bishop]|G.board.bitBoard[byWho][Queen]) != 0 {

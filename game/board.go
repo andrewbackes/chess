@@ -119,6 +119,7 @@ func (b *Board) Occupied(c Color) uint64 {
 	return mask
 }
 
+// MakeMove attempts to make the given move no matter legality.
 func (b *Board) MakeMove(m Move) {
 	from, to := getSquares(m)
 	movingPiece := b.OnSquare(from)
@@ -161,6 +162,7 @@ func (b *Board) MakeMove(m Move) {
 
 }
 
+// parseBoard parses the board passed via FEN and returns a board object.
 func parseBoard(position string) *Board {
 	b := NewBoard()
 	b.Clear()
@@ -194,7 +196,8 @@ func parseBoard(position string) *Board {
 	return &b
 }
 
-func (b *Board) put(p Piece, s Square) {
+// Put places a piece on the square.
+func (b *Board) Put(p Piece, s Square) {
 	b.BitBoard[p.Color][p.Type] |= (1 << s)
 }
 

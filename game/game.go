@@ -14,6 +14,7 @@
 package game
 
 import (
+	"fmt"
 	"strings"
 	"time"
 )
@@ -54,6 +55,8 @@ func NewGame() *Game {
 func NewTimedGame(control [2]TimeControl) *Game {
 	g := NewGame()
 	g.control = control
+	g.control[White].Reset()
+	g.control[Black].Reset()
 	return g
 }
 
@@ -85,11 +88,17 @@ func (G *Game) QuickMove(m Move) {
 // TODO(andrewbackes): reset clock if move limit reached
 func (G *Game) MakeTimedMove(m Move, timeTaken time.Duration) GameStatus {
 	color := G.PlayerToMove()
-	G.control[color].clock += timeTaken
-	if G.control[color].clock > G.control[color].Time {
+	G.control[color].clock -= timeTaken
+	if G.control[color].clock <= 0 {
 		return map[Color]GameStatus{White: WhiteTimedOut, Black: BlackTimedOut}[color]
 	}
-	return G.MakeMove(m)
+	status := G.MakeMove(m)
+	G.control[color].clock += G.control[color].Increment
+	if G.control[color].movesLeft <= 0 && G.control[color].Repeating {
+		fmt.Println(G.control[color].movesLeft, G.control[color].Repeating)
+		G.control[color].Reset()
+	}
+	return status
 }
 
 // MakeMove makes the specified move on the game board. Game state information

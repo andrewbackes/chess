@@ -48,15 +48,6 @@ func TestIllegalCastle(t *testing.T) {
 	}
 }
 
-func TestThreeFold(t *testing.T) {
-	moves := []string{"Nf3", "d6", "d4", "g6", "c4", "Bg7", "Nc3", "Nf6", "e4", "O-O", "Bd3", "Na6", "a3", "c5", "d5", "e6", "O-O", "exd5", "cxd5", "Nc7", "Be3", "Bg4", "h3", "Bxf3", "Qxf3", "Nd7", "Bf4", "Ne5", "Bxe5", "Bxe5", "Rfe1", "a6", "Qd1", "b5", "Qd2", "Qh4", "Ne2", "f5", "f4", "fxe4", "Bxe4", "Bxf4", "Qd3", "Be5", "Rf1", "c4", "Qc2", "Rae8", "Rae1", "Rxf1+", "Rxf1", "Bxb2", "Rf4", "Qe1+", "Rf1", "Qh4", "Rf4", "Qe1+", "Rf1", "Qh4"}
-	g := NewGame()
-	err := playTestGame(t, g, moves, Threefold)
-	if err != nil {
-		t.Error(err)
-	}
-}
-
 func playTestGame(t *testing.T, g *Game, moves []string, expected GameStatus) error {
 	for i, san := range moves {
 		move, err := g.ParseMove(san)
@@ -74,14 +65,6 @@ func playTestGame(t *testing.T, g *Game, moves []string, expected GameStatus) er
 	return nil
 }
 
-func TestStalemate(t *testing.T) {
-	fen := "K7/8/k7/1r6/8/8/8/8 w - - 0 1"
-	g, _ := FromFEN(fen)
-	if g.gameStatus() != Stalemate {
-		t.Fail()
-	}
-}
-
 func TestTimedOut(t *testing.T) {
 	tc := TimeControl{
 		Time:  40 * time.Minute,
@@ -91,6 +74,33 @@ func TestTimedOut(t *testing.T) {
 	s := g.MakeTimedMove(Move("e2e4"), 41*time.Minute)
 	if s != WhiteTimedOut {
 		t.Fail()
+	}
+}
+
+func timedTestGame() *Game {
+	tc := TimeControl{Time: 40 * time.Minute, Moves: 2, Increment: 5 * time.Minute, Repeating: true}
+	return NewTimedGame([2]TimeControl{tc, tc})
+}
+
+func TestTimeIncrement(t *testing.T) {
+	g := timedTestGame()
+	s := g.MakeTimedMove(Move("e2e4"), 1*time.Minute)
+	if s != InProgress {
+		t.Error("game should be in progress")
+	}
+	if g.control[White].clock != 44*time.Minute {
+		t.Error("should have 44 min on clock but have", g.control[White].clock)
+	}
+}
+
+func TestTimeReset(t *testing.T) {
+	g := timedTestGame()
+	g.MakeTimedMove(Move("e2e4"), 5*time.Minute)
+	g.MakeTimedMove(Move("e7e5"), 5*time.Minute)
+	g.MakeTimedMove(Move("d2d4"), 5*time.Minute)
+	g.MakeTimedMove(Move("d7d5"), 5*time.Minute)
+	if g.control[White].movesLeft != g.control[White].Moves {
+		t.Error(g.control[White].movesLeft, "!=", g.control[White].Moves)
 	}
 }
 
@@ -131,5 +141,22 @@ func TestEnPassantMove(t *testing.T) {
 	g.QuickMove(Move("d5c6"))
 	if g.board.OnSquare(C5).Type != None {
 		t.Error("en passant pawn not captured")
+	}
+}
+
+func TestThreeFold(t *testing.T) {
+	moves := []string{"Nf3", "d6", "d4", "g6", "c4", "Bg7", "Nc3", "Nf6", "e4", "O-O", "Bd3", "Na6", "a3", "c5", "d5", "e6", "O-O", "exd5", "cxd5", "Nc7", "Be3", "Bg4", "h3", "Bxf3", "Qxf3", "Nd7", "Bf4", "Ne5", "Bxe5", "Bxe5", "Rfe1", "a6", "Qd1", "b5", "Qd2", "Qh4", "Ne2", "f5", "f4", "fxe4", "Bxe4", "Bxf4", "Qd3", "Be5", "Rf1", "c4", "Qc2", "Rae8", "Rae1", "Rxf1+", "Rxf1", "Bxb2", "Rf4", "Qe1+", "Rf1", "Qh4", "Rf4", "Qe1+", "Rf1", "Qh4"}
+	g := NewGame()
+	err := playTestGame(t, g, moves, Threefold)
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestStalemate(t *testing.T) {
+	fen := "K7/8/k7/1r6/8/8/8/8 w - - 0 1"
+	g, _ := FromFEN(fen)
+	if g.gameStatus() != Stalemate {
+		t.Fail()
 	}
 }

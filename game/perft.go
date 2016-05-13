@@ -60,7 +60,7 @@ func perft(G *Game, depth int) (nodes, checks, castles, mates, captures, promoti
 
 *******************************************************************************/
 
-func PerftSuite(filename string, maxdepth int, failFast bool) error {
+func perftSuite(filename string, maxdepth int, failFast bool) error {
 
 	test, err := LoadPerftSuite(filename)
 	if err != nil {
@@ -73,7 +73,7 @@ func PerftSuite(filename string, maxdepth int, failFast bool) error {
 			if depth > maxdepth {
 				break
 			}
-			er := CheckPerft(t.fen, depth, nodes)
+			er := checkPerft(t.fen, depth, nodes)
 			if er != nil {
 				err = er
 			}
@@ -86,7 +86,7 @@ func PerftSuite(filename string, maxdepth int, failFast bool) error {
 	return err
 }
 
-func CheckPerft(fen string, depth int, nodes uint64) error {
+func checkPerft(fen string, depth int, nodes uint64) error {
 	G, err := FromFEN(fen)
 	if err != nil {
 		return err

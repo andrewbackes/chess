@@ -11,6 +11,14 @@ func NewMove(from, to Square) Move {
 	return Move(getAlg(from) + getAlg(to))
 }
 
+// SquaresOf returns the source and destination squares of the move.
+func SquaresOf(m Move) (Square, Square) {
+	alg := string(m)
+	from := alg[:2]
+	to := alg[2:4]
+	return toSquare(from), toSquare(to)
+}
+
 // ParseMove takes a move written in standard algebraic notation (SAN)
 // to a Pure Coordinate Notation (PCN) Move.
 //
@@ -45,7 +53,7 @@ func (G *Game) ParseMove(san string) (Move, error) {
 		// some engines dont specify the promotion piece, assume queen:
 		if (parsed[1] == '7' && parsed[3] == '8') || (parsed[1] == '2' && parsed[3] == '1') {
 			if len(parsed) <= 4 {
-				f, _ := getSquares(Move(parsed))
+				f, _ := SquaresOf(Move(parsed))
 				p := G.board.OnSquare(f)
 				if p.Type == Pawn {
 					parsed += "q"

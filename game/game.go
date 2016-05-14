@@ -79,7 +79,7 @@ func (G *Game) ActiveColor() Color {
 // QuickMove makes the specified move without checking the legality
 // of the move or the status of the game post move.
 func (G *Game) QuickMove(m Move) {
-	from, to := getSquares(m)
+	from, to := SquaresOf(m)
 	movingPiece := G.board.OnSquare(from)
 	capturedPiece := G.board.OnSquare(to)
 	G.adjustMoveCounter(movingPiece, capturedPiece)
@@ -116,7 +116,7 @@ func (G *Game) MakeTimedMove(m Move, timeTaken time.Duration) GameStatus {
 // such as the en passant square, castling rights, 50 move rule count are also adjusted.
 // The game status after the given move is made is returned.
 func (G *Game) MakeMove(m Move) GameStatus {
-	from, to := getSquares(m)
+	from, to := SquaresOf(m)
 	movingPiece := G.board.OnSquare(from)
 	capturedPiece := G.board.OnSquare(to)
 	if G.illegalMove(movingPiece, m) {
@@ -134,7 +134,7 @@ func (G *Game) MakeMove(m Move) GameStatus {
 
 func (G *Game) gameStatus() GameStatus {
 	activeColor := G.ActiveColor()
-	check, stale := G.isInCheck(activeColor), len(G.LegalMoves()) == 0
+	check, stale := G.Check(activeColor), len(G.LegalMoves()) == 0
 	if stale && check {
 		return []GameStatus{WhiteCheckmated, BlackCheckmated}[activeColor]
 	}
@@ -276,4 +276,17 @@ func (G *Game) threeFold() bool {
 		}
 	}
 	return false
+}
+
+// Check returns whether or not the specified color is in check.
+func (G *Game) Check(color Color) bool {
+	notColor := []Color{Black, White}[color]
+	kingsq := bitscan(G.board.bitBoard[color][King])
+	return G.isAttacked(Square(kingsq), notColor)
+}
+
+// EnPassant returns a pointer to a square or nil if there is not
+// en passant square.
+func (G *Game) EnPassant() *Square {
+	return G.history.enPassant
 }

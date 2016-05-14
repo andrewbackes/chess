@@ -1,6 +1,7 @@
 package game
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -58,5 +59,15 @@ func TestPutOnOccSquare(t *testing.T) {
 	b.Put(NewPiece(Black, Queen), E2)
 	if b.bitBoard[White][Pawn] != 0 {
 		t.Fail()
+	}
+}
+
+// printbitBoards is a helper for diagnosing issues.
+func (b *Board) printbitBoards() {
+	for c := range b.bitBoard {
+		for j := range b.bitBoard[c] {
+			fmt.Println(NewPiece(Color(c), PieceType(j)))
+			bitprint(b.bitBoard[c][j])
+		}
 	}
 }

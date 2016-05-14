@@ -13,6 +13,8 @@ type Board struct {
 	bitBoard [2][6]uint64 //[player][piece]
 }
 
+// NewBoard returns a game board in the opening position. If you want
+// a blank board, use Clear().
 func NewBoard() Board {
 	b := Board{bitBoard: [2][6]uint64{}}
 	b.Reset()
@@ -98,7 +100,7 @@ func (b *Board) occupied(c Color) uint64 {
 // What ever move you specify will attempt to be made. If it is illegal
 // or invalid you will get undetermined behavior.
 func (b *Board) MakeMove(m Move) {
-	from, to := getSquares(m)
+	from, to := SquaresOf(m)
 	movingPiece := b.OnSquare(from)
 	capturedPiece := b.OnSquare(to)
 
@@ -187,13 +189,4 @@ func (b *Board) Put(p Piece, s Square) {
 // any piece that may already be on that square.
 func (b *Board) QuickPut(p Piece, s Square) {
 	b.bitBoard[p.Color][p.Type] |= (1 << s)
-}
-
-func (b *Board) printbitBoards() {
-	for c := range b.bitBoard {
-		for j := range b.bitBoard[c] {
-			fmt.Println(NewPiece(Color(c), PieceType(j)))
-			bitprint(b.bitBoard[c][j])
-		}
-	}
 }

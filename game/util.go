@@ -11,13 +11,6 @@ func toSquare(alg string) Square {
 	return Square(f)
 }
 
-func getSquares(m Move) (Square, Square) {
-	alg := string(m)
-	from := alg[:2]
-	to := alg[2:4]
-	return toSquare(from), toSquare(to)
-}
-
 func promotedPiece(m Move) PieceType {
 	alg := string(m)
 	if len(alg) > 4 {

@@ -8,17 +8,11 @@ func (G *Game) LegalMoves() map[Move]struct{} {
 	for mv := range ml {
 		temp := *G
 		temp.board.MakeMove(mv)
-		if temp.isInCheck(toMove) == false {
+		if temp.Check(toMove) == false {
 			legalMoves[mv] = struct{}{}
 		}
 	}
 	return legalMoves
-}
-
-func (G *Game) isInCheck(toMove Color) bool {
-	notToMove := []Color{Black, White}[toMove]
-	kingsq := bitscan(G.board.bitBoard[toMove][King])
-	return G.isAttacked(Square(kingsq), notToMove)
 }
 
 // PsuedoLegalMoves returns all moves that a player can make but ignores legality.

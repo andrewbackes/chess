@@ -1,11 +1,21 @@
 package game
 
+/*
 import (
+	"bufio"
+	"errors"
 	"fmt"
+	"github.com/andrewbackes/chess/game"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
+)
+*/
+
+import (
+	"testing"
 )
 
 // TestNewGame just makes sure we can get a new game.
@@ -19,6 +29,7 @@ func TestRootMoves(t *testing.T) {
 	}
 }
 
+/*
 func TestPerftSuite(t *testing.T) {
 	f := "perftsuite.epd"
 	d := 3
@@ -49,6 +60,7 @@ func TestPerftSuite(t *testing.T) {
 		t.Error(err)
 	}
 }
+*/
 
 /*
 func TestPerftSuitePos(t *testing.T) {
@@ -83,5 +95,69 @@ func TestWithDivide(t *testing.T) {
 	divide(g, 1)
 	fmt.Print(g.board)
 	fmt.Println(g.FEN())
+}
+*/
+
+/*******************************************************************************
+
+	Perft Suite:
+
+*******************************************************************************/
+
+/*
+func perftSuite(filename string, maxdepth int, failFast bool) error {
+
+	test, err := loadPerftSuite(filename)
+	if err != nil {
+		return err
+	}
+	for i, t := range test {
+
+		fmt.Print("FEN ", i+1, ": \n")
+		for depth, nodes := range t.nodes {
+			if depth > maxdepth {
+				break
+			}
+			er := checkPerft(t.fen, depth, nodes)
+			if er != nil {
+				err = er
+			}
+			if er != nil && failFast {
+				return err
+			}
+		}
+		fmt.Print("\n")
+	}
+	return err
+}
+
+func checkPerft(fen string, depth int, nodes uint64) error {
+	G, err := FromFEN(fen)
+	if err != nil {
+		return err
+	}
+	start := time.Now()
+	fmt.Print("\tD", depth, ": ")
+	perftNodes, checks, castles, mates, captures, promotions, enpassant := perft(G, depth)
+	passed := perftNodes == nodes
+	fmt.Print(map[bool]string{
+		true:  "pass. ",
+		false: "FAIL. ",
+	}[passed])
+	lapsed := time.Since(start)
+	fmt.Print(lapsed, " ")
+	if !passed {
+		fmt.Println(perftNodes, "!=", nodes)
+		fmt.Print(
+			"\t\tchecks:      \t", checks,
+			"\n\t\tcastles:   \t", castles,
+			"\n\t\tmates:     \t", mates,
+			"\n\t\tcaptures:  \t", captures,
+			"\n\t\tpromotions:\t", promotions,
+			"\n\t\tenpassant: \t", enpassant)
+		err = errors.New("incorrect node count")
+	}
+	fmt.Println()
+	return err
 }
 */

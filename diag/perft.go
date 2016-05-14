@@ -3,7 +3,7 @@ package diag
 
 import (
 	"bufio"
-	"github.com/andrewbackes/chess/game"
+	"github.com/andrewbackes/chess"
 	"os"
 	"strconv"
 	"strings"

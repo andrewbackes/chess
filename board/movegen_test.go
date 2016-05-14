@@ -5,7 +5,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"github.com/andrewbackes/chess/game"
+	"github.com/andrewbackes/chess/diag"
 	"os"
 	"strconv"
 	"strings"
@@ -15,8 +15,14 @@ import (
 */
 
 import (
+	"github.com/andrewbackes/chess/diag"
 	"testing"
 )
+
+func TestCallingDiag(t *testing.T) {
+	g := NewGame()
+	diag.Divide(g, 1)
+}
 
 // TestNewGame just makes sure we can get a new game.
 func TestRootMoves(t *testing.T) {

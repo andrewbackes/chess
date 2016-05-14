@@ -52,5 +52,11 @@ func TestMoveKnight(t *testing.T) {
 }
 
 func TestPutOnOccSquare(t *testing.T) {
-
+	b := NewBoard()
+	b.Clear()
+	b.QuickPut(NewPiece(White, Pawn), E2)
+	b.Put(NewPiece(Black, Queen), E2)
+	if b.bitBoard[White][Pawn] != 0 {
+		t.Fail()
+	}
 }

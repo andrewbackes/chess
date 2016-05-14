@@ -93,7 +93,10 @@ func (b *Board) occupied(c Color) uint64 {
 	return mask
 }
 
-// MakeMove attempts to make the given move no matter legality.
+// MakeMove attempts to make the given move no matter legality or validity.
+// It does not change game state such as en passant or castling rights.
+// What ever move you specify will attempt to be made. If it is illegal
+// or invalid you will get undetermined behavior.
 func (b *Board) MakeMove(m Move) {
 	from, to := getSquares(m)
 	movingPiece := b.OnSquare(from)
@@ -170,12 +173,19 @@ func parseBoard(position string) *Board {
 	return &b
 }
 
-// Put places a piece on the square.
+// Put places a piece on the square and removes any other piece
+// that may be on that square.
 func (b *Board) Put(p Piece, s Square) {
 	pc := b.OnSquare(s)
 	if pc.Type != None {
 		b.bitBoard[pc.Color][pc.Type] ^= (1 << s)
 	}
+	b.bitBoard[p.Color][p.Type] |= (1 << s)
+}
+
+// QuickPut places a piece on the square without removing
+// any piece that may already be on that square.
+func (b *Board) QuickPut(p Piece, s Square) {
 	b.bitBoard[p.Color][p.Type] |= (1 << s)
 }
 

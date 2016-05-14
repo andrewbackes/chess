@@ -23,8 +23,3 @@ const (
 	BlackWon GameStatus = (WhiteCheckmated | WhiteTimedOut | WhiteResigned | WhiteIllegalMove)
 	Draw     GameStatus = (Threefold | FiftyMoveRule | Stalemate | InsufficientMaterial)
 )
-
-const (
-	shortSide, kingSide uint = 0, 0
-	longSide, queenSide uint = 1, 1
-)

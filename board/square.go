@@ -1,7 +1,5 @@
 package board
 
-type Move string
-
 // Square on the board.
 type Square uint8
 

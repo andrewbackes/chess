@@ -1,4 +1,4 @@
-package game
+package board
 
 /*
 import (
@@ -13,7 +13,7 @@ import (
 	"time"
 )
 */
-
+/*
 import (
 	"github.com/andrewbackes/chess/diag"
 	"testing"
@@ -34,7 +34,7 @@ func TestRootMoves(t *testing.T) {
 		t.Fail()
 	}
 }
-
+*/
 /*
 func TestPerftSuite(t *testing.T) {
 	f := "perftsuite.epd"

@@ -1,10 +1,12 @@
-package game
+package board
 
 import (
-	"errors"
-	"regexp"
-	"strings"
+//"errors"
+//"regexp"
+//"strings"
 )
+
+type Move string
 
 // NewMove returns a Move object based on the given from & to squares.
 func NewMove(from, to Square) Move {
@@ -25,6 +27,7 @@ func SquaresOf(m Move) (Square, Square) {
 // TODO(andrewbackes): ParseMove - What about promotion captures? or ambiguous promotions?
 // BUG(andrewbackes): ParseMove - Illegal move: f7g8 (raw: fxg8=Q)
 // BUG(andrewbackes): ParseMove - Illegal move: move axb8=Q+
+/*
 func (G *Game) ParseMove(san string) (Move, error) {
 
 	// Check for null move:
@@ -94,15 +97,17 @@ func (G *Game) ParseMove(san string) (Move, error) {
 	}
 
 	// Some engines dont tell you to promote to queen, so assume so in that case:
-	/*if piece == "P" && ((origin[1] == '7' && destination[1] == '8') || (origin[1] == '2' && destination[1] == '1')) {
-		if promote == "" {
-			promote = "Q"
-		}
-	}
-	*/
+	//if piece == "P" && ((origin[1] == '7' && destination[1] == '8') || (origin[1] == '2' && destination[1] == '1')) {
+	//	if promote == "" {
+	//		promote = "Q"
+	//	}
+	//}
+
 	return Move(origin + destination + strings.ToLower(promote)), nil
 }
 
+*/
+/*
 func (G *Game) originOfPiece(piece, destination, fromFile, fromRank string) (string, error) {
 	pieceMap := map[string]PieceType{
 		"P": Pawn, "p": Pawn,
@@ -153,12 +158,12 @@ func (G *Game) originOfPiece(piece, destination, fromFile, fromRank string) (str
 
 	}
 	//DEBUG:
-	/*
-		fmt.Println("params: ", piece, destination, fromFile, fromRank)
-		fmt.Println("color: ", color)
-		fmt.Println("legalMoves:", legalMoves)
-		fmt.Println("eligableMoves:", eligableMoves)
-		fmt.Println("eligableSquares:", eligableSquares)
-	*/
+		//fmt.Println("params: ", piece, destination, fromFile, fromRank)
+		//fmt.Println("color: ", color)
+		//fmt.Println("legalMoves:", legalMoves)
+		//fmt.Println("eligableMoves:", eligableMoves)
+		//fmt.Println("eligableSquares:", eligableSquares)
+
 	return "", errors.New("Notation: Can not find source square.")
 }
+*/

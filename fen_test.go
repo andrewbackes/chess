@@ -1,6 +1,8 @@
-package game
+package chess
 
 import (
+	"github.com/andrewbackes/chess/board"
+	"github.com/andrewbackes/chess/piece"
 	"strings"
 	"testing"
 )
@@ -31,12 +33,13 @@ func TestFENEncodeDecode(t *testing.T) {
 			t.Error("Do not match.")
 		}
 	}
+
 }
 
 func TestFENenPassant(t *testing.T) {
 	fen := "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2"
 	g, _ := FromFEN(fen)
-	if *g.history.enPassant != C6 {
+	if *g.history.enPassant != board.C6 {
 		t.Fail()
 	}
 }
@@ -44,8 +47,8 @@ func TestFENenPassant(t *testing.T) {
 func TestFENCastlingRights(t *testing.T) {
 	fen := "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2"
 	g, _ := FromFEN(fen)
-	if !g.history.castlingRights[White][shortSide] || !g.history.castlingRights[Black][shortSide] ||
-		!g.history.castlingRights[White][longSide] || !g.history.castlingRights[Black][longSide] {
+	if !g.history.castlingRights[piece.White][board.ShortSide] || !g.history.castlingRights[piece.Black][board.ShortSide] ||
+		!g.history.castlingRights[piece.White][board.LongSide] || !g.history.castlingRights[piece.Black][board.LongSide] {
 		t.Fail()
 	}
 }
@@ -61,7 +64,7 @@ func TestFENWhitesMove(t *testing.T) {
 
 func TestFENBlacksMove(t *testing.T) {
 	g := NewGame()
-	g.MakeMove(Move("e2e4"))
+	g.MakeMove(board.Move("e2e4"))
 	fen := g.FEN()
 	player := strings.Split(fen, " ")[1]
 	if player != "b" {

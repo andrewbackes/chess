@@ -1,8 +1,10 @@
-package game
+package chess
 
 import (
 	"errors"
 	"fmt"
+	"github.com/andrewbackes/chess/board"
+	"github.com/andrewbackes/chess/piece"
 	"testing"
 	"time"
 )
@@ -18,7 +20,7 @@ func TestNewTimedGame(t *testing.T) {
 
 func TestNonexistentMove(t *testing.T) {
 	g := NewGame()
-	mv := Move("e4e5")
+	mv := board.Move("e4e5")
 	status := g.MakeMove(mv)
 	if status != WhiteIllegalMove {
 		t.Error("Got: ", status, " Wanted: ", WhiteIllegalMove)
@@ -27,11 +29,11 @@ func TestNonexistentMove(t *testing.T) {
 
 func TestActiveColor(t *testing.T) {
 	g := NewGame()
-	if g.ActiveColor() != White {
+	if g.ActiveColor() != piece.White {
 		t.Error("it's white to move")
 	}
 	g.MakeMove("e2e4")
-	if g.ActiveColor() != Black {
+	if g.ActiveColor() != piece.Black {
 		t.Error("it's black to move")
 	}
 }
@@ -42,7 +44,7 @@ func TestIllegalCheck(t *testing.T) {
 
 func TestIllegalCastle(t *testing.T) {
 	g, err := FromFEN("4k3/8/8/8/6r1/8/8/R3K2R w KQ - 0 1")
-	s := g.MakeMove(Move("e1g1"))
+	s := g.MakeMove(board.Move("e1g1"))
 	if err != nil || s != WhiteIllegalMove {
 		t.Fail()
 	}
@@ -71,7 +73,7 @@ func TestTimedOut(t *testing.T) {
 		Moves: 40,
 	}
 	g := NewTimedGame([2]TimeControl{tc, tc})
-	s := g.MakeTimedMove(Move("e2e4"), 41*time.Minute)
+	s := g.MakeTimedMove(board.Move("e2e4"), 41*time.Minute)
 	if s != WhiteTimedOut {
 		t.Fail()
 	}
@@ -84,38 +86,23 @@ func timedTestGame() *Game {
 
 func TestTimeIncrement(t *testing.T) {
 	g := timedTestGame()
-	s := g.MakeTimedMove(Move("e2e4"), 1*time.Minute)
+	s := g.MakeTimedMove(board.Move("e2e4"), 1*time.Minute)
 	if s != InProgress {
 		t.Error("game should be in progress")
 	}
-	if g.control[White].clock != 44*time.Minute {
-		t.Error("should have 44 min on clock but have", g.control[White].clock)
+	if g.control[piece.White].clock != 44*time.Minute {
+		t.Error("should have 44 min on clock but have", g.control[piece.White].clock)
 	}
 }
 
 func TestTimeReset(t *testing.T) {
 	g := timedTestGame()
-	g.MakeTimedMove(Move("e2e4"), 5*time.Minute)
-	g.MakeTimedMove(Move("e7e5"), 5*time.Minute)
-	g.MakeTimedMove(Move("d2d4"), 5*time.Minute)
-	g.MakeTimedMove(Move("d7d5"), 5*time.Minute)
-	if g.control[White].movesLeft != g.control[White].Moves {
-		t.Error(g.control[White].movesLeft, "!=", g.control[White].Moves)
-	}
-}
-
-// TODO(andrewbackes): add more advanced insufficient material checks.
-func TestInsufMaterial(t *testing.T) {
-	fens := []string{
-		"8/8/4kb2/8/8/3K4/8/8 w - - 0 1",
-		"8/8/4k3/8/6N1/3K4/8/8 w - - 0 1",
-	}
-	for _, fen := range fens {
-		g, _ := FromFEN(fen)
-		s := g.gameStatus()
-		if s != InsufficientMaterial {
-			t.Error("ended with status ", s)
-		}
+	g.MakeTimedMove(board.Move("e2e4"), 5*time.Minute)
+	g.MakeTimedMove(board.Move("e7e5"), 5*time.Minute)
+	g.MakeTimedMove(board.Move("d2d4"), 5*time.Minute)
+	g.MakeTimedMove(board.Move("d7d5"), 5*time.Minute)
+	if g.control[piece.White].movesLeft != g.control[piece.White].Moves {
+		t.Error(g.control[piece.White].movesLeft, "!=", g.control[piece.White].Moves)
 	}
 }
 
@@ -132,14 +119,14 @@ func TestFiftyMoveRule(t *testing.T) {
 func TestEnPassantMove(t *testing.T) {
 	fen := "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"
 	g, _ := FromFEN(fen)
-	g.QuickMove(Move("e2c4"))
-	g.QuickMove(Move("c7c5"))
+	g.QuickMove(board.Move("e2c4"))
+	g.QuickMove(board.Move("c7c5"))
 	moves := g.LegalMoves()
 	if _, ok := moves["d5c6"]; !ok {
 		t.Error("missing legal en passant d5c6")
 	}
-	g.QuickMove(Move("d5c6"))
-	if g.board.OnSquare(C5).Type != None {
+	g.QuickMove(board.Move("d5c6"))
+	if g.board.OnSquare(board.C5).Type != piece.None {
 		t.Error("en passant pawn not captured")
 	}
 }

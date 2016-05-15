@@ -1,5 +1,6 @@
-package game
+package chess
 
+/*
 import (
 	"bufio"
 	"errors"
@@ -21,6 +22,7 @@ func EmptyTags() map[string]string {
 	tags["Result"] = ""
 	return tags
 }
+
 
 // FromPGN returns a Game from a PGN string. The string should only contain one
 // game, not a series of games. If you need to load a series of PGN games from a
@@ -56,7 +58,7 @@ func NewPGNGame() PGNGame {
 // PGN returns the PGN of the game.
 func (G *Game) PGN() string {
 	// TODO: Test needed. Changed code about Move.log without testing. See below.
-	/*
+
 		var pgn string
 		tags := [][]string{
 			{"Event", G.Event},
@@ -100,7 +102,7 @@ func (G *Game) PGN() string {
 		pgn += fmt.Sprintln("")
 
 		return pgn
-	*/
+
 	return ""
 }
 
@@ -302,3 +304,4 @@ func ValuesMatch(value string, constraint string) bool {
 	}
 	return value == constraint
 }
+*/

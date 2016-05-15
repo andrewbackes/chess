@@ -154,7 +154,8 @@ func FromFEN(position string) (*Board, error) {
 	b.Clear()
 	// remove the /'s and replace the numbers with that many spaces
 	// so that there is a 1-1 mapping from bytes to squares.
-	parsedBoard := strings.Replace(position, "/", "", 9)
+	justBoard := strings.Split(position, " ")[0]
+	parsedBoard := strings.Replace(justBoard, "/", "", 9)
 	for i := 1; i < 9; i++ {
 		parsedBoard = strings.Replace(parsedBoard, strconv.Itoa(i), strings.Repeat(" ", i), -1)
 	}

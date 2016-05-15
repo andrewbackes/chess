@@ -63,7 +63,7 @@ func (G *Game) FEN() string {
 func FromFEN(fen string) (*Game, error) {
 	G := NewGame()
 	words := strings.Split(fen, " ")
-	if len(words) < 6 {
+	if len(words) < 4 {
 		return nil, errors.New("FEN: incomplete fen")
 	}
 	if words[1] != "w" && words[1] != "b" {
@@ -74,8 +74,10 @@ func FromFEN(fen string) (*Game, error) {
 		return nil, err
 	}
 	G.board = *b
-	h, _ := parseMoveHistory(words[1], words[5], words[4])
-	G.history = *h
+	if len(words) >= 6 {
+		h, _ := parseMoveHistory(words[1], words[5], words[4])
+		G.history = *h
+	}
 	G.history.castlingRights = parseCastlingRights(words[2])
 	G.history.enPassant = parseEnPassantSquare(words[3])
 	return G, nil

@@ -73,13 +73,13 @@ func ParseEPD(epd string) (*EPD, error) {
 	return &EPD{Position: posStr, Operations: opers}, nil
 }
 
-/*
 // FromEPD returns a game based on the epd provided.
-func FromEPD(epd EPD) *Game {
+func FromEPD(epd EPD) (*Game, error) {
 	g, err := FromFEN(epd.Position)
 	return g, err
 }
 
+/*
 // OpenEPD loads a file with new line delimited epd's into a slice of Games.
 func OpenEPD(f os.File) []*Game {
 	return nil

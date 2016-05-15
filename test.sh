@@ -10,4 +10,3 @@ for pkg in $packages; do
 done
 echo "mode: count" > total.coverprofile
 cat $(find . -name .coverprofile) | grep -v "mode: count" >> total.coverprofile
-

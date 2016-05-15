@@ -149,7 +149,7 @@ func (G *Game) gameStatus() GameStatus {
 	if G.history.fiftyMoveCount >= 100 { // we keep track of it in half moves, start at 0
 		return FiftyMoveRule
 	}
-	if G.insufficientMaterial() {
+	if G.board.InsufficientMaterial() {
 		return InsufficientMaterial
 	}
 	return InProgress
@@ -203,64 +203,6 @@ func (G *Game) adjustCastlingRights(movingPiece piece.Piece, from, to board.Squa
 			G.history.castlingRights[[]piece.Color{piece.Black, piece.White}[movingPiece.Color]][side] = false
 		}
 	}
-}
-
-func (G *Game) insufficientMaterial() bool {
-	/*
-		BUG!
-		TODO:
-		  	-(Any number of additional bishops of either color on the same color of square due to underpromotion do not affect the situation.)
-	*/
-	/*
-		loneKing := []bool{
-			G.board.occupied(piece.White)&G.board.bitBoard[piece.White][piece.King] == G.board.occupied(piece.White),
-			G.board.occupied(piece.Black)&G.board.bitBoard[piece.Black][piece.King] == G.board.occupied(piece.Black)}
-
-		if !loneKing[piece.White] && !loneKing[piece.Black] {
-			return false
-		}
-
-		for color := piece.White; color <= piece.Black; color++ {
-			otherColor := []Color{piece.Black, piece.White}[color]
-			if loneKing[color] {
-				// King vs King:
-				if loneKing[otherColor] {
-					return true
-				}
-				// King vs King & Knight
-				if popcount(G.board.bitBoard[otherColor][piece.Knight]) == 1 {
-					mask := G.board.bitBoard[otherColor][piece.King] | G.board.bitBoard[otherColor][piece.Knight]
-					occuppied := G.board.occupied(otherColor)
-					if occuppied&mask == occuppied {
-						return true
-					}
-				}
-				// King vs King & Bishop
-				if popcount(G.board.bitBoard[otherColor][piece.Bishop]) == 1 {
-					mask := G.board.bitBoard[otherColor][piece.King] | G.board.bitBoard[otherColor][piece.Bishop]
-					occuppied := G.board.occupied(otherColor)
-					if occuppied&mask == occuppied {
-						return true
-					}
-				}
-			}
-			// King vs King & oppoSite bishop
-			kingBishopMask := G.board.bitBoard[color][King] | G.board.bitBoard[color][Bishop]
-			if (G.board.occupied(color)&kingBishopMask == G.board.occupied(color)) && (popcount(G.board.bitBoard[color][Bishop]) == 1) {
-				mask := G.board.bitBoard[otherColor][King] | G.board.bitBoard[otherColor][Bishop]
-				occuppied := G.board.occupied(otherColor)
-				if (occuppied&mask == occuppied) && (popcount(G.board.bitBoard[otherColor][Bishop]) == 1) {
-					color1 := bitscan(G.board.bitBoard[color][Bishop]) % 2
-					color2 := bitscan(G.board.bitBoard[otherColor][Bishop]) % 2
-					if color1 == color2 {
-						return true
-					}
-				}
-			}
-
-		}
-	*/
-	return false
 }
 
 // TODO(andrewbackes): threeFold detection should not have to go through all of the move history.

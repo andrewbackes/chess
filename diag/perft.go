@@ -2,12 +2,8 @@
 package diag
 
 import (
-	"bufio"
 	"github.com/andrewbackes/chess"
 	"github.com/andrewbackes/chess/board"
-	"os"
-	"strconv"
-	"strings"
 )
 
 /*******************************************************************************
@@ -52,17 +48,14 @@ func Perft(g *chess.Game, depth int) uint64 {
 	if depth == 0 {
 		return 1
 	}
-
-	toMove := G.ActiveColor()
-	notToMove := []game.Color{game.Black, game.White}[toMove]
-
-	ml := G.LegalMoves()
-
+	toMove := g.ActiveColor()
+	var nodes uint64
+	ml := g.LegalMoves()
 	for mv := range ml {
-		temp := *G
+		temp := *g
 		temp.QuickMove(mv)
 		if temp.Check(toMove) == false {
-			n := Perft(&temp, depth-1)
+			nodes += Perft(&temp, depth-1)
 		}
 	}
 	return nodes
@@ -77,7 +70,7 @@ func perftBreakdown(G *chess.Game, depth int) (nodes, checks, castles, mates, ca
 	}
 
 	toMove := G.ActiveColor()
-	notToMove := []game.Color{game.Black, game.White}[toMove]
+	notToMove := []piece.Color{game.Black, game.White}[toMove]
 
 	isChecked := G.Check(toMove)
 	ml := G.LegalMoves()

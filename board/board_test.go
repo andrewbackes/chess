@@ -63,12 +63,37 @@ func TestPutOnOccSquare(t *testing.T) {
 	}
 }
 
+func TestFind(t *testing.T) {
+	b := New()
+	s := b.Find(piece.New(piece.White, piece.King))
+	if len(s) != 1 {
+		t.Fail()
+	}
+	if _, ok := s[E1]; !ok {
+		t.Fail()
+	}
+}
+
 // printbitBoards is a helper for diagnosing issues.
 func (b *Board) printbitBoards() {
 	for c := range b.bitBoard {
 		for j := range b.bitBoard[c] {
 			fmt.Println(piece.New(piece.Color(c), piece.Type(j)))
 			bitprint(b.bitBoard[c][j])
+		}
+	}
+}
+
+// TODO(andrewbackes): add more advanced insufficient material checks.
+func TestInsufMaterial(t *testing.T) {
+	fens := []string{
+		"8/8/4kb2/8/8/3K4/8/8 w - - 0 1",
+		"8/8/4k3/8/6N1/3K4/8/8 w - - 0 1",
+	}
+	for _, fen := range fens {
+		b, _ := FromFEN(fen)
+		if b.InsufficientMaterial() != true {
+			t.Fail()
 		}
 	}
 }

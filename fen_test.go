@@ -33,6 +33,7 @@ func TestFENEncodeDecode(t *testing.T) {
 			t.Error("Do not match.")
 		}
 	}
+
 }
 
 func TestFENenPassant(t *testing.T) {

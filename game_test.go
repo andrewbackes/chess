@@ -106,21 +106,6 @@ func TestTimeReset(t *testing.T) {
 	}
 }
 
-// TODO(andrewbackes): add more advanced insufficient material checks.
-func TestInsufMaterial(t *testing.T) {
-	fens := []string{
-		"8/8/4kb2/8/8/3K4/8/8 w - - 0 1",
-		"8/8/4k3/8/6N1/3K4/8/8 w - - 0 1",
-	}
-	for _, fen := range fens {
-		g, _ := FromFEN(fen)
-		s := g.gameStatus()
-		if s != InsufficientMaterial {
-			t.Error("ended with status ", s)
-		}
-	}
-}
-
 func TestFiftyMoveRule(t *testing.T) {
 	fen := "8/8/2B2k2/8/3r1NKp/3N4/8/8 b - - 0 62"
 	g, _ := FromFEN(fen)

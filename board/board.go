@@ -2,6 +2,7 @@
 package board
 
 import (
+	"errors"
 	"fmt"
 	"github.com/andrewbackes/chess/piece"
 	"strconv"
@@ -148,7 +149,7 @@ func (b *Board) MakeMove(m Move) {
 }
 
 // FromFEN parses the board passed via FEN and returns a board object.
-func FromFEN(position string) *Board {
+func FromFEN(position string) (*Board, error) {
 	b := New()
 	b.Clear()
 	// remove the /'s and replace the numbers with that many spaces
@@ -157,31 +158,34 @@ func FromFEN(position string) *Board {
 	for i := 1; i < 9; i++ {
 		parsedBoard = strings.Replace(parsedBoard, strconv.Itoa(i), strings.Repeat(" ", i), -1)
 	}
-	p := map[string]piece.Type{
-		"P": piece.Pawn, "p": piece.Pawn,
-		"N": piece.Knight, "n": piece.Knight,
-		"B": piece.Bishop, "b": piece.Bishop,
-		"R": piece.Rook, "r": piece.Rook,
-		"Q": piece.Queen, "q": piece.Queen,
-		"K": piece.King, "k": piece.King}
-	color := map[string]piece.Color{
-		"P": piece.White, "p": piece.Black,
-		"N": piece.White, "n": piece.Black,
-		"B": piece.White, "b": piece.Black,
-		"R": piece.White, "r": piece.Black,
-		"Q": piece.White, "q": piece.Black,
-		"K": piece.White, "k": piece.Black}
+	if len(parsedBoard) < 64 {
+		return nil, errors.New("fen: could not parse position")
+	}
+	p := map[rune]piece.Type{
+		'P': piece.Pawn, 'p': piece.Pawn,
+		'N': piece.Knight, 'n': piece.Knight,
+		'B': piece.Bishop, 'b': piece.Bishop,
+		'R': piece.Rook, 'r': piece.Rook,
+		'Q': piece.Queen, 'q': piece.Queen,
+		'K': piece.King, 'k': piece.King}
+	color := map[rune]piece.Color{
+		'P': piece.White, 'p': piece.Black,
+		'N': piece.White, 'n': piece.Black,
+		'B': piece.White, 'b': piece.Black,
+		'R': piece.White, 'r': piece.Black,
+		'Q': piece.White, 'q': piece.Black,
+		'K': piece.White, 'k': piece.Black}
 	// adjust the bitboards:
 	for pos := 0; pos < len(parsedBoard); pos++ {
-		k := parsedBoard[pos:(pos + 1)]
-		if k == " " {
-			return &b
+		if pos > 64 {
+			break
 		}
+		k := rune(parsedBoard[pos])
 		if _, ok := p[k]; ok {
 			b.bitBoard[color[k]][p[k]] |= (1 << uint(63-pos))
 		}
 	}
-	return &b
+	return &b, nil
 }
 
 // Put places a piece on the square and removes any other piece
@@ -207,7 +211,63 @@ func (b *Board) Find(p piece.Piece) map[Square]struct{} {
 	for bits != 0 {
 		sq := bitscan(bits)
 		s[Square(sq)] = struct{}{}
-		bits |= (1 << sq)
+		bits ^= (1 << sq)
 	}
 	return s
+}
+
+func (b *Board) InsufficientMaterial() bool {
+	/*
+		BUG!
+		TODO:
+		  	-(Any number of additional bishops of either color on the same color of square due to underpromotion do not affect the situation.)
+	*/
+	loneKing := []bool{
+		b.occupied(piece.White)&b.bitBoard[piece.White][piece.King] == b.occupied(piece.White),
+		b.occupied(piece.Black)&b.bitBoard[piece.Black][piece.King] == b.occupied(piece.Black)}
+
+	if !loneKing[piece.White] && !loneKing[piece.Black] {
+		return false
+	}
+
+	for color := piece.White; color <= piece.Black; color++ {
+		otherColor := []piece.Color{piece.Black, piece.White}[color]
+		if loneKing[color] {
+			// King vs King:
+			if loneKing[otherColor] {
+				return true
+			}
+			// King vs King & Knight
+			if popcount(b.bitBoard[otherColor][piece.Knight]) == 1 {
+				mask := b.bitBoard[otherColor][piece.King] | b.bitBoard[otherColor][piece.Knight]
+				occuppied := b.occupied(otherColor)
+				if occuppied&mask == occuppied {
+					return true
+				}
+			}
+			// King vs King & Bishop
+			if popcount(b.bitBoard[otherColor][piece.Bishop]) == 1 {
+				mask := b.bitBoard[otherColor][piece.King] | b.bitBoard[otherColor][piece.Bishop]
+				occuppied := b.occupied(otherColor)
+				if occuppied&mask == occuppied {
+					return true
+				}
+			}
+		}
+		// King vs King & oppoSite bishop
+		kingBishopMask := b.bitBoard[color][piece.King] | b.bitBoard[color][piece.Bishop]
+		if (b.occupied(color)&kingBishopMask == b.occupied(color)) && (popcount(b.bitBoard[color][piece.Bishop]) == 1) {
+			mask := b.bitBoard[otherColor][piece.King] | b.bitBoard[otherColor][piece.Bishop]
+			occuppied := b.occupied(otherColor)
+			if (occuppied&mask == occuppied) && (popcount(b.bitBoard[otherColor][piece.Bishop]) == 1) {
+				color1 := bitscan(b.bitBoard[color][piece.Bishop]) % 2
+				color2 := bitscan(b.bitBoard[otherColor][piece.Bishop]) % 2
+				if color1 == color2 {
+					return true
+				}
+			}
+		}
+
+	}
+	return false
 }

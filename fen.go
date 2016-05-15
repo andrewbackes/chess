@@ -69,7 +69,11 @@ func FromFEN(fen string) (*Game, error) {
 	if words[1] != "w" && words[1] != "b" {
 		return nil, errors.New("FEN: can not determine active player")
 	}
-	G.board = *board.FromFEN(words[0])
+	b, err := board.FromFEN(words[0])
+	if err != nil {
+		return nil, err
+	}
+	G.board = *b
 	h, _ := parseMoveHistory(words[1], words[5], words[4])
 	G.history = *h
 	G.history.castlingRights = parseCastlingRights(words[2])

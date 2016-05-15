@@ -15,8 +15,8 @@ type Board struct {
 }
 
 const (
-	shortSide, kingSide uint = 0, 0
-	longSide, queenSide uint = 1, 1
+	ShortSide, kingSide uint = 0, 0
+	LongSide, queenSide uint = 1, 1
 )
 
 // New returns a game board in the opening position. If you want
@@ -106,7 +106,7 @@ func (b *Board) occupied(c piece.Color) uint64 {
 // What ever move you specify will attempt to be made. If it is illegal
 // or invalid you will get undetermined behavior.
 func (b *Board) MakeMove(m Move) {
-	from, to := SquaresOf(m)
+	from, to := Split(m)
 	movingPiece := b.OnSquare(from)
 	capturedPiece := b.OnSquare(to)
 
@@ -147,8 +147,8 @@ func (b *Board) MakeMove(m Move) {
 
 }
 
-// parseBoard parses the board passed via FEN and returns a board object.
-func parseBoard(position string) *Board {
+// FromFEN parses the board passed via FEN and returns a board object.
+func FromFEN(position string) *Board {
 	b := New()
 	b.Clear()
 	// remove the /'s and replace the numbers with that many spaces
@@ -174,6 +174,9 @@ func parseBoard(position string) *Board {
 	// adjust the bitboards:
 	for pos := 0; pos < len(parsedBoard); pos++ {
 		k := parsedBoard[pos:(pos + 1)]
+		if k == " " {
+			return &b
+		}
 		if _, ok := p[k]; ok {
 			b.bitBoard[color[k]][p[k]] |= (1 << uint(63-pos))
 		}
@@ -195,4 +198,16 @@ func (b *Board) Put(p piece.Piece, s Square) {
 // any piece that may already be on that square.
 func (b *Board) QuickPut(p piece.Piece, s Square) {
 	b.bitBoard[p.Color][p.Type] |= (1 << s)
+}
+
+// Find returns the squares that hold the specified piece.
+func (b *Board) Find(p piece.Piece) map[Square]struct{} {
+	s := make(map[Square]struct{})
+	bits := b.bitBoard[p.Color][p.Type]
+	for bits != 0 {
+		sq := bitscan(bits)
+		s[Square(sq)] = struct{}{}
+		bits |= (1 << sq)
+	}
+	return s
 }

@@ -1,7 +1,9 @@
-package game
+package chess
 
 import (
 	"errors"
+	"github.com/andrewbackes/chess/board"
+	"github.com/andrewbackes/chess/piece"
 	"strconv"
 	"strings"
 )
@@ -9,31 +11,31 @@ import (
 // FEN returns the fen of the current position of the game.
 func (G *Game) FEN() string {
 
-	piece := [][]string{
+	pc := [][]string{
 		{"P", "N", "B", "R", "Q", "K", " "},
 		{"p", "n", "b", "r", "q", "k", " "},
 		{" ", " ", " ", " ", " ", " ", " "}}
 
-	var board string
+	var boardstr string
 	// put what is on each square into a squence (including blanks):
 	for i := int(63); i >= 0; i-- {
-		p := G.board.OnSquare(Square(i))
-		board += piece[p.Color][p.Type]
+		p := G.board.OnSquare(board.Square(i))
+		boardstr += pc[p.Color][p.Type]
 		if i%8 == 0 && i > 0 {
-			board += "/"
+			boardstr += "/"
 		}
 	}
 	// replace groups of spaces with numbers instead
 	for i := 8; i > 0; i-- {
-		board = strings.Replace(board, strings.Repeat(" ", i), strconv.Itoa(i), -1)
+		boardstr = strings.Replace(boardstr, strings.Repeat(" ", i), strconv.Itoa(i), -1)
 	}
 	// Player to move:
 	turn := []string{"w", "b"}[G.ActiveColor()]
 	// Castling Rights:
 	var rights string
 	castles := [][]string{{"K", "Q"}, {"k", "q"}}
-	for c := White; c <= Black; c++ {
-		for side := shortSide; side <= longSide; side++ {
+	for c := piece.White; c <= piece.Black; c++ {
+		for side := board.ShortSide; side <= board.LongSide; side++ {
 			if G.history.castlingRights[c][side] {
 				rights += castles[c][side]
 			}
@@ -45,7 +47,7 @@ func (G *Game) FEN() string {
 	// en Passant:
 	var enPas string
 	if G.history.enPassant != nil {
-		enPas = getAlg(Square(*G.history.enPassant))
+		enPas = board.Square(*G.history.enPassant).String()
 	} else {
 		enPas = "-"
 	}
@@ -53,7 +55,7 @@ func (G *Game) FEN() string {
 	fifty := strconv.Itoa(int(G.history.fiftyMoveCount / 2))
 	move := strconv.Itoa(int(len(G.history.move)/2) + 1)
 	// all together:
-	fen := board + " " + turn + " " + rights + " " + enPas + " " + fifty + " " + move
+	fen := boardstr + " " + turn + " " + rights + " " + enPas + " " + fifty + " " + move
 	return fen
 }
 
@@ -67,7 +69,7 @@ func FromFEN(fen string) (*Game, error) {
 	if words[1] != "w" && words[1] != "b" {
 		return nil, errors.New("FEN: can not determine active player")
 	}
-	G.board = *parseBoard(words[0])
+	G.board = *board.FromFEN(words[0])
 	h, _ := parseMoveHistory(words[1], words[5], words[4])
 	G.history = *h
 	G.history.castlingRights = parseCastlingRights(words[2])

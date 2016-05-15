@@ -6,7 +6,16 @@ import (
 	"strings"
 )
 
-func toSquare(alg string) Square {
+// Split breaks the move into its source and destination squares.
+func Split(m Move) (Square, Square) {
+	alg := string(m)
+	from := alg[:2]
+	to := alg[2:4]
+	return ParseSquare(from), ParseSquare(to)
+}
+
+// ParseSquare takes the algebraic notation of a square and returns a Square.
+func ParseSquare(alg string) Square {
 	alg = strings.ToLower(alg)
 	f := ((alg[1] - 48) * 8) - (alg[0] - 96)
 	return Square(f)

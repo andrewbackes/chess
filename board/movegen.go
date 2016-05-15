@@ -4,6 +4,27 @@ import (
 	"github.com/andrewbackes/chess/piece"
 )
 
+// LegalMoves returns only the legal moves that can be made.
+func (b *Board) LegalMoves(c piece.Color, enPassant *Square, castlingRights [2][2]bool) map[Move]struct{} {
+	legalMoves := make(map[Move]struct{})
+	ml := b.Moves(c, enPassant, castlingRights)
+	for mv := range ml {
+		temp := *b
+		temp.MakeMove(mv)
+		if temp.check(c) == false {
+			legalMoves[mv] = struct{}{}
+		}
+	}
+	return legalMoves
+}
+
+// Check returns whether or not the specified color is in check.
+func (b *Board) check(color piece.Color) bool {
+	opponent := []piece.Color{piece.Black, piece.White}[color]
+	kingsq := Square(bitscan(b.bitBoard[color][piece.King]))
+	return b.Threatened(kingsq, opponent)
+}
+
 // Moves returns all moves that a player can make but ignores legality.
 // Moves that put the active color into check are included. Castling moves through
 // an attacked square are not included.
@@ -91,20 +112,20 @@ func (b *Board) genKingMoves(toMove, notToMove piece.Color, castlingRights [2][2
 			destinations ^= (1 << to)
 		}
 		// Castles:
-		if castlingRights[toMove][shortSide] == true {
+		if castlingRights[toMove][ShortSide] == true {
 			if Square(bsr(east[from]&b.occupied(piece.BothColors))) == []Square{H1, H8}[toMove] {
-				if (b.isAttacked([]Square{F1, F8}[toMove], notToMove) == false) &&
-					(b.isAttacked([]Square{G1, G8}[toMove], notToMove) == false) &&
-					(b.isAttacked([]Square{E1, E8}[toMove], notToMove) == false) {
+				if (b.Threatened([]Square{F1, F8}[toMove], notToMove) == false) &&
+					(b.Threatened([]Square{G1, G8}[toMove], notToMove) == false) &&
+					(b.Threatened([]Square{E1, E8}[toMove], notToMove) == false) {
 					add(NewMove(Square(from), []Square{G1, G8}[toMove]))
 				}
 			}
 		}
-		if castlingRights[toMove][longSide] == true {
+		if castlingRights[toMove][LongSide] == true {
 			if Square(bsf(west[from]&b.occupied(piece.BothColors))) == []Square{A1, A8}[toMove] {
-				if (b.isAttacked([]Square{D1, D8}[toMove], notToMove) == false) &&
-					(b.isAttacked([]Square{C1, C8}[toMove], notToMove) == false) &&
-					(b.isAttacked([]Square{E1, E8}[toMove], notToMove) == false) {
+				if (b.Threatened([]Square{D1, D8}[toMove], notToMove) == false) &&
+					(b.Threatened([]Square{C1, C8}[toMove], notToMove) == false) &&
+					(b.Threatened([]Square{E1, E8}[toMove], notToMove) == false) {
 					add(NewMove(Square(from), []Square{C1, C8}[toMove]))
 				}
 			}
@@ -162,7 +183,9 @@ func (b *Board) genPawnMoves(toMove, notToMove piece.Color, enPassant *Square, a
 	}
 }
 
-func (b *Board) isAttacked(square Square, byWho piece.Color) bool {
+// Threatened returns whether or not the specified square is under attack
+// by the specified color.
+func (b *Board) Threatened(square Square, byWho piece.Color) bool {
 	defender := []piece.Color{piece.Black, piece.White}[byWho]
 
 	// other king attacks:

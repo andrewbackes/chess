@@ -71,4 +71,16 @@ const (
 	A8
 )
 
+// LastSquare is the end of the board.
 const LastSquare Square = A8
+
+func (s Square) String() string {
+	var r string
+
+	file := rune(97 + (7 - (int(s) % 8)))
+	rank := rune((int(s) / 8) + 49)
+
+	r = string(file) + string(rank)
+
+	return r
+}

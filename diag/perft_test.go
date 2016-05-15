@@ -1,14 +1,16 @@
 package diag
 
 import (
-	"github.com/andrewbackes/chess/game"
+	"github.com/andrewbackes/chess"
+	"github.com/andrewbackes/chess/board"
+	"github.com/andrewbackes/chess/piece"
 	"testing"
 )
 
 func TestSimplePerftOutput(t *testing.T) {
-	g := game.NewGame()
+	g := chess.NewGame()
 	g.Board().Clear()
-	g.Board().Put(game.NewPiece(game.White, game.Pawn), game.E2)
+	g.Board().Put(piece.New(piece.White, piece.Pawn), board.E2)
 	c := Perft(g, 1)
 	if c != 2 {
 		t.Fail()
@@ -16,10 +18,10 @@ func TestSimplePerftOutput(t *testing.T) {
 }
 
 func TestDivideOutput(t *testing.T) {
-	g := game.NewGame()
+	g := chess.NewGame()
 	g.Board().Clear()
-	g.Board().Put(game.NewPiece(game.White, game.King), game.A1)
-	g.Board().Put(game.NewPiece(game.Black, game.King), game.A8)
+	g.Board().Put(piece.New(piece.White, piece.King), board.A1)
+	g.Board().Put(piece.New(piece.Black, piece.King), board.A8)
 	m := Divide(g, 1)
 	if len(m) != 3 {
 		t.Fail()

@@ -11,11 +11,12 @@
 
 *******************************************************************************/
 
-package game
+package chess
 
 import (
 	"fmt"
 	"github.com/andrewbackes/chess/board"
+	"github.com/andrewbackes/chess/piece"
 	"strings"
 	"time"
 )
@@ -73,14 +74,14 @@ func (G *Game) MoveHistory() []board.Move {
 }
 
 // ActiveColor returns the color of the player whos turn it is.
-func (G *Game) ActiveColor() board.Color {
-	return Color(len(G.history.move) % 2)
+func (G *Game) ActiveColor() piece.Color {
+	return piece.Color(len(G.history.move) % 2)
 }
 
 // QuickMove makes the specified move without checking the legality
 // of the move or the status of the game post move.
 func (G *Game) QuickMove(m board.Move) {
-	from, to := SquaresOf(m)
+	from, to := board.Split(m)
 	movingPiece := G.board.OnSquare(from)
 	capturedPiece := G.board.OnSquare(to)
 	G.adjustMoveCounter(movingPiece, capturedPiece)
@@ -102,7 +103,7 @@ func (G *Game) MakeTimedMove(m board.Move, timeTaken time.Duration) GameStatus {
 	color := G.ActiveColor()
 	G.control[color].clock -= timeTaken
 	if G.control[color].clock <= 0 {
-		return map[Color]GameStatus{White: WhiteTimedOut, Black: BlackTimedOut}[color]
+		return map[piece.Color]GameStatus{piece.White: WhiteTimedOut, piece.Black: BlackTimedOut}[color]
 	}
 	status := G.MakeMove(m)
 	G.control[color].clock += G.control[color].Increment
@@ -117,7 +118,7 @@ func (G *Game) MakeTimedMove(m board.Move, timeTaken time.Duration) GameStatus {
 // such as the en passant square, castling rights, 50 move rule count are also adjusted.
 // The game status after the given move is made is returned.
 func (G *Game) MakeMove(m board.Move) GameStatus {
-	from, to := SquaresOf(m)
+	from, to := board.Split(m)
 	movingPiece := G.board.OnSquare(from)
 	capturedPiece := G.board.OnSquare(to)
 	if G.illegalMove(movingPiece, m) {
@@ -155,7 +156,7 @@ func (G *Game) gameStatus() GameStatus {
 }
 
 func (G *Game) illegalMove(p piece.Piece, m board.Move) bool {
-	if p.Color == Neither || p.Type == None {
+	if p.Color == piece.Neither || p.Type == piece.None {
 		return true
 	}
 	if _, legal := G.LegalMoves()[m]; !legal {
@@ -165,7 +166,7 @@ func (G *Game) illegalMove(p piece.Piece, m board.Move) bool {
 }
 
 func (G *Game) illegalMoveStatus() GameStatus {
-	if G.ActiveColor() == White {
+	if G.ActiveColor() == piece.White {
 		return WhiteIllegalMove
 	}
 	return BlackIllegalMove
@@ -183,7 +184,7 @@ func (G *Game) adjustEnPassant(movingPiece piece.Piece, from, to board.Square) {
 	if movingPiece.Type == piece.Pawn {
 		G.history.enPassant = nil
 		if int(from)-int(to) == 16 || int(from)-int(to) == -16 {
-			s := Square(int(from) + []int{8, -8}[movingPiece.Color])
+			s := board.Square(int(from) + []int{8, -8}[movingPiece.Color])
 			G.history.enPassant = &s
 		}
 	} else {
@@ -192,13 +193,14 @@ func (G *Game) adjustEnPassant(movingPiece piece.Piece, from, to board.Square) {
 }
 
 func (G *Game) adjustCastlingRights(movingPiece piece.Piece, from, to board.Square) {
-	for side := shortSide; side <= longSide; side++ {
-		if movingPiece.Type == King || //King moves
-			(movingPiece.Type == Rook && from == [2][2]Square{{H1, A1}, {H8, A8}}[movingPiece.Color][side]) {
+	for side := board.ShortSide; side <= board.LongSide; side++ {
+		if movingPiece.Type == piece.King || //King moves
+			(movingPiece.Type == piece.Rook &&
+				from == [2][2]board.Square{{board.H1, board.A1}, {board.H8, board.A8}}[movingPiece.Color][side]) {
 			G.history.castlingRights[movingPiece.Color][side] = false
 		}
-		if to == [2][2]Square{{board.H8, board.A8}, {board.H1, board.A1}}[movingPiece.Color][side] {
-			G.history.castlingRights[[]Color{piece.Black, piece.White}[movingPiece.Color]][side] = false
+		if to == [2][2]board.Square{{board.H8, board.A8}, {board.H1, board.A1}}[movingPiece.Color][side] {
+			G.history.castlingRights[[]piece.Color{piece.Black, piece.White}[movingPiece.Color]][side] = false
 		}
 	}
 }
@@ -282,9 +284,12 @@ func (G *Game) threeFold() bool {
 
 // Check returns whether or not the specified color is in check.
 func (G *Game) Check(color piece.Color) bool {
-	notColor := []Color{piece.Black, piece.White}[color]
-	kingsq := bitscan(G.board.bitBoard[color][piece.King])
-	return G.isAttacked(Square(kingsq), notColor)
+	opponent := []piece.Color{piece.Black, piece.White}[color]
+	s := G.board.Find(piece.New(color, piece.King))
+	for sq := range s {
+		return G.board.Threatened(sq, opponent)
+	}
+	return false
 }
 
 // EnPassant returns a pointer to a square or nil if there is not
@@ -294,16 +299,7 @@ func (G *Game) EnPassant() *board.Square {
 }
 
 // LegalMoves returns only the legal moves that can be made.
-func (G *Game) LegalMoves() map[Move]struct{} {
-	legalMoves := make(map[Move]struct{})
-	ml := G.PsuedoLegalMoves()
+func (G *Game) LegalMoves() map[board.Move]struct{} {
 	toMove := G.ActiveColor()
-	for mv := range ml {
-		temp := *G
-		temp.board.MakeMove(mv)
-		if temp.Check(toMove) == false {
-			legalMoves[mv] = struct{}{}
-		}
-	}
-	return legalMoves
+	return G.board.LegalMoves(toMove, G.history.enPassant, G.history.castlingRights)
 }

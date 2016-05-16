@@ -1,9 +1,9 @@
 package chess
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
+	"github.com/andrewbackes/chess/board"
 	"os"
 	"strconv"
 	"strings"
@@ -13,7 +13,7 @@ import (
 
 func TestPerftSuite(t *testing.T) {
 	f := "perftsuite.epd"
-	d := 3
+	d := 4
 	if strings.ToLower(os.Getenv("TEST_FULL_PERFT_SUITE")) == "true" {
 		d = 6
 	}
@@ -37,22 +37,55 @@ func TestPerftSuite(t *testing.T) {
 			}
 		}()
 	}
-	if err := perftSuite(f, d, false); err != nil {
+	if err := perftSuite(f, d, true); err != nil {
 		t.Error(err)
 	}
 }
 
 /*
 func TestPerftSuitePos(t *testing.T) {
-	f := "perftsuite.epd"
-	d := 4
-	tests, _ := loadPerftSuite(f)
-	err := checkPerft(tests[1].fen, d, tests[1].nodes[d])
-	if err != nil {
-		t.Error(err)
-	}
+	edp, _ := ParseEPD("4k3/8/8/8/8/8/8/4K2R b K - 0 1 ;D1 5 ;D2 75 ;D3 459 ;D4 8290 ;D5 47635 ;D6 899442")
+	g, _ := FromEPD(*edp)
+	fmt.Println(edp)
+	fmt.Println(g.ActiveColor())
+	fmt.Println(g.LegalMoves())
+
+		g.MakeMove("c2c3")
+		g.MakeMove("d7d6")
+		m := divide(g, 1)
+		fmt.Println(g.board.Moves(g.ActiveColor(), g.history.enPassant, g.history.castlingRights))
+		for k, v := range m {
+			fmt.Println(k, ":", v)
+		}
+		fmt.Println(len(m))
+
+	//err := checkPerft(edp.Position, 3, 8902)
+	//if err != nil {
+	//	t.Fail()
+	//}
+
 }
 */
+func divide(G *Game, depth int) map[board.Move]uint64 {
+	div := make(map[board.Move]uint64)
+	//fmt.Println("Depth", depth)
+	var nodes, moveCount uint64
+	ml := G.LegalMoves()
+	toMove := G.ActiveColor()
+	for mv := range ml {
+		temp := *G
+		temp.MakeMove(mv)
+
+		if temp.Check(toMove) == false {
+			//Count it for mate:
+			moveCount++
+			n := perft(&temp, depth-1)
+			div[mv] = n
+			nodes += n
+		}
+	}
+	return div
+}
 
 /*******************************************************************************
 
@@ -60,30 +93,34 @@ func TestPerftSuitePos(t *testing.T) {
 
 *******************************************************************************/
 
-type epdTest struct {
-	fen   string
-	nodes []uint64
-}
-
 func perftSuite(filename string, maxdepth int, failFast bool) error {
 
-	test, err := loadPerftSuite(filename)
+	f, err := os.Open(filename)
 	if err != nil {
 		return err
 	}
-	for i, t := range test {
-
-		fmt.Print("FEN ", i+1, ":  \t")
-		for depth, nodes := range t.nodes {
+	tests, err := OpenEPD(f)
+	if err != nil {
+		return err
+	}
+	for i, test := range tests {
+		fmt.Print("EPD ", i+1, ":  ")
+		//fmt.Println(test)
+		for depth, op := range test.Operations {
+			//fmt.Println(op)
 			if depth > maxdepth {
 				break
 			}
-			er := checkPerft(t.fen, depth, nodes)
+			nodes, er := strconv.ParseUint(op.Operand, 10, 0)
+			if er != nil {
+				return er
+			}
+			er = checkPerft(test.Position, depth, nodes)
 			if er != nil {
 				err = er
-			}
-			if er != nil && failFast {
-				return err
+				if failFast {
+					return err
+				}
 			}
 		}
 		fmt.Print("\n")
@@ -93,6 +130,7 @@ func perftSuite(filename string, maxdepth int, failFast bool) error {
 
 func checkPerft(fen string, depth int, nodes uint64) error {
 	G, err := FromFEN(fen)
+	//fmt.Println(G.board)
 	if err != nil {
 		return err
 	}
@@ -107,40 +145,11 @@ func checkPerft(fen string, depth int, nodes uint64) error {
 	lapsed := time.Since(start)
 	fmt.Print(lapsed, " ")
 	if !passed {
-		fmt.Println(perftNodes, "!=", nodes)
+		fmt.Println("got", perftNodes, "wanted", nodes)
 		err = errors.New("incorrect node count")
 	}
 	//fmt.Print("\t")
 	return err
-}
-
-func loadPerftSuite(filename string) ([]epdTest, error) {
-
-	f, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-	scanner := bufio.NewScanner(f)
-
-	var test []epdTest
-	for scanner.Scan() {
-		line := scanner.Text()
-		words := strings.Split(line, ";")
-
-		var newTest epdTest
-		newTest.fen = words[0]
-		newTest.nodes = append(newTest.nodes, 1) // depth 0 = 1 node
-
-		for i := 1; i < len(words); i++ {
-			n, _ := strconv.ParseUint(strings.Split(words[i], " ")[1], 10, 0)
-			newTest.nodes = append(newTest.nodes, n)
-		}
-
-		test = append(test, newTest)
-	}
-	f.Close()
-
-	return test, err
 }
 
 func perft(g *Game, depth int) uint64 {

@@ -226,12 +226,15 @@ func (G *Game) threeFold() bool {
 
 // Check returns whether or not the specified color is in check.
 func (G *Game) Check(color piece.Color) bool {
-	opponent := []piece.Color{piece.Black, piece.White}[color]
-	s := G.board.Find(piece.New(color, piece.King))
-	for sq := range s {
-		return G.board.Threatened(sq, opponent)
-	}
-	return false
+	return G.board.Check(color)
+	/*
+		opponent := []piece.Color{piece.Black, piece.White}[color]
+		s := G.board.Find(piece.New(color, piece.King))
+		for sq := range s {
+			return G.board.Threatened(sq, opponent)
+		}
+		return false
+	*/
 }
 
 // EnPassant returns a pointer to a square or nil if there is not

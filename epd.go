@@ -2,8 +2,10 @@ package chess
 
 import (
 	//"os"
+	"bufio"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 )
 
@@ -54,7 +56,6 @@ func (e EPD) String() string {
 
 // ParseEPD turns a string representation of an epd into an object.
 func ParseEPD(epd string) (*EPD, error) {
-	// POS 2 3 4 a b; c d; e f;
 	s := strings.Split(epd, " ")
 	if len(s) <= 4 {
 		return &EPD{Position: epd, Operations: nil}, nil
@@ -73,44 +74,24 @@ func ParseEPD(epd string) (*EPD, error) {
 	return &EPD{Position: posStr, Operations: opers}, nil
 }
 
-// FromEPD returns a game based on the epd provided.
+// FromEPD returns a game based on the position in the EPD provided.
 func FromEPD(epd EPD) (*Game, error) {
 	g, err := FromFEN(epd.Position)
 	return g, err
 }
 
-/*
 // OpenEPD loads a file with new line delimited epd's into a slice of Games.
-func OpenEPD(f os.File) []*Game {
-	return nil
-}
-
-func openEPD(f *os.File) ([]epdTest, error) {
-
-	f, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
+func OpenEPD(f *os.File) ([]*EPD, error) {
 	scanner := bufio.NewScanner(f)
-
-	var test []epdTest
+	var ret []*EPD
 	for scanner.Scan() {
 		line := scanner.Text()
-		words := strings.Split(line, ";")
-
-		var newTest epdTest
-		newTest.fen = words[0]
-		newTest.nodes = append(newTest.nodes, 1) // depth 0 = 1 node
-
-		for i := 1; i < len(words); i++ {
-			n, _ := strconv.ParseUint(strings.Split(words[i], " ")[1], 10, 0)
-			newTest.nodes = append(newTest.nodes, n)
+		epd, err := ParseEPD(line)
+		if err != nil {
+			return nil, err
 		}
+		ret = append(ret, epd)
 
-		test = append(test, newTest)
 	}
-	f.Close()
-
-	return test, err
+	return ret, nil
 }
-*/

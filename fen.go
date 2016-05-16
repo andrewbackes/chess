@@ -77,6 +77,11 @@ func FromFEN(fen string) (*Game, error) {
 	if len(words) >= 6 {
 		h, _ := parseMoveHistory(words[1], words[5], words[4])
 		G.history = *h
+	} else if strings.ToLower(words[1]) == "b" {
+		// add a null move since we want it to be black's turn.
+		var m []board.Move
+		m = append(m, board.Move("0000"))
+		G.history.move = m
 	}
 	G.history.castlingRights = parseCastlingRights(words[2])
 	G.history.enPassant = parseEnPassantSquare(words[3])

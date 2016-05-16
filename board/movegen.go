@@ -11,18 +11,11 @@ func (b *Board) LegalMoves(c piece.Color, enPassant *Square, castlingRights [2][
 	for mv := range ml {
 		temp := *b
 		temp.MakeMove(mv)
-		if temp.check(c) == false {
+		if temp.Check(c) == false {
 			legalMoves[mv] = struct{}{}
 		}
 	}
 	return legalMoves
-}
-
-// Check returns whether or not the specified color is in check.
-func (b *Board) check(color piece.Color) bool {
-	opponent := []piece.Color{piece.Black, piece.White}[color]
-	kingsq := Square(bitscan(b.bitBoard[color][piece.King]))
-	return b.Threatened(kingsq, opponent)
 }
 
 // Moves returns all moves that a player can make but ignores legality.

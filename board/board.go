@@ -272,3 +272,10 @@ func (b *Board) InsufficientMaterial() bool {
 	}
 	return false
 }
+
+// Check returns whether or not the specified color is in check.
+func (b *Board) Check(color piece.Color) bool {
+	opponent := []piece.Color{piece.Black, piece.White}[color]
+	kingsq := Square(bitscan(b.bitBoard[color][piece.King]))
+	return b.Threatened(kingsq, opponent)
+}

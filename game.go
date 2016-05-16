@@ -71,10 +71,7 @@ func (G *Game) AddTag(tag, value string) {
 
 // Tag returns the value of the specified tag.
 func (G *Game) Tag(tag string) string {
-	if v, ok := G.tags[tag]; ok {
-		return v
-	}
-	return ""
+	return G.tags[tag]
 }
 
 // RemoveTag deletes the specified game tag.

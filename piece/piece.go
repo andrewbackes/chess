@@ -1,3 +1,4 @@
+// Package piece provides tools for working with chess pieces.
 package piece
 
 // Color is the color of a piece or square.

@@ -1,4 +1,4 @@
-// Package game plays chess games.
+// Package board provides tools for representing a chess board.
 package board
 
 import (

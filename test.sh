@@ -5,7 +5,7 @@ packages=$(find . -type d | grep -v git)
 IFS=$'\n'
 for pkg in $packages; do
     pushd $pkg
-    go test -coverprofile=.coverprofile -test.v -covermode=count || exit 1
+    go test timeout=48h -coverprofile=.coverprofile -test.v -covermode=count || exit 1
     popd
 done
 echo "mode: count" > total.coverprofile

@@ -63,6 +63,25 @@ func NewTimedGame(control [2]TimeControl) *Game {
 	return g
 }
 
+// AddTag adds the specified tag to the game. Tags are meant to hold useful
+// metadata about the game. Some useful tags include: Event, Date, Site, Round, etc.
+func (G *Game) AddTag(tag, value string) {
+	G.tags[tag] = value
+}
+
+// Tag returns the value of the specified tag.
+func (G *Game) Tag(tag string) string {
+	if v, ok := G.tags[tag]; ok {
+		return v
+	}
+	return ""
+}
+
+// RemoveTag deletes the specified game tag.
+func (G *Game) RemoveTag(tag string) {
+	delete(G.tags, tag)
+}
+
 // Board returns the Board object used for the game.
 func (G *Game) Board() *board.Board {
 	return &G.board

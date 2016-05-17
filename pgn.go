@@ -1,15 +1,21 @@
 package chess
 
-/*
 import (
-	"bufio"
-	"errors"
+	//"bufio"
+	//"errors"
 	"fmt"
 	//"io/ioutil"
-	"os"
+	"github.com/andrewbackes/chess/board"
+	//"os"
 	"strconv"
-	"strings"
+	//"strings"
 )
+
+// PGN represents a game in Portable Game Notation.
+type PGN struct {
+	Tags  map[string]string
+	Moves []board.Move
+}
 
 func EmptyTags() map[string]string {
 	tags := make(map[string]string)
@@ -22,7 +28,6 @@ func EmptyTags() map[string]string {
 	tags["Result"] = ""
 	return tags
 }
-
 
 // FromPGN returns a Game from a PGN string. The string should only contain one
 // game, not a series of games. If you need to load a series of PGN games from a
@@ -39,18 +44,9 @@ func OpenPGN(filename string) []*Game {
 	return games
 }
 
-type PGNGame struct {
-	Tags     map[string]string
-	MoveList []Move
-}
-
-type PGNFilter struct {
-	Tag   string // ex: WhiteElo
-	Value string // ex: ">2700"
-}
-
-func NewPGNGame() PGNGame {
-	return PGNGame{
+// NewPGN returns a new blank PGN game.
+func NewPGN() PGN {
+	return PGN{
 		Tags: make(map[string]string),
 	}
 }
@@ -59,53 +55,75 @@ func NewPGNGame() PGNGame {
 func (G *Game) PGN() string {
 	// TODO: Test needed. Changed code about Move.log without testing. See below.
 
-		var pgn string
-		tags := [][]string{
-			{"Event", G.Event},
-			{"Site", G.Site},
-			{"Date", G.Date},
-			{"Round", strconv.Itoa(G.Round)},
-			{"White", G.Player[WHITE].Name},
-			{"Black", G.Player[BLACK].Name},
-			{"Result", "*"},
+	var pgn string
+	status := G.statusString()
+	pgn += G.tagsString(status)
+	pgn += fmt.Sprintln("")
+	pgn += G.enumerateMoves()
+	pgn += status
+	pgn += fmt.Sprintln("")
+	pgn += fmt.Sprintln("")
+
+	return pgn
+}
+
+// tagsString formats the game tags the way PGN does.
+func (G *Game) tagsString(status string) string {
+	tags := [][]string{
+		{"Event", G.tags["Event"]},
+		{"Site", G.tags["Site"]},
+		{"Date", G.tags["Date"]},
+		{"Round", G.tags["Round"]},
+		{"White", G.tags["White"]},
+		{"Black", G.tags["Black"]},
+		{"Result", status},
+		/*
 			{"WhiteElo", "-"},
 			{"BlackElo", "-"},
 			{"Time", "-"},
 			{"TimeControl", "-"},
-		}
-		if G.StartingFEN != "" {
-			tags = append(tags, []string{"Setup", "1"})
-			tags = append(tags, []string{"FEN", G.StartingFEN})
-		}
-		if G.Completed {
-			tags[6][1] = []string{"1-0", "0-1", "1/2-1/2"}[G.Result]
-		}
-		for _, t := range tags {
-			pgn += fmt.Sprintln("[" + t[0] + " \"" + t[1] + "\"]")
-		}
-		pgn += fmt.Sprintln("")
-
-		for j, _ := range G.MoveList {
-			// TODO: replaced this code without testing:
-			//if len(G.MoveList[j].log) > 0 && strings.Contains(G.MoveList[j].log[0], "Book Move.") {
-			if G.AnalysisList[j].Comment == BOOKMOVE {
-				// dont print book moves, since the FEN tag would mess it up.
-				continue
-			}
-			if j%2 == 0 {
-				pgn += strconv.Itoa((j/2)+1) + ". "
-			}
-			pgn += string(G.MoveList[j]) + " "
-		}
-		pgn += tags[6][1]
-		pgn += fmt.Sprintln("")
-		pgn += fmt.Sprintln("")
-
-		return pgn
-
-	return ""
+		*/
+	}
+	if G.history.startingFen != "" {
+		tags = append(tags, []string{"Setup", "1"})
+		tags = append(tags, []string{"FEN", G.history.startingFen})
+	}
+	var s string
+	for _, t := range tags {
+		s += fmt.Sprintln("[" + t[0] + " \"" + t[1] + "\"]")
+	}
+	return s
 }
 
+func (G *Game) statusString() string {
+	if WhiteWon&G.Status() != 0 {
+		return "1-0"
+	}
+	if BlackWon&G.Status() != 0 {
+		return "0-1"
+	}
+	if Draw&G.Status() != 0 {
+		return "1/2-1/2"
+	}
+	return "*"
+}
+
+func (G *Game) enumerateMoves() string {
+	moves := ""
+	for j, move := range G.history.move {
+		if move == board.NullMove {
+			// dont print book moves, since the FEN tag would mess it up.
+			continue
+		}
+		if j%2 == 0 {
+			moves += strconv.Itoa((j/2)+1) + ". "
+		}
+		moves += string(move) + " "
+	}
+	return moves
+}
+
+/*
 // Line by line reads a pgn file. Turns what is read into a PGNGame struct.
 // This is an improvement over LoadPGN() since it goes line by line.
 // For huge PGN files, this will work but LoadPGN() will not.

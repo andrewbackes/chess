@@ -62,6 +62,7 @@ func (G *Game) FEN() string {
 // FromFEN creates a game from the provided FEN.
 func FromFEN(fen string) (*Game, error) {
 	G := NewGame()
+	G.history.startingFen = fen
 	words := strings.Split(fen, " ")
 	if len(words) < 4 {
 		return nil, errors.New("FEN: incomplete fen")
@@ -80,10 +81,43 @@ func FromFEN(fen string) (*Game, error) {
 	} else if strings.ToLower(words[1]) == "b" {
 		// add a null move since we want it to be black's turn.
 		var m []board.Move
-		m = append(m, board.Move("0000"))
+		m = append(m, board.NullMove)
 		G.history.move = m
 	}
 	G.history.castlingRights = parseCastlingRights(words[2])
 	G.history.enPassant = parseEnPassantSquare(words[3])
 	return G, nil
+}
+
+func parseMoveHistory(activeColor, moveCount, fiftyMoveCount string) (*gameHistory, error) {
+	h := gameHistory{}
+	fullMoves, err := strconv.ParseUint(moveCount, 10, 0)
+	if err != nil {
+		return nil, errors.New("FEN: could not parse move count")
+	}
+	halfMoves := ((fullMoves - 1) * 2) + map[string]uint64{"w": 0, "b": 1}[activeColor]
+	for i := uint64(0); i < halfMoves; i++ {
+		h.move = append(h.move, board.NullMove)
+	}
+	fmc, err := strconv.ParseUint(fiftyMoveCount, 10, 0)
+	if err != nil {
+		return nil, errors.New("FEN: could not parse fifty move rule count")
+	}
+	// Since internally we store half moves:
+	h.fiftyMoveCount = (fmc * 2) + map[string]uint64{"w": 0, "b": 1}[activeColor]
+	return &h, nil
+}
+
+func parseEnPassantSquare(sq string) *board.Square {
+	if sq != "-" {
+		s := board.ParseSquare(sq)
+		return &s
+	}
+	return nil
+}
+
+func parseCastlingRights(KQkq string) [2][2]bool {
+	return [2][2]bool{
+		{strings.Contains(KQkq, "K"), strings.Contains(KQkq, "Q")},
+		{strings.Contains(KQkq, "k"), strings.Contains(KQkq, "q")}}
 }

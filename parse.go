@@ -5,7 +5,7 @@ import (
 	"github.com/andrewbackes/chess/board"
 	"github.com/andrewbackes/chess/piece"
 	"regexp"
-	"strconv"
+	//"strconv"
 	"strings"
 )
 
@@ -146,38 +146,4 @@ func (G *Game) originOfPiece(p string, color piece.Color, destination, fromFile,
 	//fmt.Println("eligableSquares:", eligableSquares)
 
 	return "", errors.New("Notation: Can not find source square.")
-}
-
-func parseMoveHistory(activeColor, moveCount, fiftyMoveCount string) (*gameHistory, error) {
-	h := gameHistory{}
-	unknownMove := board.Move("")
-	fullMoves, err := strconv.ParseUint(moveCount, 10, 0)
-	if err != nil {
-		return nil, errors.New("FEN: could not parse move count")
-	}
-	halfMoves := ((fullMoves - 1) * 2) + map[string]uint64{"w": 0, "b": 1}[activeColor]
-	for i := uint64(0); i < halfMoves; i++ {
-		h.move = append(h.move, unknownMove)
-	}
-	fmc, err := strconv.ParseUint(fiftyMoveCount, 10, 0)
-	if err != nil {
-		return nil, errors.New("FEN: could not parse fifty move rule count")
-	}
-	// Since internally we store half moves:
-	h.fiftyMoveCount = (fmc * 2) + map[string]uint64{"w": 0, "b": 1}[activeColor]
-	return &h, nil
-}
-
-func parseEnPassantSquare(sq string) *board.Square {
-	if sq != "-" {
-		s := board.ParseSquare(sq)
-		return &s
-	}
-	return nil
-}
-
-func parseCastlingRights(KQkq string) [2][2]bool {
-	return [2][2]bool{
-		{strings.Contains(KQkq, "K"), strings.Contains(KQkq, "Q")},
-		{strings.Contains(KQkq, "k"), strings.Contains(KQkq, "q")}}
 }

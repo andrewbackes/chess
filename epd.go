@@ -80,7 +80,7 @@ func FromEPD(epd EPD) (*Game, error) {
 	return g, err
 }
 
-// OpenEPD loads a file with new line delimited epd's into a slice of Games.
+// OpenEPD loads a file with multiple EPD's. Each EPD needs to be on its own line.
 func OpenEPD(f *os.File) ([]*EPD, error) {
 	scanner := bufio.NewScanner(f)
 	var ret []*EPD

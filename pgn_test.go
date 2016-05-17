@@ -1,15 +1,33 @@
 package chess
 
 import (
-	"fmt"
 	"testing"
 )
 
-func TestPGNoutput(t *testing.T) {
+func TestPGNnullmoves(t *testing.T) {
+	expected := `[Event ""]
+[Site ""]
+[Date ""]
+[Round ""]
+[White ""]
+[Black ""]
+[Result "1-0"]
 
+3. h5e5 1-0
+
+`
+	g, _ := FromFEN("rnbq1bnr/ppppkppp/8/4p2Q/4P3/8/PPPP1PPP/RNB1KBNR w KQ - 1 3")
+	m, err := g.ParseMove("Qxe5#")
+	if err != nil {
+		t.Error("couldnt parse move")
+	}
+	g.MakeMove(m)
+	if g.PGN() != expected {
+		t.Fail()
+	}
 }
 
-func TestPGNnullmoves(t *testing.T) {
+func TestPGNoutput(t *testing.T) {
 	expected := `[Event ""]
 [Site ""]
 [Date ""]
@@ -33,6 +51,4 @@ func TestPGNnullmoves(t *testing.T) {
 	if g.PGN() != expected {
 		t.Fail()
 	}
-	fmt.Println(g.PGN())
-	fmt.Println(g.FEN())
 }

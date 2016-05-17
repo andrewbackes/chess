@@ -143,7 +143,7 @@ func TestThreeFold(t *testing.T) {
 func TestStalemate(t *testing.T) {
 	fen := "K7/8/k7/1r6/8/8/8/8 w - - 0 1"
 	g, _ := FromFEN(fen)
-	if g.gameStatus() != Stalemate {
+	if g.Status() != Stalemate {
 		t.Fail()
 	}
 }

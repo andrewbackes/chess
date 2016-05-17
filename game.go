@@ -31,6 +31,7 @@ type Game struct {
 }
 
 type gameHistory struct {
+	startingFen    string
 	fen            []string
 	move           []board.Move
 	fiftyMoveCount uint64
@@ -147,10 +148,11 @@ func (G *Game) MakeMove(m board.Move) GameStatus {
 	G.board.MakeMove(m)
 	G.history.move = append(G.history.move, m)
 	G.history.fen = append(G.history.fen, G.FEN())
-	return G.gameStatus()
+	return G.Status()
 }
 
-func (G *Game) gameStatus() GameStatus {
+// Status returns the game's status.
+func (G *Game) Status() GameStatus {
 	activeColor := G.ActiveColor()
 	check, stale := G.Check(activeColor), len(G.LegalMoves()) == 0
 	if stale && check {

@@ -32,7 +32,7 @@ func EmptyTags() map[string]string {
 // FromPGN returns a Game from a PGN string. The string should only contain one
 // game, not a series of games. If you need to load a series of PGN games from a
 // file use OpenPGN(filename) instead.
-func FromPGN(pgn string) *Game {
+func FromPGN(pgn string) (*Game, error) {
 	g := NewGame()
 	// TODO(andrewbackes): write this function
 	return g

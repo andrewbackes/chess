@@ -62,7 +62,6 @@ func (G *Game) FEN() string {
 // FromFEN creates a game from the provided FEN.
 func FromFEN(fen string) (*Game, error) {
 	G := NewGame()
-	G.history.startingFen = fen
 	words := strings.Split(fen, " ")
 	if len(words) < 4 {
 		return nil, errors.New("FEN: incomplete fen")
@@ -86,6 +85,7 @@ func FromFEN(fen string) (*Game, error) {
 	}
 	G.history.castlingRights = parseCastlingRights(words[2])
 	G.history.enPassant = parseEnPassantSquare(words[3])
+	G.history.startingFen = fen
 	return G, nil
 }
 

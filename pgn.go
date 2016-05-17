@@ -34,7 +34,7 @@ func EmptyTags() map[string]string {
 // file use OpenPGN(filename) instead.
 func FromPGN(pgn string) *Game {
 	g := NewGame()
-
+	// TODO(andrewbackes): write this function
 	return g
 }
 
@@ -53,8 +53,6 @@ func NewPGN() PGN {
 
 // PGN returns the PGN of the game.
 func (G *Game) PGN() string {
-	// TODO: Test needed. Changed code about Move.log without testing. See below.
-
 	var pgn string
 	status := G.statusString()
 	pgn += G.tagsString(status)
@@ -63,7 +61,6 @@ func (G *Game) PGN() string {
 	pgn += status
 	pgn += fmt.Sprintln("")
 	pgn += fmt.Sprintln("")
-
 	return pgn
 }
 

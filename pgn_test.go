@@ -12,6 +12,8 @@ func TestPGNnullmoves(t *testing.T) {
 [White ""]
 [Black ""]
 [Result "1-0"]
+[Setup "1"]
+[FEN "rnbq1bnr/ppppkppp/8/4p2Q/4P3/8/PPPP1PPP/RNB1KBNR w KQ - 1 3"]
 
 3. h5e5 1-0
 
@@ -23,6 +25,7 @@ func TestPGNnullmoves(t *testing.T) {
 	}
 	g.MakeMove(m)
 	if g.PGN() != expected {
+		t.Log(g.PGN())
 		t.Fail()
 	}
 }

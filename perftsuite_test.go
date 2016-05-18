@@ -99,7 +99,7 @@ func perftSuite(filename string, maxdepth int, failFast bool) error {
 	if err != nil {
 		return err
 	}
-	tests, err := OpenEPD(f)
+	tests, err := ReadEPD(f)
 	if err != nil {
 		return err
 	}

@@ -1,6 +1,7 @@
 package chess
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -54,4 +55,77 @@ func TestPGNoutput(t *testing.T) {
 	if g.PGN() != expected {
 		t.Fail()
 	}
+}
+
+func TestReadTwoPGN(t *testing.T) {
+	input := `[Event "one"]
+[Round "1"]
+[Result "1-0"]
+
+1. e2e4 e7e5 2. d1h5 e8e7 3. h5e5 1-0
+
+[Event "two"]
+[Round "2"]
+[Result "1/2-1/2"]
+
+1. e2e4 e7e5 2. d1h5 e8e7 1/2-1/2
+`
+	games, err := ReadPGN(strings.NewReader(input))
+	if err != nil || len(games) != 2 {
+		t.Fail()
+	}
+
+}
+
+func TestReadOnePGN(t *testing.T) {
+	input := `[Event "one"]
+[Round "1"]
+[Result "1-0"]
+
+1. e2e4 e7e5 2. d1h5 e8e7 3. h5e5 1-0
+`
+	games, err := ReadPGN(strings.NewReader(input))
+	if err != nil || len(games) != 1 {
+		t.Fail()
+	}
+
+}
+
+func TestReadThreePGN(t *testing.T) {
+	input := `[Event "one"]
+[Round "1"]
+[Result "1-0"]
+
+1. e2e4 e7e5 2. d1h5 e8e7 3. h5e5 1-0
+
+[Event "one"]
+[Round "1"]
+[Result "1-0"]
+
+1. e2e4 e7e5 2. d1h5 e8e7 3. h5e5 1-0
+
+[Event "one"]
+[Round "1"]
+[Result "1-0"]
+
+1. e2e4 e7e5 2. d1h5 e8e7 3. h5e5 1-0
+`
+	games, err := ReadPGN(strings.NewReader(input))
+	if err != nil || len(games) != 3 {
+		t.Fail()
+	}
+}
+
+func TestParsePGN(t *testing.T) {
+	input := `[Event "one"]
+[Round "1"]
+[Result "1-0"]
+
+1. e2e4 e7e5 2. d1h5 e8e7 3. h5e5 1-0
+`
+	pgn, err := ParsePGN(input)
+	if err != nil || pgn == nil {
+		t.Fail()
+	}
+
 }

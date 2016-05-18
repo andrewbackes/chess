@@ -1,7 +1,7 @@
 package chess
 
 import (
-	//"bufio"
+	"bufio"
 	//"errors"
 	"fmt"
 	//"io/ioutil"
@@ -9,12 +9,13 @@ import (
 	//"os"
 	"strconv"
 	//"strings"
+	"io"
 )
 
 // PGN represents a game in Portable Game Notation.
 type PGN struct {
 	Tags  map[string]string
-	Moves []board.Move
+	Moves []string
 }
 
 func EmptyTags() map[string]string {
@@ -32,16 +33,10 @@ func EmptyTags() map[string]string {
 // FromPGN returns a Game from a PGN string. The string should only contain one
 // game, not a series of games. If you need to load a series of PGN games from a
 // file use OpenPGN(filename) instead.
-func FromPGN(pgn string) (*Game, error) {
+func FromPGN(pgn PGN) (*Game, error) {
 	g := NewGame()
 	// TODO(andrewbackes): write this function
-	return g
-}
-
-// OpenPGN loads a file containing a sequence of PGN games into a slice of Games.
-func OpenPGN(filename string) []*Game {
-	var games []*Game
-	return games
+	return g, nil
 }
 
 // NewPGN returns a new blank PGN game.
@@ -120,11 +115,53 @@ func (G *Game) enumerateMoves() string {
 	return moves
 }
 
+// ParsePGN reads a string containing a PGN and returns a PGN object.
+func ParsePGN(pgn string) (*PGN, error) {
+	return parsePGN([]byte(pgn))
+}
+
+func parsePGN(pgn []byte) (*PGN, error) {
+	//fmt.Println(string(pgn))
+	r := NewPGN()
+	return &r, nil
+}
+
+// ReadPGN loads a file containing a sequence of PGN games into a slice of Games.
+func ReadPGN(file io.Reader) ([]*PGN, error) {
+	var games []*PGN
+	readingTags := true
+	scanner := bufio.NewScanner(file)
+	var buffer []byte
+	for scanner.Scan() {
+		line := append(scanner.Bytes(), '\n')
+		if len(line) == 0 {
+			continue
+		}
+		if line[0] == '[' {
+			if !readingTags {
+				readingTags = true
+				game, _ := parsePGN(buffer)
+				games = append(games, game)
+				buffer = make([]byte, 0)
+			}
+		} else {
+			readingTags = false
+		}
+		buffer = append(buffer, line...)
+	}
+	game, _ := parsePGN(buffer)
+	games = append(games, game)
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	return games, nil
+}
+
 /*
 // Line by line reads a pgn file. Turns what is read into a PGNGame struct.
 // This is an improvement over LoadPGN() since it goes line by line.
 // For huge PGN files, this will work but LoadPGN() will not.
-func ReadPGN(filename string, filters []PGNFilter) (*[]PGNGame, error) {
+func ReadPGN2(filename string, filters []PGNFilter) (*[]PGNGame, error) {
 
 	fmt.Println("Reading", filename, "...")
 	if !strings.HasSuffix(filename, ".pgn") {

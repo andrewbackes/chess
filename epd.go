@@ -5,7 +5,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"os"
+	"io"
 	"strings"
 )
 
@@ -80,9 +80,9 @@ func FromEPD(epd EPD) (*Game, error) {
 	return g, err
 }
 
-// OpenEPD loads a file with multiple EPD's. Each EPD needs to be on its own line.
-func OpenEPD(f *os.File) ([]*EPD, error) {
-	scanner := bufio.NewScanner(f)
+// ReadEPD loads a file with multiple EPD's. Each EPD needs to be on its own line.
+func ReadEPD(file io.Reader) ([]*EPD, error) {
+	scanner := bufio.NewScanner(file)
 	var ret []*EPD
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -91,7 +91,6 @@ func OpenEPD(f *os.File) ([]*EPD, error) {
 			return nil, err
 		}
 		ret = append(ret, epd)
-
 	}
 	return ret, nil
 }

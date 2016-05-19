@@ -1,6 +1,7 @@
 package chess
 
 import (
+	"github.com/andrewbackes/chess/board"
 	"strings"
 	"testing"
 )
@@ -57,6 +58,22 @@ func TestPGNoutput(t *testing.T) {
 	}
 }
 
+func TestReadOnePGN(t *testing.T) {
+	input := `[Event "one"]
+[Round "1"]
+[Result "1-0"]
+
+1. e2e4 e7e5 2. d1h5 e8e7 3. h5e5 1-0
+`
+	games, err := ReadPGN(strings.NewReader(input))
+	if err != nil || len(games) != 1 {
+		t.Log(games)
+		t.Log(err)
+		t.Fail()
+	}
+
+}
+
 func TestReadTwoPGN(t *testing.T) {
 	input := `[Event "one"]
 [Round "1"]
@@ -72,20 +89,9 @@ func TestReadTwoPGN(t *testing.T) {
 `
 	games, err := ReadPGN(strings.NewReader(input))
 	if err != nil || len(games) != 2 {
+		t.Log(games)
+		t.Log(err)
 		t.Fail()
-	}
-
-}
-
-func TestReadOnePGN(t *testing.T) {
-	input := `[Event "one"]
-[Round "1"]
-[Result "1-0"]
-
-1. e2e4 e7e5 2. d1h5 e8e7 3. h5e5 1-0
-`
-	games, err := ReadPGN(strings.NewReader(input))
-	if err != nil || len(games) != 1 {
 		t.Fail()
 	}
 
@@ -112,20 +118,47 @@ func TestReadThreePGN(t *testing.T) {
 `
 	games, err := ReadPGN(strings.NewReader(input))
 	if err != nil || len(games) != 3 {
+		t.Log(games)
+		t.Log(err)
+		t.Fail()
 		t.Fail()
 	}
 }
 
-func TestParsePGN(t *testing.T) {
+func TestReadPGN(t *testing.T) {
 	input := `[Event "one"]
 [Round "1"]
 [Result "1-0"]
 
 1. e2e4 e7e5 2. d1h5 e8e7 3. h5e5 1-0
 `
-	pgn, err := ParsePGN(input)
-	if err != nil || pgn == nil {
-		t.Fail()
-	}
+	games, _ := ReadPGN(strings.NewReader(input))
+	games[0].Tags["Event"] = "one"
+	games[0].Tags["Round"] = "1"
+	games[0].Tags["Result"] = "1-0"
 
+	moves := []string{"e2e4", "e7e5", "d1h5", "e8e7", "h5e5"}
+	for i, m := range games[0].Moves {
+		if m != moves[i] {
+			t.Log(games[0].Moves)
+			t.Fail()
+		}
+	}
+}
+
+func TestFromPGN(t *testing.T) {
+	pgn := NewPGN()
+	pgn.Tags["Event"] = "test"
+	pgn.Moves = []string{"e2e4", "e7e5", "d1h5", "e8e7", "h5e5"}
+	game, err := FromPGN(pgn)
+	if err != nil {
+		t.Error(err)
+	}
+	moves := game.MoveHistory()
+	for i, m := range pgn.Moves {
+		if board.Move(m) != moves[i] {
+			t.Log(moves)
+			t.Fail()
+		}
+	}
 }

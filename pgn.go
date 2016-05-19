@@ -2,14 +2,12 @@ package chess
 
 import (
 	"bufio"
-	//"errors"
+	"errors"
 	"fmt"
-	//"io/ioutil"
 	"github.com/andrewbackes/chess/board"
-	//"os"
-	"strconv"
-	//"strings"
 	"io"
+	"strconv"
+	"strings"
 )
 
 // PGN represents a game in Portable Game Notation.
@@ -33,15 +31,22 @@ func EmptyTags() map[string]string {
 // FromPGN returns a Game from a PGN string. The string should only contain one
 // game, not a series of games. If you need to load a series of PGN games from a
 // file use OpenPGN(filename) instead.
-func FromPGN(pgn PGN) (*Game, error) {
+func FromPGN(pgn *PGN) (*Game, error) {
 	g := NewGame()
-	// TODO(andrewbackes): write this function
+	g.tags = pgn.Tags
+	for _, san := range pgn.Moves {
+		move, err := g.ParseMove(san)
+		if err != nil {
+			return nil, err
+		}
+		g.MakeMove(move)
+	}
 	return g, nil
 }
 
 // NewPGN returns a new blank PGN game.
-func NewPGN() PGN {
-	return PGN{
+func NewPGN() *PGN {
+	return &PGN{
 		Tags: make(map[string]string),
 	}
 }
@@ -115,91 +120,31 @@ func (G *Game) enumerateMoves() string {
 	return moves
 }
 
-// ParsePGN reads a string containing a PGN and returns a PGN object.
+// ParsePGN reads a string containing a single PGN and returns a PGN object.
+// To read multiple PGNs from a string use:
+//     ReadPGN(strings.NewReader(multiPgnString))
 func ParsePGN(pgn string) (*PGN, error) {
-	return parsePGN([]byte(pgn))
-}
-
-func parsePGN(pgn []byte) (*PGN, error) {
-	//fmt.Println(string(pgn))
-	r := NewPGN()
-	return &r, nil
-}
-
-// ReadPGN loads a file containing a sequence of PGN games into a slice of Games.
-func ReadPGN(file io.Reader) ([]*PGN, error) {
-	var games []*PGN
-	readingTags := true
-	scanner := bufio.NewScanner(file)
-	var buffer []byte
-	for scanner.Scan() {
-		line := append(scanner.Bytes(), '\n')
-		if len(line) == 0 {
-			continue
-		}
-		if line[0] == '[' {
-			if !readingTags {
-				readingTags = true
-				game, _ := parsePGN(buffer)
-				games = append(games, game)
-				buffer = make([]byte, 0)
-			}
-		} else {
-			readingTags = false
-		}
-		buffer = append(buffer, line...)
-	}
-	game, _ := parsePGN(buffer)
-	games = append(games, game)
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-	return games, nil
-}
-
-/*
-// Line by line reads a pgn file. Turns what is read into a PGNGame struct.
-// This is an improvement over LoadPGN() since it goes line by line.
-// For huge PGN files, this will work but LoadPGN() will not.
-func ReadPGN2(filename string, filters []PGNFilter) (*[]PGNGame, error) {
-
-	fmt.Println("Reading", filename, "...")
-	if !strings.HasSuffix(filename, ".pgn") {
-		return nil, errors.New("Invalid PGN file.")
-	}
-
-	// Open the file:
-	file, err := os.Open(filename)
+	games, err := ReadPGN(strings.NewReader(pgn))
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
-	GameList := []PGNGame{}
-
-	// Display progress bar:
-	var filesize int64
-	if fs, err := file.Stat(); err == nil {
-		filesize = fs.Size()
+	if len(games) < 1 {
+		return nil, errors.New("could not read game")
 	}
-	dotsPrinted := 0
-	bytesPerDot := filesize / 80
-	fmt.Print("1%", strings.Repeat(" ", 36), "50%", strings.Repeat(" ", 35), "100%\n")
-	updateProgressBar := func(completed int64) {
-		dotnumber := int(completed / bytesPerDot)
-		if (dotsPrinted) < dotnumber {
-			dotsPrinted++
-			fmt.Print(".")
-		}
-	}
+	return games[0], nil
+}
 
+// Line by line reads a pgn file. Turns what is read into a PGNGame struct.
+// This is an improvement over LoadPGN() since it goes line by line.
+// For huge PGN files, this will work but LoadPGN() will not.
+func ReadPGN(file io.Reader) ([]*PGN, error) {
+	var GameList []*PGN
 	// Read line by line:
-	var bytesRead int64
 	scanner := bufio.NewScanner(file)
 	readingmoves := false // flag
-	currentGame := NewPGNGame()
+	currentGame := NewPGN()
 	for scanner.Scan() {
 		line := scanner.Bytes()
-		bytesRead += int64(len(line))
 		if len(line) == 0 {
 			continue
 		}
@@ -208,29 +153,24 @@ func ReadPGN2(filename string, filters []PGNFilter) (*[]PGNGame, error) {
 				// since we are no longer reading moves, we know this is a new game
 				readingmoves = false
 				// so we need to sort out what to do with the game that we previously read:
-				if SatisfiesFilters(&currentGame, &filters) {
-					GameList = append(GameList, currentGame)
-				}
-				currentGame = NewPGNGame()
-				updateProgressBar(bytesRead)
+				GameList = append(GameList, currentGame)
+				currentGame = NewPGN()
 			}
-			key, value := SplitTag(line)
+			key, value := splitTag(line)
 			currentGame.Tags[string(key)] = string(value)
 		} else {
 			readingmoves = true
-			appendMoves(&currentGame, line)
+			appendMoves(currentGame, line)
 		}
 	}
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-	fmt.Println("\nRead", len(GameList), "games in PGN.")
-	return &GameList, nil
+	GameList = append(GameList, currentGame)
+	err := scanner.Err()
+	return GameList, err
 }
 
-func appendMoves(game *PGNGame, line []byte) {
+func appendMoves(game *PGN, line []byte) {
 	// example: 1. e2e4 d7d5 2. b1c3 f7f5 {asd asd} 3. a2a3 ;asdasdasdasd"
-	l := RemoveComments(line)
+	l := removeComments(line)
 	//l = RemoveNumbering(line)
 	moves := strings.Split(string(l), " ")
 	for _, m := range moves {
@@ -240,14 +180,14 @@ func appendMoves(game *PGNGame, line []byte) {
 		}
 		//if isMove(StripAnnotations(m)) {
 		if m != "1/2-1/2" && m != "1-0" && m != "0-1" && m != "*" && m != "" {
-			game.MoveList = append(game.MoveList, Move(m))
+			game.Moves = append(game.Moves, m)
 		}
 		//}
 
 	}
 }
 
-func RemoveComments(line []byte) []byte {
+func removeComments(line []byte) []byte {
 	marker := 0
 	i := 0
 	for {
@@ -279,7 +219,8 @@ func RemoveComments(line []byte) []byte {
 	return line
 }
 
-func RemoveNumbering(line []byte) []byte {
+/*
+func removeNumbering(line []byte) []byte {
 	marker := 0
 	i := 0
 	for {
@@ -304,10 +245,11 @@ func RemoveNumbering(line []byte) []byte {
 	}
 	return line
 }
+*/
 
 // takes a tag and returns its key and value components.
 // ex: [Event "Testing"] ==> "Event", "Testing"
-func SplitTag(line []byte) ([]byte, []byte) {
+func splitTag(line []byte) ([]byte, []byte) {
 
 	// Look for a space:
 	space := 0
@@ -323,22 +265,24 @@ func SplitTag(line []byte) ([]byte, []byte) {
 	return key, value
 }
 
+/*
 // Verifies that the game meets the requirements of the filter.
-func SatisfiesFilters(game *PGNGame, filters *[]PGNFilter) bool {
+func satisfiesFilters(game *PGN, filters *[]PGNFilter) bool {
 	if filters == nil {
 		return true
 	}
 	for _, f := range *filters {
 		v := game.Tags[f.Tag]
-		if v == "" || !ValuesMatch(v, f.Value) {
+		if v == "" || !valuesMatch(v, f.Value) {
 			return false
 		}
 	}
 	return true
 }
 
-// ex: ValuesMatch("2701",">2700") == true
-func ValuesMatch(value string, constraint string) bool {
+
+// ex: valuesMatch("2701",">2700") == true
+func valuesMatch(value string, constraint string) bool {
 	if len(constraint) > 1 {
 		c := constraint[1:]
 		switch constraint[:1] {

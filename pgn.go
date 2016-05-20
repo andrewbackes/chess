@@ -16,6 +16,11 @@ type PGN struct {
 	Moves []string
 }
 
+// Tag returns a tag for the pgn.
+func (p *PGN) Tag(name string) string {
+	return p.Tags[name]
+}
+
 func EmptyTags() map[string]string {
 	tags := make(map[string]string)
 	tags["Event"] = ""
@@ -264,40 +269,3 @@ func splitTag(line []byte) ([]byte, []byte) {
 
 	return key, value
 }
-
-/*
-// Verifies that the game meets the requirements of the filter.
-func satisfiesFilters(game *PGN, filters *[]PGNFilter) bool {
-	if filters == nil {
-		return true
-	}
-	for _, f := range *filters {
-		v := game.Tags[f.Tag]
-		if v == "" || !valuesMatch(v, f.Value) {
-			return false
-		}
-	}
-	return true
-}
-
-
-// ex: valuesMatch("2701",">2700") == true
-func valuesMatch(value string, constraint string) bool {
-	if len(constraint) > 1 {
-		c := constraint[1:]
-		switch constraint[:1] {
-		case ">":
-			c_int, _ := strconv.Atoi(c)
-			value_int, _ := strconv.Atoi(value)
-			return value_int > c_int
-		case "<":
-			c_int, _ := strconv.Atoi(c)
-			value_int, _ := strconv.Atoi(value)
-			return value_int < c_int
-		case "=":
-			return value == c
-		}
-	}
-	return value == constraint
-}
-*/

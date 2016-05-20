@@ -9,6 +9,16 @@ import (
 	"strings"
 )
 
+type BitBoard uint64
+
+func (b BitBoard) String() string {
+	s := ""
+	for i := 7; i >= 0; i-- {
+		s += fmt.Sprintf("%08b\n", (b >> uint64(8*i) & 255))
+	}
+	return s
+}
+
 // Board is a representation of a chess Board.
 type Board struct {
 	// bitBoard has one bitBoard per player per color.

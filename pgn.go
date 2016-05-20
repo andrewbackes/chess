@@ -21,6 +21,7 @@ func (p *PGN) Tag(name string) string {
 	return p.Tags[name]
 }
 
+/*
 func EmptyTags() map[string]string {
 	tags := make(map[string]string)
 	tags["Event"] = ""
@@ -32,6 +33,7 @@ func EmptyTags() map[string]string {
 	tags["Result"] = ""
 	return tags
 }
+*/
 
 // FromPGN returns a Game from a PGN string. The string should only contain one
 // game, not a series of games. If you need to load a series of PGN games from a

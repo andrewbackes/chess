@@ -41,7 +41,7 @@ func TestGenPromotion(t *testing.T) {
 	}
 }
 
-func TestGenPromotionCap(t *testing.T) {
+func TestGenCastles(t *testing.T) {
 	b := New()
 	b.Clear()
 	b.QuickPut(piece.New(piece.White, piece.King), E1)
@@ -57,7 +57,7 @@ func TestGenPromotionCap(t *testing.T) {
 	}
 }
 
-func TestGenCastles(t *testing.T) {
+func TestGenPromotionCap(t *testing.T) {
 	// TODO
 }
 

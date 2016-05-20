@@ -76,10 +76,6 @@ func (G *Game) ParseMove(san string) (board.Move, error) {
 
 	origin, err := G.originOfPiece(piece, color, destination, fromFile, fromRank)
 	if err != nil {
-		//fmt.Println(err)
-		//fmt.Println(G.FEN())
-		//fmt.Println(san)
-		//G.PrintHUD()
 		return board.Move(san), errors.New("could not find source square of '" + san + "'")
 	}
 

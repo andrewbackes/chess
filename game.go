@@ -14,7 +14,6 @@
 package chess
 
 import (
-	"fmt"
 	"github.com/andrewbackes/chess/board"
 	"github.com/andrewbackes/chess/piece"
 	"strings"

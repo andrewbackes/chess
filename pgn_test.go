@@ -207,10 +207,6 @@ func TestParsePGN(t *testing.T) {
 	}
 }
 
-func TestStatusStringBlackWon(t *testing.T) {
-
-}
-
 func TestStatusStringInProgress(t *testing.T) {
 	g := NewGame()
 	if g.statusString() != "*" {

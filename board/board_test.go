@@ -99,7 +99,15 @@ func TestInsufMaterial(t *testing.T) {
 }
 
 func TestKandBvKandOpB(t *testing.T) {
-
+	b := New()
+	b.Clear()
+	b.QuickPut(piece.New(piece.White, piece.Bishop), A1)
+	b.QuickPut(piece.New(piece.Black, piece.Bishop), B1)
+	b.QuickPut(piece.New(piece.White, piece.King), A8)
+	b.QuickPut(piece.New(piece.Black, piece.King), H1)
+	if b.InsufficientMaterial() != false {
+		t.Fail()
+	}
 }
 
 func TestBoardPrint(t *testing.T) {

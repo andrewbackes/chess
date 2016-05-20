@@ -125,7 +125,6 @@ func (G *Game) MakeTimedMove(m board.Move, timeTaken time.Duration) GameStatus {
 	status := G.MakeMove(m)
 	G.control[color].clock += G.control[color].Increment
 	if G.control[color].movesLeft <= 0 && G.control[color].Repeating {
-		fmt.Println(G.control[color].movesLeft, G.control[color].Repeating)
 		G.control[color].Reset()
 	}
 	return status

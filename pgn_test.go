@@ -162,3 +162,21 @@ func TestFromPGN(t *testing.T) {
 		}
 	}
 }
+
+func TestStripBracketComments(t *testing.T) {
+	moves := "1. e4 d5 { comment here } 2. d4 e5"
+	p := removeComments([]byte(moves))
+	if string(p) != "1. e4 d5 2. d4 e5" {
+		t.Fail()
+	}
+}
+
+func TestStripColonComments(t *testing.T) {
+	moves := "1. e4 d5 ; something here"
+	expected := "1. e4 d5"
+	p := removeComments([]byte(moves))
+	if string(p) != expected {
+		t.Log(string(p))
+		t.Fail()
+	}
+}

@@ -10,10 +10,6 @@ func TestParseLongCastle(t *testing.T) {
 
 }
 
-func TestParseShortCastle(t *testing.T) {
-
-}
-
 func TestParseNoPromo(t *testing.T) {
 	g := NewGame()
 	g.board.Clear()

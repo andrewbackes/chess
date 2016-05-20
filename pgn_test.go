@@ -2,6 +2,7 @@ package chess
 
 import (
 	"github.com/andrewbackes/chess/board"
+	"github.com/andrewbackes/chess/piece"
 	"strings"
 	"testing"
 )
@@ -177,6 +178,52 @@ func TestStripColonComments(t *testing.T) {
 	p := removeComments([]byte(moves))
 	if string(p) != expected {
 		t.Log(string(p))
+		t.Fail()
+	}
+}
+
+func TestParsePGN(t *testing.T) {
+	input := `[Event "one"]
+[Round "1"]
+[Result "1-0"]
+
+1. e2e4 e7e5 2. d1h5 e8e7 3. h5e5 1-0
+
+[Event "one"]
+[Round "2"]
+[Result "1-0"]
+
+1. e2e4 e7e5 2. d1h5 e8e7 3. h5e5 1-0
+
+[Event "one"]
+[Round "3"]
+[Result "1-0"]
+
+1. e2e4 e7e5 2. d1h5 e8e7 3. h5e5 1-0
+`
+	pgn, err := ParsePGN(input)
+	if err != nil || pgn.Tags["Round"] != "1" {
+		t.Fail()
+	}
+}
+
+func TestStatusStringBlackWon(t *testing.T) {
+
+}
+
+func TestStatusStringInProgress(t *testing.T) {
+	g := NewGame()
+	if g.statusString() != "*" {
+		t.Fail()
+	}
+}
+
+func TestStatusStringInDraw(t *testing.T) {
+	g := NewGame()
+	g.board.Clear()
+	g.board.QuickPut(piece.New(piece.White, piece.King), board.E1)
+	g.board.QuickPut(piece.New(piece.Black, piece.King), board.E8)
+	if g.statusString() != "1/2-1/2" {
 		t.Fail()
 	}
 }

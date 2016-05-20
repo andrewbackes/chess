@@ -98,6 +98,10 @@ func TestInsufMaterial(t *testing.T) {
 	}
 }
 
+func TestKandBvKandOpB(t *testing.T) {
+
+}
+
 func TestBoardPrint(t *testing.T) {
 	expected := `+---+---+---+---+---+---+---+---+
 | r | n | b | q | k | b | n | r |

@@ -147,3 +147,15 @@ func TestStalemate(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestTags(t *testing.T) {
+	g := NewGame()
+	g.AddTag("test", "one")
+	if g.Tag("test") != "one" {
+		t.Fail()
+	}
+	g.RemoveTag("test")
+	if len(g.tags) != 0 {
+		t.Fail()
+	}
+}

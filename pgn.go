@@ -173,9 +173,8 @@ func ParsePGN(pgn string) (*PGN, error) {
 	return games[0], nil
 }
 
-// Line by line reads a pgn file. Turns what is read into a PGNGame struct.
-// This is an improvement over LoadPGN() since it goes line by line.
-// For huge PGN files, this will work but LoadPGN() will not.
+// ReadPGN reads the passed file line by line. Each game that is read is loaded
+// into a PGN. If you want to load a PGN fron a string you can use ParsePGN(your_pgn_str)
 func ReadPGN(file io.Reader) ([]*PGN, error) {
 	var GameList []*PGN
 	// Read line by line:

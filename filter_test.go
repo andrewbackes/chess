@@ -5,7 +5,9 @@ import (
 	"testing"
 )
 
-func ExampleTagFilter() {
+// Example of tag filtering in action:
+func ExampleFilterPGNs() {
+	// Make some PGNs to filter:
 	g1 := NewPGN()
 	g1.Tags["WhiteElo"] = "3000"
 	g1.Moves = append(g1.Moves, "e2e4")
@@ -13,6 +15,7 @@ func ExampleTagFilter() {
 	g2.Tags["WhiteElo"] = "2000"
 	g2.Moves = append(g1.Moves, "d2d4")
 	pgns := []*PGN{g1, g2}
+	// Then filter:
 	filtered := FilterPGNs(pgns, NewTagFilter("WhiteElo>2000"))
 	for _, pgn := range filtered {
 		fmt.Println(pgn)
@@ -23,6 +26,7 @@ func ExampleTagFilter() {
 	//
 }
 
+// Some examples of different filters:
 func ExampleNewTagFilter() {
 	NewTagFilter("BlackElo<=2700")
 	NewTagFilter("WhiteElo<2701")

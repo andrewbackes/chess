@@ -27,6 +27,7 @@ func ExampleGame_Play(t *testing.T) {
 	// Making a move also returns the game status:
 	gamestatus := g.MakeMove(foolsmate)
 	fmt.Println(gamestatus == WhiteCheckmated)
+	// Output: true
 }
 
 func TestNewTimedGame(t *testing.T) {

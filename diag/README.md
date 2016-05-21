@@ -6,7 +6,7 @@ Diag is a go package for diagnostics of chess engines.
 It provides divide and perft functions.
 
 ##How to get it
-If you have your GOPATH set in the recommended way ([](https://golang.org/doc/code.html#GOPATH)):
+If you have your GOPATH set in the recommended way ([golang.org](https://golang.org/doc/code.html#GOPATH)):
 
 ```go get github.com/andrewbackes/chess/diag```
 

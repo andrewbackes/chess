@@ -30,11 +30,18 @@ func ExampleGame() {
 	// Output: true
 }
 
+func ExampleLegalMoves() {
+	game, _ := FromFEN("8/8/1KP5/3r4/8/8/8/k7 w - - 0 1")
+	moves := game.LegalMoves()
+	fmt.Println(moves)
+	// Output : map[b6b7:{} b6a7:{} c6c7:{} b6a6:{} b6c7:{}]
+}
+
 func TestGamePrint(t *testing.T) {
 	tc := NewTimeControl(10*time.Minute, 40, 0, true)
 	g := NewTimedGame([2]TimeControl{tc, tc})
 	got := fmt.Sprint(g)
-	expected := `+---+---+---+---+---+---+---+---+
+	expected := `   +---+---+---+---+---+---+---+---+
  8 | r | n | b | q | k | b | n | r |   Active Color:    White
    +---+---+---+---+---+---+---+---+
  7 | p | p | p | p | p | p | p | p |
@@ -59,6 +66,7 @@ func TestGamePrint(t *testing.T) {
 	if got != expected {
 		fmt.Print("'", expected, "'\n")
 		fmt.Print("'", got, "'\n")
+		t.Fail()
 	}
 }
 

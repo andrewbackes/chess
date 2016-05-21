@@ -55,6 +55,52 @@ func FoolsMate() {
 }
 ```
 
+#### Setting up a timed game
+```
+import (
+    "fmt"
+    "github.com/andrewbackes/chess"
+    "github.com/andrewbackes/chess/board"
+    "time"
+)
+
+func TimedGame() {
+    forWhite := chess.NewTimeControl(5 * time.Minute, 40, 0, true)
+    forBlack := chess.NewTimeControl(1 * time.Minute, 40, 0, true)
+    tc := [2]chess.TimeControl{forWhite, forBlack}
+    game := chess.NewTimedGame(tc)
+    game.MakeTimedMove(board.Move("e2e4"), 1*time.Minute)
+}
+```
+
+#### Play a timed game in the console
+```
+import (
+	"bufio"
+	"fmt"
+	"github.com/andrewbackes/chess"
+	"os"
+	"time"
+)
+
+func main() {
+	tc := chess.NewTimeControl(40*time.Minute, 40, 0, true)
+	game := chess.NewTimedGame([2]chess.TimeControl{tc, tc})
+	console := bufio.NewReader(os.Stdin)
+	for game.Status() == chess.InProgress {
+		fmt.Print(game, "\nMove: ")
+		start := time.Now()
+		input, _ := console.ReadString('\n')
+		if move, err := game.ParseMove(input); err == nil {
+			game.MakeTimedMove(move, time.Since(start))
+		} else {
+			fmt.Println("Couldn't understand your move.")
+		}
+	}
+}
+```
+
+
 #### Importing and filtering a PGN
 ```
 import (
@@ -65,10 +111,42 @@ import (
 
 func PrintGrandmasterGames() {
     f, _ := os.Open("myfile.pgn")
-    pgns := chess.ReadPGN(f)
-    filtered := chess.FilterPGNs(pgns, NewTagFilter("WhiteElo>2600"), NewTagFilter("BlackElo>2600"))
-	for _, pgn := range filtered {
-		fmt.Println(pgn)
+    pgn := chess.ReadPGN(f)
+    filtered := chess.FilterPGNs(pgn, NewTagFilter("WhiteElo>2600"), NewTagFilter("BlackElo>2600"))
+	for _, game := range filtered {
+		fmt.Println(game)
 	} 
+}
+```
+
+#### Working with FENs
+```
+import (
+    "fmt"
+    "github.com/andrewbackes/chess"
+)
+
+func SaavedraPosition() {
+    game, _ := chess.FromFEN("8/8/1KP5/3r4/8/8/8/k7 w - - 0 1")
+    fmt.Println(game)
+    // Output: chess board of the position.
+    fmt.Println(game.FEN())
+    // Output: the inputted FEN
+}
+```
+
+#### Legal move generation
+
+```
+import (
+    "fmt"
+    "github.com/andrewbackes/chess"
+)
+
+func SaavedraPosition() {
+    game, _ := chess.FromFEN("8/8/1KP5/3r4/8/8/8/k7 w - - 0 1")
+    moves := game.LegalMoves()
+    fmt.Println(moves)
+    // Output: map[b6b7:{} b6a7:{} c6c7:{} b6a6:{} b6c7:{}]
 }
 ```

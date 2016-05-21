@@ -14,6 +14,7 @@
 package chess
 
 import (
+	"fmt"
 	"github.com/andrewbackes/chess/board"
 	"github.com/andrewbackes/chess/piece"
 	"strings"
@@ -260,4 +261,47 @@ func (G *Game) EnPassant() *board.Square {
 func (G *Game) LegalMoves() map[board.Move]struct{} {
 	toMove := G.ActiveColor()
 	return G.board.LegalMoves(toMove, G.history.enPassant, G.history.castlingRights)
+}
+
+// String puts the Board into a pretty print-able format.
+func (G Game) String() string {
+	castles := [][]string{{"K", "Q"}, {"k", "q"}}
+	rights := ""
+	for c := piece.White; c <= piece.Black; c++ {
+		for s := board.ShortSide; s <= board.LongSide; s++ {
+			if G.history.castlingRights[c][s] {
+				rights += castles[c][s]
+			}
+		}
+	}
+	str := "   +---+---+---+---+---+---+---+---+\n"
+	for i := 63; i >= 0; i-- {
+		p := G.board.OnSquare(board.Square(i))
+		if i%8 == 7 {
+			str += fmt.Sprint(" ", (i/8)+1, " ")
+		}
+		str += "| " + fmt.Sprint(p) + " "
+		if i%8 == 0 {
+			str += "|"
+			switch i / 8 {
+			case 7:
+				str += fmt.Sprint("   Active Color:    ", []string{"White", "Black"}[G.ActiveColor()])
+			case 5:
+				str += fmt.Sprint("   En Passant:      ", G.history.enPassant)
+			case 4:
+				str += fmt.Sprint("   Castling Rights: ", rights)
+			case 3:
+				str += fmt.Sprint("   50 Move Rule:    ", G.history.fiftyMoveCount)
+			case 1:
+				str += fmt.Sprint("   White's Clock:   ", G.control[0].clock, " (", G.control[0].movesLeft, " moves)")
+			case 0:
+				str += fmt.Sprint("   Black's Clock:   ", G.control[1].clock, " (", G.control[1].movesLeft, " moves)")
+			}
+			str += "\n   +---+---+---+---+---+---+---+---+\n"
+
+		}
+	}
+	str += "     A   B   C   D   E   F   G   H\n"
+	str += fmt.Sprintln("\n\n     FEN:", G.FEN())
+	return str
 }

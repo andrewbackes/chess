@@ -30,6 +30,38 @@ func ExampleGame() {
 	// Output: true
 }
 
+func TestGamePrint(t *testing.T) {
+	tc := NewTimeControl(10*time.Minute, 40, 0, true)
+	g := NewTimedGame([2]TimeControl{tc, tc})
+	got := fmt.Sprint(g)
+	expected := `+---+---+---+---+---+---+---+---+
+ 8 | r | n | b | q | k | b | n | r |   Active Color:    White
+   +---+---+---+---+---+---+---+---+
+ 7 | p | p | p | p | p | p | p | p |
+   +---+---+---+---+---+---+---+---+
+ 6 |   |   |   |   |   |   |   |   |   En Passant:      <nil>
+   +---+---+---+---+---+---+---+---+
+ 5 |   |   |   |   |   |   |   |   |   Castling Rights: KQkq
+   +---+---+---+---+---+---+---+---+
+ 4 |   |   |   |   |   |   |   |   |   50 Move Rule:    0
+   +---+---+---+---+---+---+---+---+
+ 3 |   |   |   |   |   |   |   |   |
+   +---+---+---+---+---+---+---+---+
+ 2 | P | P | P | P | P | P | P | P |   White's Clock:   10m0s (40 moves)
+   +---+---+---+---+---+---+---+---+
+ 1 | R | N | B | Q | K | B | N | R |   Black's Clock:   10m0s (40 moves)
+   +---+---+---+---+---+---+---+---+
+     A   B   C   D   E   F   G   H
+
+
+     FEN: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+`
+	if got != expected {
+		fmt.Print("'", expected, "'\n")
+		fmt.Print("'", got, "'\n")
+	}
+}
+
 func TestNewTimedGame(t *testing.T) {
 	standard := TimeControl{
 		Time:  40 * time.Minute,

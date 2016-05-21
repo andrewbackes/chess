@@ -9,6 +9,26 @@ import (
 	"time"
 )
 
+// This is an example of how you might play a game.
+func ExampleGame_Play(t *testing.T) {
+	// Create a new game:
+	g := NewGame()
+	// Moves can be created based on source and destination squares:
+	f3 := board.NewMove(board.F2, board.F3)
+	g.MakeMove(f3)
+	// They can also be created by parsing algebraic notation:
+	e5, _ := g.ParseMove("e5")
+	g.MakeMove(e5)
+	// Or by using piece coordinate notation:
+	g4 := board.Move("g2g4")
+	g.MakeMove(g4)
+	// Another example of SAN:
+	foolsmate, _ := g.ParseMove("Qh4#")
+	// Making a move also returns the game status:
+	gamestatus := g.MakeMove(foolsmate)
+	fmt.Println(gamestatus == WhiteCheckmated)
+}
+
 func TestNewTimedGame(t *testing.T) {
 	standard := TimeControl{
 		Time:  40 * time.Minute,

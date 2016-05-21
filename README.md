@@ -17,7 +17,7 @@ This package provides tools for working with chess games. You can:
 For details you can visit the [godoc](https://godoc.org/github.com/andrewbackes/chess)
 
 ## How to get it
-If you have your GOPATH set in the recommended way ([golang.org](https://golang.org/doc/code.html#GOPATH)):
+If you have your GOPATH set in the recommended way ([golang.org](https://golang.org/doc/code.html#GOPATH)) then you can use `go get`:
 
 ```go get github.com/andrewbackes/chess```
 
@@ -25,7 +25,7 @@ otherwise you can clone the repo.
 
 ## Examples
 
-#### Playing a game
+#### Making Moves
 ```
 import (
     "fmt"

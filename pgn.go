@@ -16,11 +16,6 @@ type PGN struct {
 	Moves []string
 }
 
-// Tag returns a tag for the pgn.
-func (p *PGN) Tag(name string) string {
-	return p.Tags[name]
-}
-
 func (p PGN) String() string {
 	s := ""
 	ordering := []string{"Event", "Site", "Date", "Round", "White", "Black", "Result"}
@@ -72,7 +67,7 @@ func EmptyTags() map[string]string {
 // or use ReadPGN() to load it from a file.
 func FromPGN(pgn *PGN) (*Game, error) {
 	g := NewGame()
-	g.tags = pgn.Tags
+	g.Tags = pgn.Tags
 	for _, san := range pgn.Moves {
 		move, err := g.ParseMove(san)
 		if err != nil {
@@ -106,12 +101,12 @@ func (G *Game) PGN() string {
 // tagsString formats the game tags the way PGN does.
 func (G *Game) tagsString(status string) string {
 	tags := [][]string{
-		{"Event", G.tags["Event"]},
-		{"Site", G.tags["Site"]},
-		{"Date", G.tags["Date"]},
-		{"Round", G.tags["Round"]},
-		{"White", G.tags["White"]},
-		{"Black", G.tags["Black"]},
+		{"Event", G.Tags["Event"]},
+		{"Site", G.Tags["Site"]},
+		{"Date", G.Tags["Date"]},
+		{"Round", G.Tags["Round"]},
+		{"White", G.Tags["White"]},
+		{"Black", G.Tags["Black"]},
 		{"Result", status},
 		/*
 			{"WhiteElo", "-"},

@@ -23,7 +23,7 @@ import (
 
 // Game represents a chess game.
 type Game struct {
-	tags    map[string]string
+	Tags    map[string]string
 	control [2]TimeControl
 	board   board.Board
 	history gameHistory
@@ -44,7 +44,7 @@ type gameHistory struct {
 func NewGame() *Game {
 	return &Game{
 		control: [2]TimeControl{},
-		tags:    make(map[string]string),
+		Tags:    make(map[string]string),
 		board:   board.New(),
 		history: gameHistory{
 			fen:            make([]string, 0),
@@ -62,22 +62,6 @@ func NewTimedGame(control [2]TimeControl) *Game {
 	g.control[piece.White].Reset()
 	g.control[piece.Black].Reset()
 	return g
-}
-
-// AddTag adds the specified tag to the game. Tags are meant to hold useful
-// metadata about the game. Some useful tags include: Event, Date, Site, Round, etc.
-func (G *Game) AddTag(tag, value string) {
-	G.tags[tag] = value
-}
-
-// Tag returns the value of the specified tag.
-func (G *Game) Tag(tag string) string {
-	return G.tags[tag]
-}
-
-// RemoveTag deletes the specified game tag.
-func (G *Game) RemoveTag(tag string) {
-	delete(G.tags, tag)
 }
 
 // Board returns the Board object used for the game.

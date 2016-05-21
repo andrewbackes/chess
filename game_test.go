@@ -10,7 +10,7 @@ import (
 )
 
 // This is an example of how you might play a game.
-func ExampleGame_Play() {
+func ExampleGame() {
 	// Create a new game:
 	g := NewGame()
 	// Moves can be created based on source and destination squares:

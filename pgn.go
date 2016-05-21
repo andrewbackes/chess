@@ -21,6 +21,39 @@ func (p *PGN) Tag(name string) string {
 	return p.Tags[name]
 }
 
+func (p PGN) String() string {
+	s := ""
+	ordering := []string{"Event", "Site", "Date", "Round", "White", "Black", "Result"}
+	for _, t := range ordering {
+		if v, ok := p.Tags[t]; ok {
+			s += fmt.Sprint("[", t, " ", "\"", v, "\"]\n")
+		}
+	}
+	alreadyPrinted := func(t string) bool {
+		for _, v := range ordering {
+			if v == t {
+				return true
+			}
+		}
+		return false
+	}
+	for t, v := range p.Tags {
+		if !alreadyPrinted(t) {
+			s += fmt.Sprint("[", t, " ", "\"", v, "\"]\n")
+		}
+	}
+	s += fmt.Sprintln()
+	for i, m := range p.Moves {
+		if i%2 == 0 {
+			s += fmt.Sprint((i/2)+1, ". ")
+		}
+		s += fmt.Sprint(m, " ")
+	}
+	s += fmt.Sprintln(p.Tags["Result"])
+	s += fmt.Sprintln()
+	return s
+}
+
 /*
 func EmptyTags() map[string]string {
 	tags := make(map[string]string)
@@ -35,9 +68,8 @@ func EmptyTags() map[string]string {
 }
 */
 
-// FromPGN returns a Game from a PGN string. The string should only contain one
-// game, not a series of games. If you need to load a series of PGN games from a
-// file use OpenPGN(filename) instead.
+// FromPGN returns a Game from a PGN struct. To load a PGN string ParsePGN()
+// or use ReadPGN() to load it from a file.
 func FromPGN(pgn *PGN) (*Game, error) {
 	g := NewGame()
 	g.tags = pgn.Tags

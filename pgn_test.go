@@ -1,11 +1,34 @@
 package chess
 
 import (
+	"fmt"
 	"github.com/andrewbackes/chess/board"
 	"github.com/andrewbackes/chess/piece"
 	"strings"
 	"testing"
 )
+
+func TestPGNString(t *testing.T) {
+	str := `[Event ""]
+[Site ""]
+[Date ""]
+[Round ""]
+[White ""]
+[Black ""]
+[Result "1-0"]
+[FEN "rnbq1bnr/ppppkppp/8/4p2Q/4P3/8/PPPP1PPP/RNB1KBNR w KQ - 1 1"]
+
+1. h5e5 1-0
+
+`
+	pgn, _ := ParsePGN(str)
+	if fmt.Sprint(pgn) != str {
+		fmt.Print("'", pgn, "'")
+		fmt.Println()
+		fmt.Print("'", str, "'")
+		t.Fail()
+	}
+}
 
 func TestPGNnullmoves(t *testing.T) {
 	expected := `[Event ""]

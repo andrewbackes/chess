@@ -9,5 +9,5 @@ is quick.
 
 ##How to get it
 If you have your GOPATH set in the recommended way ([](https://golang.org/doc/code.html#GOPATH)):
-`go get github.com/andrewbackes/chess/board`
+```go get github.com/andrewbackes/chess/board```
 otherwise you can clone the repo.

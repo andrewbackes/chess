@@ -16,17 +16,24 @@ This package provides tools for working with chess games. You can:
 
 For details you can visit the [godoc](https://godoc.org/github.com/andrewbackes/chess)
 
+## How to get it
+If you have your GOPATH set in the recommended way ([golang.org](https://golang.org/doc/code.html#GOPATH)):
+
+```go get github.com/andrewbackes/chess```
+
+otherwise you can clone the repo.
+
 ## Examples
 
 #### Playing a game
 ```
 import (
+    "fmt"
     "github.com/andrewbackes/chess"
 	"github.com/andrewbackes/chess/board"
 	"github.com/andrewbackes/chess/piece"
 )
 
-// This is an example of how you might play a game.
 func FoolsMate() {
 	// Create a new game:
 	g := chess.NewGame()
@@ -43,15 +50,25 @@ func FoolsMate() {
 	foolsmate, _ := g.ParseMove("Qh4#")
 	// Making a move also returns the game status:
 	gamestatus := g.MakeMove(foolsmate)
-	fmt.Println(gamestatus == WhiteCheckmated)
+	fmt.Println(gamestatus == chess.WhiteCheckmated)
 	// Output: true
 }
 ```
 
+#### Importing and filtering a PGN
+```
+import (
+    "fmt"
+    "github.com/andrewbackes/chess"
+    "os"
+)
 
-## How to get it
-If you have your GOPATH set in the recommended way ([golang.org](https://golang.org/doc/code.html#GOPATH)):
-
-```go get github.com/andrewbackes/chess```
-
-otherwise you can clone the repo.
+func PrintGrandmasterGames() {
+    f, _ := os.Open("myfile.pgn")
+    pgns := chess.ReadPGN(f)
+    filtered := chess.FilterPGNs(pgns, NewTagFilter("WhiteElo>2600"), NewTagFilter("BlackElo>2600"))
+	for _, pgn := range filtered {
+		fmt.Println(pgn)
+	} 
+}
+```

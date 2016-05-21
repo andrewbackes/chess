@@ -17,12 +17,6 @@ type TagFilter struct {
 }
 
 // NewTagFilter makes a new TagFilter from a string.
-//
-// Examples:
-//      NewTagFilter("BlackElo<=2700")
-//      NewTagFilter("WhiteElo<2701")
-//      NewTagFilter("Black==Stockfish")
-//      NewTagFilter("White!=Crafty")
 func NewTagFilter(filter string) TagFilter {
 	operators := []string{">=", "<=", "!=", "==", "=", ">", "<"}
 	for _, op := range operators {

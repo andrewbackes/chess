@@ -1,6 +1,6 @@
 [![GoDoc](https://godoc.org/github.com/andrewbackes/chess/diag?status.svg)](https://godoc.org/github.com/andrewbackes/chess/diag)
 
-#diag
+#Diag
 
 Diag is a go package for diagnostics of chess engines.
 It provides divide and perft functions.

@@ -1,6 +1,6 @@
 [![GoDoc](https://godoc.org/github.com/andrewbackes/chess/piece?status.svg)](https://godoc.org/github.com/andrewbackes/chess/piece)
 
-#piece
+#Piece
 
 Piece is a go package that provides chess pieces and tools to work with them.
 

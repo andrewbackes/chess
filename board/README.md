@@ -1,6 +1,6 @@
 [![GoDoc](https://godoc.org/github.com/andrewbackes/chess/board?status.svg)](https://godoc.org/github.com/andrewbackes/chess/board)
 
-#board
+#Board
 
 Board is a go package that provides a chess board representation.
 With this package you can work with chess boards, squares and moves.

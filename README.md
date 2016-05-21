@@ -12,6 +12,7 @@ This package provides tools for working with chess games. You can:
 - Load FENs
 - Generate legal moves from any position.
 - and more
+
 For details you can visit the [godoc](https://godoc.org/github.com/andrewbackes/chess)
 
 ##How to get it

@@ -8,10 +8,10 @@ This package provides tools for working with chess games. You can:
 - Play games
 - Play timed games
 - Detect checks, checkmates, and draws (stalemate, threefold, 50 move rule, insufficient material)
-- Open PGN files or strings and filter them
+- Open, save and filter PGN files or strings
 - Open EPD files or strings
-- Load FENs
-- Generate legal moves from any position.
+- Open and save FENs
+- Generate legal moves from any position
 - and more
 
 For details you can visit the [godoc](https://godoc.org/github.com/andrewbackes/chess)

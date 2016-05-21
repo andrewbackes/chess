@@ -112,9 +112,6 @@ func (G *Game) QuickMove(m board.Move) {
 // of the move to the player's clock. If the player goes over time, then
 // the TimedOut game status is returned. In that case, the move is not
 // added to the game history.
-//
-// TODO(andrewbackes): add bonus time
-// TODO(andrewbackes): reset clock if move limit reached
 func (G *Game) MakeTimedMove(m board.Move, timeTaken time.Duration) GameStatus {
 	color := G.ActiveColor()
 	G.control[color].clock -= timeTaken

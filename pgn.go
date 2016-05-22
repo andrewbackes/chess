@@ -6,14 +6,14 @@ import (
 	"fmt"
 	"github.com/andrewbackes/chess/board"
 	"io"
-	"strconv"
 	"strings"
 )
 
 // PGN represents a game in Portable Game Notation.
 type PGN struct {
-	Tags  map[string]string
-	Moves []string
+	Tags         map[string]string
+	Moves        []string
+	FirstMoveNum int
 }
 
 func (p PGN) String() string {
@@ -40,7 +40,7 @@ func (p PGN) String() string {
 	s += fmt.Sprintln()
 	for i, m := range p.Moves {
 		if i%2 == 0 {
-			s += fmt.Sprint((i/2)+1, ". ")
+			s += fmt.Sprint(p.FirstMoveNum+(i/2), ". ")
 		}
 		s += fmt.Sprint(m, " ")
 	}
@@ -49,19 +49,23 @@ func (p PGN) String() string {
 	return s
 }
 
-/*
-func EmptyTags() map[string]string {
-	tags := make(map[string]string)
-	tags["Event"] = ""
-	tags["Site"] = ""
-	tags["Date"] = ""
-	tags["Round"] = ""
-	tags["White"] = ""
-	tags["Black"] = ""
-	tags["Result"] = ""
-	return tags
+// MarshalText allows PGN to implement the TextMarshaler interface.
+func (p *PGN) MarshalText() (text []byte, err error) {
+	text = []byte(p.String())
+	err = nil
+	return
 }
-*/
+
+// UnmarshalText allows PGN to implement the TextUnmarshaler interface.
+func (p *PGN) UnmarshalText(text []byte) error {
+	pgn, err := ParsePGN(string(text))
+	if err != nil {
+		return err
+	}
+	p.Tags = pgn.Tags
+	p.Moves = pgn.Moves
+	return nil
+}
 
 // FromPGN returns a Game from a PGN struct. To load a PGN string ParsePGN()
 // or use ReadPGN() to load it from a file.
@@ -81,49 +85,40 @@ func FromPGN(pgn *PGN) (*Game, error) {
 // NewPGN returns a new blank PGN game.
 func NewPGN() *PGN {
 	return &PGN{
-		Tags: make(map[string]string),
+		Tags:         make(map[string]string),
+		FirstMoveNum: 1,
 	}
 }
 
 // PGN returns the PGN of the game.
-func (G *Game) PGN() string {
-	var pgn string
-	status := G.statusString()
-	pgn += G.tagsString(status)
-	pgn += fmt.Sprintln("")
-	pgn += G.enumerateMoves()
-	pgn += status
-	pgn += fmt.Sprintln("")
-	pgn += fmt.Sprintln("")
+// If you want to see it as a string then you can use:
+// 		G.PGN().String()
+// or:
+//		G.PGN().UnmarshalText()
+func (G *Game) PGN() *PGN {
+	pgn := NewPGN()
+	G.appendTags()
+	pgn.Tags = G.Tags
+	firstRealMove := 0
+	for i, move := range G.MoveHistory() {
+		if move != board.NullMove {
+			firstRealMove = i
+			break
+		}
+	}
+	pgn.FirstMoveNum = firstRealMove/2 + 1
+	for i := firstRealMove; i < len(G.history.move); i++ {
+		pgn.Moves = append(pgn.Moves, string(G.history.move[i]))
+	}
 	return pgn
 }
 
-// tagsString formats the game tags the way PGN does.
-func (G *Game) tagsString(status string) string {
-	tags := [][]string{
-		{"Event", G.Tags["Event"]},
-		{"Site", G.Tags["Site"]},
-		{"Date", G.Tags["Date"]},
-		{"Round", G.Tags["Round"]},
-		{"White", G.Tags["White"]},
-		{"Black", G.Tags["Black"]},
-		{"Result", status},
-		/*
-			{"WhiteElo", "-"},
-			{"BlackElo", "-"},
-			{"Time", "-"},
-			{"TimeControl", "-"},
-		*/
-	}
+func (G *Game) appendTags() {
 	if G.history.startingFen != "" {
-		tags = append(tags, []string{"Setup", "1"})
-		tags = append(tags, []string{"FEN", G.history.startingFen})
+		G.Tags["Setup"] = "1"
+		G.Tags["FEN"] = G.history.startingFen
 	}
-	var s string
-	for _, t := range tags {
-		s += fmt.Sprintln("[" + t[0] + " \"" + t[1] + "\"]")
-	}
-	return s
+	G.Tags["Result"] = G.statusString()
 }
 
 func (G *Game) statusString() string {
@@ -137,21 +132,6 @@ func (G *Game) statusString() string {
 		return "1/2-1/2"
 	}
 	return "*"
-}
-
-func (G *Game) enumerateMoves() string {
-	moves := ""
-	for j, move := range G.history.move {
-		if move == board.NullMove {
-			// dont print book moves, since the FEN tag would mess it up.
-			continue
-		}
-		if j%2 == 0 {
-			moves += strconv.Itoa((j/2)+1) + ". "
-		}
-		moves += string(move) + " "
-	}
-	return moves
 }
 
 // ParsePGN reads a string containing a single PGN and returns a PGN object.

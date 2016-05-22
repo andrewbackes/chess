@@ -31,13 +31,7 @@ func TestPGNString(t *testing.T) {
 }
 
 func TestPGNnullmoves(t *testing.T) {
-	expected := `[Event ""]
-[Site ""]
-[Date ""]
-[Round ""]
-[White ""]
-[Black ""]
-[Result "1-0"]
+	expected := `[Result "1-0"]
 [Setup "1"]
 [FEN "rnbq1bnr/ppppkppp/8/4p2Q/4P3/8/PPPP1PPP/RNB1KBNR w KQ - 1 3"]
 
@@ -50,20 +44,14 @@ func TestPGNnullmoves(t *testing.T) {
 		t.Error("couldnt parse move")
 	}
 	g.MakeMove(m)
-	if g.PGN() != expected {
+	if g.PGN().String() != expected {
 		t.Log(g.PGN())
 		t.Fail()
 	}
 }
 
 func TestPGNoutput(t *testing.T) {
-	expected := `[Event ""]
-[Site ""]
-[Date ""]
-[Round ""]
-[White ""]
-[Black ""]
-[Result "1-0"]
+	expected := `[Result "1-0"]
 
 1. e2e4 e7e5 2. d1h5 e8e7 3. h5e5 1-0
 
@@ -77,7 +65,9 @@ func TestPGNoutput(t *testing.T) {
 		}
 		g.MakeMove(m)
 	}
-	if g.PGN() != expected {
+	if g.PGN().String() != expected {
+		fmt.Print("expected:\n'", expected, "'")
+		fmt.Print("got:\n'", g.PGN().String(), "'")
 		t.Fail()
 	}
 }

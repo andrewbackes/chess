@@ -91,7 +91,7 @@ func TestInsufMaterial(t *testing.T) {
 		"8/8/4k3/8/6N1/3K4/8/8 w - - 0 1",
 	}
 	for _, fen := range fens {
-		b, _ := GameGameFromFEN(fen)
+		b, _ := FromFEN(fen)
 		if b.InsufficientMaterial() != true {
 			t.Fail()
 		}

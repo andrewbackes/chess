@@ -69,7 +69,7 @@ func GameFromFEN(fen string) (*Game, error) {
 	if words[1] != "w" && words[1] != "b" {
 		return nil, errors.New("FEN: can not determine active player")
 	}
-	b, err := board.GameFromFEN(words[0])
+	b, err := board.FromFEN(words[0])
 	if err != nil {
 		return nil, err
 	}

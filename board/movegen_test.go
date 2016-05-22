@@ -18,7 +18,7 @@ func TestRootMoves(t *testing.T) {
 func TestCheck(t *testing.T) {
 	whiteChecked := []string{"rnb1kbnr/pppp1ppp/8/4p3/4P1q1/2N5/PPPPKPPP/R1BQ1BNR w kq - 4 4"}
 	for _, check := range whiteChecked {
-		b, _ := FromFEN(check)
+		b, _ := GameFromFEN(check)
 		if !b.Check(piece.White) {
 			t.Fail()
 		}

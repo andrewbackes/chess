@@ -45,7 +45,7 @@ func TestPerftSuite(t *testing.T) {
 /*
 func TestPerftSuitePos(t *testing.T) {
 	edp, _ := ParseEPD("4k3/8/8/8/8/8/8/4K2R b K - 0 1 ;D1 5 ;D2 75 ;D3 459 ;D4 8290 ;D5 47635 ;D6 899442")
-	g, _ := FromEPD(*edp)
+	g, _ := GameFromEPD(*edp)
 	fmt.Println(edp)
 	fmt.Println(g.ActiveColor())
 	fmt.Println(g.LegalMoves())
@@ -129,7 +129,7 @@ func perftSuite(filename string, maxdepth int, failFast bool) error {
 }
 
 func checkPerft(fen string, depth int, nodes uint64) error {
-	G, err := FromFEN(fen)
+	G, err := GameFromFEN(fen)
 	//fmt.Println(G.board)
 	if err != nil {
 		return err

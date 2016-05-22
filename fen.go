@@ -59,8 +59,8 @@ func (G *Game) FEN() string {
 	return fen
 }
 
-// FromFEN creates a game from the provided FEN.
-func FromFEN(fen string) (*Game, error) {
+// GameFromFEN creates a game from the provided FEN.
+func GameFromFEN(fen string) (*Game, error) {
 	G := NewGame()
 	words := strings.Split(fen, " ")
 	if len(words) < 4 {
@@ -69,7 +69,7 @@ func FromFEN(fen string) (*Game, error) {
 	if words[1] != "w" && words[1] != "b" {
 		return nil, errors.New("FEN: can not determine active player")
 	}
-	b, err := board.FromFEN(words[0])
+	b, err := board.GameFromFEN(words[0])
 	if err != nil {
 		return nil, err
 	}

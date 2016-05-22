@@ -38,7 +38,7 @@ func TestPGNnullmoves(t *testing.T) {
 3. h5e5 1-0
 
 `
-	g, _ := FromFEN("rnbq1bnr/ppppkppp/8/4p2Q/4P3/8/PPPP1PPP/RNB1KBNR w KQ - 1 3")
+	g, _ := GameFromFEN("rnbq1bnr/ppppkppp/8/4p2Q/4P3/8/PPPP1PPP/RNB1KBNR w KQ - 1 3")
 	m, err := g.ParseMove("Qxe5#")
 	if err != nil {
 		t.Error("couldnt parse move")
@@ -164,7 +164,7 @@ func TestFromPGN(t *testing.T) {
 	pgn := NewPGN()
 	pgn.Tags["Event"] = "test"
 	pgn.Moves = []string{"e2e4", "e7e5", "d1h5", "e8e7", "h5e5"}
-	game, err := FromPGN(pgn)
+	game, err := GameFromPGN(pgn)
 	if err != nil {
 		t.Error(err)
 	}

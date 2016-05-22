@@ -31,7 +31,7 @@ func ExampleGame() {
 }
 
 func ExampleLegalMoves() {
-	game, _ := FromFEN("8/8/1KP5/3r4/8/8/8/k7 w - - 0 1")
+	game, _ := GameFromFEN("8/8/1KP5/3r4/8/8/8/k7 w - - 0 1")
 	moves := game.LegalMoves()
 	fmt.Println(moves)
 	// Output : map[b6b7:{} b6a7:{} c6c7:{} b6a6:{} b6c7:{}]
@@ -104,7 +104,7 @@ func TestIllegalCheck(t *testing.T) {
 }
 
 func TestIllegalCastle(t *testing.T) {
-	g, err := FromFEN("4k3/8/8/8/6r1/8/8/R3K2R w KQ - 0 1")
+	g, err := GameFromFEN("4k3/8/8/8/6r1/8/8/R3K2R w KQ - 0 1")
 	s := g.MakeMove(board.Move("e1g1"))
 	if err != nil || s != WhiteIllegalMove {
 		t.Fail()
@@ -169,7 +169,7 @@ func TestTimeReset(t *testing.T) {
 
 func TestFiftyMoveRule(t *testing.T) {
 	fen := "8/8/2B2k2/8/3r1NKp/3N4/8/8 b - - 0 62"
-	g, _ := FromFEN(fen)
+	g, _ := GameFromFEN(fen)
 	moves := []string{"Rd8", "Kxh4", "Rg8", "Be4", "Rg1", "Nh5+", "Ke6", "Ng3", "Kf6", "Kg4", "Ra1", "Bd5", "Ra5", "Bf3", "Ra1", "Kf4", "Ke6", "Nc5+", "Kd6", "Nge4+", "Ke7", "Ke5", "Rf1", "Bg4", "Rg1", "Be6", "Re1", "Bc8", "Rc1", "Kd4", "Rd1", "Nd3", "Kf7", "Ke3", "Ra1", "Kf4", "Ke7", "Nb4", "Rc1", "Nd5+", "Kf7", "Bd7", "Rf1", "Ke5", "Ra1", "Ng5+", "Kg6", "Nf3", "Kg7", "Bg4", "Kg6", "Nf4+", "Kg7", "Nd4", "Re1", "Kf5", "Rc1", "Be2", "Re1", "Bh5", "Ra1", "Nfe6+", "Kh6", "Be8", "Ra8", "Bc6", "Ra1", "Kf6", "Kh7", "Ng5+", "Kh8", "Nde6", "Ra6", "Be8", "Ra8", "Bh5", "Ra1", "Bg6", "Rf1", "Ke7", "Ra1", "Nf7+", "Kg8", "Nh6+", "Kh8", "Nf5", "Ra7", "Kf6", "Ra1", "Ne3", "Re1", "Nd5", "Rg1", "Bf5", "Rf1", "Ndf4", "Ra1", "Ng6+", "Kg8", "Ne7+", "Kh8", "Ng6+"}
 	err := playTestGame(t, g, moves, FiftyMoveRule)
 	if err != nil {
@@ -179,7 +179,7 @@ func TestFiftyMoveRule(t *testing.T) {
 
 func TestEnPassantMove(t *testing.T) {
 	fen := "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"
-	g, _ := FromFEN(fen)
+	g, _ := GameFromFEN(fen)
 	g.QuickMove(board.Move("e2c4"))
 	g.QuickMove(board.Move("c7c5"))
 	moves := g.LegalMoves()
@@ -203,7 +203,7 @@ func TestThreeFold(t *testing.T) {
 
 func TestStalemate(t *testing.T) {
 	fen := "K7/8/k7/1r6/8/8/8/8 w - - 0 1"
-	g, _ := FromFEN(fen)
+	g, _ := GameFromFEN(fen)
 	if g.Status() != Stalemate {
 		t.Fail()
 	}

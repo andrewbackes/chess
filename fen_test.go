@@ -9,7 +9,7 @@ import (
 
 func TestLoadRootPos(t *testing.T) {
 	root := "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-	_, err := FromFEN(root)
+	_, err := GameFromFEN(root)
 	if err != nil {
 		t.Fail()
 	}
@@ -26,7 +26,7 @@ func TestFENEncodeDecode(t *testing.T) {
 	}
 	for _, fen := range fens {
 		t.Log("In:  ", fen)
-		g, err := FromFEN(fen)
+		g, err := GameFromFEN(fen)
 		out := g.FEN()
 		t.Log("Out: ", out)
 		if err != nil || fen != out {
@@ -38,7 +38,7 @@ func TestFENEncodeDecode(t *testing.T) {
 
 func TestFENenPassant(t *testing.T) {
 	fen := "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2"
-	g, _ := FromFEN(fen)
+	g, _ := GameFromFEN(fen)
 	if *g.history.enPassant != board.C6 {
 		t.Fail()
 	}
@@ -46,7 +46,7 @@ func TestFENenPassant(t *testing.T) {
 
 func TestFENCastlingRights(t *testing.T) {
 	fen := "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2"
-	g, _ := FromFEN(fen)
+	g, _ := GameFromFEN(fen)
 	if !g.history.castlingRights[piece.White][board.ShortSide] || !g.history.castlingRights[piece.Black][board.ShortSide] ||
 		!g.history.castlingRights[piece.White][board.LongSide] || !g.history.castlingRights[piece.Black][board.LongSide] {
 		t.Fail()

@@ -74,9 +74,9 @@ func ParseEPD(epd string) (*EPD, error) {
 	return &EPD{Position: posStr, Operations: opers}, nil
 }
 
-// FromEPD returns a game based on the position in the EPD provided.
-func FromEPD(epd EPD) (*Game, error) {
-	g, err := FromFEN(epd.Position)
+// GameFromEPD returns a game based on the position in the EPD provided.
+func GameFromEPD(epd EPD) (*Game, error) {
+	g, err := GameFromFEN(epd.Position)
 	return g, err
 }
 

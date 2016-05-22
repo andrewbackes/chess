@@ -127,7 +127,7 @@ import (
 )
 
 func SaavedraPosition() {
-    game, _ := chess.FromFEN("8/8/1KP5/3r4/8/8/8/k7 w - - 0 1")
+    game, _ := chess.GameFromFEN("8/8/1KP5/3r4/8/8/8/k7 w - - 0 1")
     fmt.Println(game)
     // Output: chess board of the position.
     fmt.Println(game.FEN())
@@ -144,7 +144,7 @@ import (
 )
 
 func SaavedraPosition() {
-    game, _ := chess.FromFEN("8/8/1KP5/3r4/8/8/8/k7 w - - 0 1")
+    game, _ := chess.GameFromFEN("8/8/1KP5/3r4/8/8/8/k7 w - - 0 1")
     moves := game.LegalMoves()
     fmt.Println(moves)
     // Output: map[b6b7:{} b6a7:{} c6c7:{} b6a6:{} b6c7:{}]

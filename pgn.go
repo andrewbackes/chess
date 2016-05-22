@@ -67,9 +67,9 @@ func (p *PGN) UnmarshalText(text []byte) error {
 	return nil
 }
 
-// FromPGN returns a Game from a PGN struct. To load a PGN string ParsePGN()
+// GameFromPGN returns a Game from a PGN struct. To load a PGN string ParsePGN()
 // or use ReadPGN() to load it from a file.
-func FromPGN(pgn *PGN) (*Game, error) {
+func GameFromPGN(pgn *PGN) (*Game, error) {
 	g := NewGame()
 	g.Tags = pgn.Tags
 	for _, san := range pgn.Moves {

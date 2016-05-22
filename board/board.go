@@ -170,8 +170,8 @@ func (b *Board) MakeMove(m Move) {
 
 }
 
-// FromFEN parses the board passed via FEN and returns a board object.
-func FromFEN(position string) (*Board, error) {
+// GameFromFEN parses the board passed via FEN and returns a board object.
+func GameFromFEN(position string) (*Board, error) {
 	b := New()
 	b.Clear()
 	// remove the /'s and replace the numbers with that many spaces

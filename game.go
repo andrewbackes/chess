@@ -1,16 +1,3 @@
-/*******************************************************************************
-
- TODO:
- 	-Test the fen save/load by loading a file full of FEN and make sure the
- 	same fen comes out after loading.
- 	-check state before each modifying function and functions that print to
- 	the screen
- 	-double check 3 fold and 50 move rules.
- 	-optimize 3 fold.
- 	-some of the Game data members can be omitted from json.
-
-*******************************************************************************/
-
 package chess
 
 import (

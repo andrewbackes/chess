@@ -6,15 +6,24 @@ import (
 	"errors"
 	"github.com/andrewbackes/chess"
 	"github.com/andrewbackes/chess/board"
-	"io"
 	"os/exec"
 	"path/filepath"
 )
 
 // Engine is an interface for using different types of engines (UCI or WinBoard)
 type Engine interface {
-	Start()
+
+	// Shutdown stops the engine's executable.
+	Close() error
+
+	// NewGame signals to the engine that the next search will be on a new game.
+	NewGame() error
+
+	// Search finds the best move for the game.
 	Search(*chess.Game) (*SearchInfo, error)
+
+	// Stop tells the engine to stop doing what ever its doing.
+	Stop() error
 }
 
 // SearchInfo holds the data that the engine returned during a search.
@@ -23,8 +32,8 @@ type SearchInfo struct {
 	Pv       string
 }
 
-// Exec executes the engine executable and wires up the input and output as Readers and Writers
-func Exec(enginePath string) (io.Writer, io.Reader, error) {
+// Exec executes the engine executable and wires up the input and output as Readers and Writers.
+func Exec(enginePath string) (*bufio.Reader, *bufio.Writer, error) {
 	fullpath, _ := filepath.Abs(enginePath)
 	cmd := exec.Command(fullpath)
 	cmd.Dir, _ = filepath.Abs(filepath.Dir(enginePath))
@@ -32,43 +41,17 @@ func Exec(enginePath string) (io.Writer, io.Reader, error) {
 	// Setup the pipes to communicate with the engine:
 	StdinPipe, errIn := cmd.StdinPipe()
 	if errIn != nil {
-		E.LogError("Initializing Engine:" + errIn.Error())
-		return nil, nil, errors.New("Error Initializing Engine: can not establish inward pipe.")
+		return nil, nil, errors.New("can not establish inward pipe")
 	}
 	StdoutPipe, errOut := cmd.StdoutPipe()
 	if errOut != nil {
-		E.LogError("Initializing Engine:" + errOut.Error())
-		return nil, nilerrors.New("Error Initializing Engine: can not establish outward pipe.")
+		return nil, nil, errors.New("can not establish outward pipe")
 	}
-	E.writer, E.reader = bufio.NewWriter(StdinPipe), bufio.NewReader(StdoutPipe)
+	r, w := bufio.NewReader(StdoutPipe), bufio.NewWriter(StdinPipe)
 
-	// Start the engine:
-	started := make(chan struct{})
-	errChan := make(chan error)
-	go func() {
-		// Question: Does this force the engine to run in its own thread?
-		if err := cmd.Start(); err != nil {
-			errChan <- err
-			return
-			//return errors.New("Error executing " + E.Path + " - " + err.Error())
-		}
-		close(started)
-	}()
-	select {
-	case <-started:
-	case e := <-errChan:
-		return errors.New("Error starting engine:" + e.Error())
+	if err := cmd.Start(); err != nil {
+		return nil, nil, errors.New("couldnt execute " + enginePath + " - " + err.Error())
 	}
-
-	// Get the engine ready:
-	if err := E.Initialize(); err != nil {
-		E.LogError("Initializing Engine: " + err.Error())
-		//E.Shutdown()
-		//cmd.Process.Kill()
-		//return err
-	}
-
-	//E.NewGame()
 
 	// Setup up for when the engine exits:
 	go func() {
@@ -76,5 +59,5 @@ func Exec(enginePath string) (io.Writer, io.Reader, error) {
 		//TODO: add some confirmation that the engine has terminated correctly.
 	}()
 
-	return nil
+	return r, w, nil
 }

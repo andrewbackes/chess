@@ -5,7 +5,6 @@ import (
 	"bufio"
 	"errors"
 	"github.com/andrewbackes/chess"
-	"github.com/andrewbackes/chess/board"
 	"os/exec"
 	"path/filepath"
 )
@@ -20,16 +19,18 @@ type Engine interface {
 	NewGame() error
 
 	// Search finds the best move for the game.
-	Search(*chess.Game) (*SearchInfo, error)
+	BestMove(*chess.Game) (*SearchResult, error)
 
 	// Stop tells the engine to stop doing what ever its doing.
 	Stop() error
 }
 
-// SearchInfo holds the data that the engine returned during a search.
-type SearchInfo struct {
-	BestMove board.Move
-	Pv       string
+// SearchResult is used to transfer information from an engine after searching.
+type SearchResult struct {
+	BestMove string
+	Ponder   string
+	// keys: depth, seldepth, score, lowerbound, upperbound, time, nodes, pv
+	Analysis []map[string]string
 }
 
 // Exec executes the engine executable and wires up the input and output as Readers and Writers.

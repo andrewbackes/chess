@@ -2,7 +2,7 @@ package uci
 
 import (
 	"bufio"
-	"fmt"
+	"github.com/andrewbackes/chess"
 	"os"
 	"strings"
 	"testing"
@@ -28,8 +28,8 @@ func readAll(c chan []byte) []string {
 	}
 }
 
+// Makes sure the engine can go through the initialization process error free.
 func TestNewEngine(t *testing.T) {
-	fmt.Println()
 	if os.Getenv("TEST_ENGINE") == "" {
 		t.SkipNow()
 	}
@@ -38,4 +38,66 @@ func TestNewEngine(t *testing.T) {
 		t.Fail()
 	}
 	e.Close()
+}
+
+func TestParseInfo(t *testing.T) {
+	commands := uciCommands()
+	tests := []string{
+		"info depth 2 seldepth 5 score cp 100 lowerbound pv e2e4 d7d5",
+		"info pv e2e4 d7d5 depth 2 seldepth 5 score cp 100 lowerbound",
+		"info pv e2e4 d7d5 depth 2 seldepth 5 score cp 100 lowerbound ",
+		"info pv e2e4 d7d5 depth 2 score cp 100 lowerbound seldepth 5",
+	}
+	expected := map[string]string{
+		"depth":      "2",
+		"seldepth":   "5",
+		"score":      "cp 100",
+		"lowerbound": "",
+		"pv":         "e2e4 d7d5",
+	}
+	for _, test := range tests {
+		ret := parseInfo(strings.Split(test, " "), commands)
+		if len(ret) != 5 {
+			t.Log(test)
+			t.Log("len(got)=", len(ret), "wanted 5")
+			t.Log(ret)
+			t.Fail()
+		}
+		for k, v := range expected {
+			if ret[k] != v {
+				t.Log(test)
+				t.Log("missing", k, "got '", ret[k], "' but wanted '", v, "'")
+				t.Fail()
+			}
+		}
+	}
+}
+
+type mockWriter struct {
+	data []byte
+}
+
+func (w *mockWriter) Write(p []byte) (n int, err error) {
+	w.data = append(w.data, p...)
+	return len(w.data), nil
+}
+
+func TestUCIBestMove(t *testing.T) {
+	output := []string{
+		"uciok\n",
+		"info depth 2 seldepth 5 score cp 100 lowerbound pv e2e4 d7d5\n",
+		"bestmove e2e4 ponder d7d5\n",
+	}
+	r := bufio.NewReader(strings.NewReader(strings.Join(output, "")))
+	w := bufio.NewWriter(&mockWriter{})
+	e, err := newEngine("", r, w)
+	if err != nil {
+		t.Fail()
+	}
+	g := chess.NewGame()
+	sr, err := e.BestMove(g)
+	if sr == nil || sr.BestMove != "e2e4" || sr.Ponder != "d7d5" {
+		t.Log(sr)
+		t.Fail()
+	}
 }

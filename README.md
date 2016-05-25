@@ -26,7 +26,7 @@ otherwise you can clone the repo.
 ## Examples
 
 #### Making Moves
-```
+```Go
 import (
     "fmt"
     "github.com/andrewbackes/chess"
@@ -56,7 +56,7 @@ func FoolsMate() {
 ```
 
 #### Setting up a timed game
-```
+```Go
 import (
     "fmt"
     "github.com/andrewbackes/chess"
@@ -74,7 +74,7 @@ func TimedGame() {
 ```
 
 #### Play a timed game in the console
-```
+```Go
 import (
 	"bufio"
 	"fmt"
@@ -102,7 +102,7 @@ func main() {
 
 
 #### Importing and filtering a PGN
-```
+```Go
 import (
     "fmt"
     "github.com/andrewbackes/chess"
@@ -120,7 +120,7 @@ func PrintGrandmasterGames() {
 ```
 
 #### Working with FENs
-```
+```Go
 import (
     "fmt"
     "github.com/andrewbackes/chess"
@@ -137,7 +137,7 @@ func SaavedraPosition() {
 
 #### Legal move generation
 
-```
+```Go
 import (
     "fmt"
     "github.com/andrewbackes/chess"

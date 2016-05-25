@@ -191,6 +191,7 @@ func (G *Game) adjustCastlingRights(movingPiece piece.Piece, from, to board.Squa
 }
 
 // TODO(andrewbackes): threeFold detection should not have to go through all of the move history.
+// BUG(andrewbackes): starting FEN is not considered when calculating threefold.
 func (G *Game) threeFold() bool {
 	for i := 0; i < len(G.history.fen); i++ {
 		fen := G.history.fen[i]
@@ -275,4 +276,15 @@ func (G Game) String() string {
 	str += "     A   B   C   D   E   F   G   H\n"
 	str += fmt.Sprintln("\n\n     FEN:", G.FEN())
 	return str
+}
+
+// Clock returns the time left for the current player. It does not update
+// until after a move is made.
+func (G *Game) Clock(player piece.Color) time.Duration {
+	return G.control[player].clock
+}
+
+// MovesLeft returns the number of moves left until time control.
+func (G *Game) MovesLeft(player piece.Color) int64 {
+	return G.control[player].movesLeft
 }

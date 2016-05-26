@@ -84,3 +84,8 @@ func (s Square) String() string {
 
 	return r
 }
+
+// NewSquare returns a new square based on file and rank.
+func NewSquare(file, rank uint) Square {
+	return Square(((rank - 1) * 8) + (8 - file))
+}

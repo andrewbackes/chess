@@ -43,7 +43,19 @@ func (P Piece) String() string {
 	return abbrev[P.Color][P.Type]
 }
 
-// NewPiece returns a new chess piece type.
+// Figurine returns a chess piece icon
+func (P Piece) Figurine() string {
+	if P.Color == NoColor || P.Type == None {
+		return " "
+	}
+	figurines := [][]rune{
+		{0x2659, 0x2658, 0x2657, 0x2656, 0x2655, 0x2654},
+		{0x265F, 0x265E, 0x265D, 0x265C, 0x265B, 0x265A},
+	}
+	return string(figurines[P.Color][P.Type])
+}
+
+// New returns a new chess piece type.
 func New(c Color, t Type) Piece {
 	return Piece{
 		Color: c,

@@ -1,7 +1,6 @@
 package chess
 
 import (
-	"fmt"
 	"github.com/andrewbackes/chess/piece"
 	"testing"
 )
@@ -101,7 +100,6 @@ func TestPolyglotHash(t *testing.T) {
 		//got := fmt.Sprintf("%s", g.Polyglot())
 		got := g.Polyglot()
 		if got != p.key {
-			fmt.Println(g)
 			t.Log("test index:", i)
 			t.Log("got", got, "wanted", p.key)
 			t.Fail()

@@ -1,21 +1,18 @@
-// Package uci is for working with UCI chess engines.
-package uci
+package engines
 
 import (
 	"bufio"
 	"errors"
 	"github.com/andrewbackes/chess"
 	"github.com/andrewbackes/chess/board"
-	"github.com/andrewbackes/chess/engines"
 	"github.com/andrewbackes/chess/piece"
-	"io"
 	"strconv"
 	"strings"
 	"time"
 )
 
-// Engine represents a chess engine that uses the UCI protocol.
-type Engine struct {
+// UCIEngine represents provides an API for working with UCI chess engines.
+type UCIEngine struct {
 	filepath     string
 	reader       *bufio.Reader
 	writer       *bufio.Writer
@@ -30,20 +27,21 @@ const (
 	newGameTimeout = 1 * time.Second
 )
 
-func NewEngine(filepath string) (*Engine, error) {
-	r, w, err := engines.Exec(filepath)
+// NewUCIEngine execs an engine and allows interaction with the engine through its methods.
+func NewUCIEngine(filepath string) (*UCIEngine, error) {
+	r, w, err := execEngine(filepath)
 	if err != nil {
 		return nil, err
 	}
-	e, err := newEngine(filepath, r, w)
+	e, err := newUCIEngine(filepath, r, w)
 	if err != nil {
 		return nil, err
 	}
 	return e, nil
 }
 
-func newEngine(filepath string, reader *bufio.Reader, writer *bufio.Writer) (*Engine, error) {
-	e := Engine{
+func newUCIEngine(filepath string, reader *bufio.Reader, writer *bufio.Writer) (*UCIEngine, error) {
+	e := UCIEngine{
 		filepath: filepath,
 		output:   make(chan []byte, 1024),
 		input:    make(chan []byte, 1024),
@@ -59,38 +57,6 @@ func newEngine(filepath string, reader *bufio.Reader, writer *bufio.Writer) (*En
 	return &e, nil
 }
 
-func pub(source chan []byte, dest *bufio.Writer, stop chan struct{}) {
-	for {
-		select {
-		case message := <-source:
-			dest.Write(message) // TODO: error handling
-			dest.WriteByte('\n')
-			dest.Flush()
-		case <-stop:
-			return
-		}
-	}
-}
-
-func sub(source *bufio.Reader, dest chan []byte, stop chan struct{}) {
-	for {
-		line, err := source.ReadBytes('\n')
-		if err == io.EOF {
-			return
-		}
-		if len(line) >= 2 && line[len(line)-2] == '\r' {
-			dest <- line[:len(line)-2]
-		} else if len(line) >= 1 && line[len(line)-1] == '\n' {
-			dest <- line[:len(line)-1]
-		} else {
-			dest <- line
-		}
-		if should(stop) {
-			return
-		}
-	}
-}
-
 // should is a helper to determing if the channel is passing or not.
 func should(stop chan struct{}) bool {
 	select {
@@ -101,12 +67,12 @@ func should(stop chan struct{}) bool {
 	return false
 }
 
-func (e *Engine) initialize() error {
+func (e *UCIEngine) initialize() error {
 	_, err := e.sendAndWait([]byte("uci"), "uciok", initTimeout, func([]byte) {})
 	return err
 }
 
-func (e *Engine) sendAndWait(send []byte, expected string, timeout time.Duration, parse func([]byte)) (time.Duration, error) {
+func (e *UCIEngine) sendAndWait(send []byte, expected string, timeout time.Duration, parse func([]byte)) (time.Duration, error) {
 	e.input <- send
 	start := time.Now()
 	for {
@@ -124,13 +90,13 @@ func (e *Engine) sendAndWait(send []byte, expected string, timeout time.Duration
 	}
 }
 
-func (e *Engine) isReady() bool {
+func (e *UCIEngine) isReady() bool {
 	_, err := e.sendAndWait([]byte("isready"), "readyok", initTimeout, func([]byte) {})
 	return err == nil
 }
 
 // Close shuts down the engine.
-func (e *Engine) Close() error {
+func (e *UCIEngine) Close() error {
 	e.input <- []byte("quit")
 	close(e.stop)
 	// TODO: need a way to kill the process if it doesnt close on its own.
@@ -138,19 +104,19 @@ func (e *Engine) Close() error {
 }
 
 // NewGame tells the engine that we will be passing positions and thinking on a new game.
-func (e *Engine) NewGame() {
+func (e *UCIEngine) NewGame() {
 	e.input <- []byte("ucinewgame")
 	e.isReady()
 }
 
 // Stop sends a command to the engine to stop what it is doing.
-func (e *Engine) Stop() error {
+func (e *UCIEngine) Stop() error {
 	e.input <- []byte("stop\n")
 	return nil
 }
 
 // SetBoard sets the engines internal board to that of the games.
-func (e *Engine) SetBoard(g *chess.Game) {
+func (e *UCIEngine) SetBoard(g *chess.Game) {
 	/*
 		    if g != e.lastGameUsed {
 				e.NewGame()
@@ -174,7 +140,7 @@ func (e *Engine) SetBoard(g *chess.Game) {
 }
 
 // BestMove tells the engine to return what it things is the best move for the current game.
-func (e *Engine) BestMove(g *chess.Game) (*engines.SearchResult, error) {
+func (e *UCIEngine) BestMove(g *chess.Game) (*SearchResult, error) {
 	command := "go"
 
 	s := []string{" wtime ", " btime "}
@@ -188,7 +154,7 @@ func (e *Engine) BestMove(g *chess.Game) (*engines.SearchResult, error) {
 		command += " movestogo " + strconv.FormatInt(m, 10)
 	}
 	timeout := (g.Clock(g.ActiveColor()) * 125) / 100 // 25% buffer on time
-	si := engines.SearchResult{}
+	si := SearchResult{}
 	commands := map[string]int{}
 	parse := func(info []byte) {
 		parseAnalysis(&si, commands, info)
@@ -197,7 +163,7 @@ func (e *Engine) BestMove(g *chess.Game) (*engines.SearchResult, error) {
 	return &si, nil
 }
 
-func parseAnalysis(si *engines.SearchResult, commands map[string]int, line []byte) {
+func parseAnalysis(si *SearchResult, commands map[string]int, line []byte) {
 	words := strings.Split(string(line), " ")
 	if len(words) > 0 {
 		if words[0] == "info" {

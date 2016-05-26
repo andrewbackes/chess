@@ -1,4 +1,4 @@
-package uci
+package engines
 
 import (
 	"bufio"
@@ -29,11 +29,11 @@ func readAll(c chan []byte) []string {
 }
 
 // Makes sure the engine can go through the initialization process error free.
-func TestNewEngine(t *testing.T) {
+func TestNewUCIEngine(t *testing.T) {
 	if os.Getenv("TEST_ENGINE") == "" {
 		t.SkipNow()
 	}
-	e, err := NewEngine(os.Getenv("TEST_ENGINE"))
+	e, err := NewUCIEngine(os.Getenv("TEST_ENGINE"))
 	if err != nil {
 		t.Fail()
 	}
@@ -90,7 +90,7 @@ func TestUCIBestMove(t *testing.T) {
 	}
 	r := bufio.NewReader(strings.NewReader(strings.Join(output, "")))
 	w := bufio.NewWriter(&mockWriter{})
-	e, err := newEngine("", r, w)
+	e, err := newUCIEngine("", r, w)
 	if err != nil {
 		t.Fail()
 	}

@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"errors"
 	"github.com/andrewbackes/chess"
+	"io"
 	"os/exec"
 	"path/filepath"
 )
@@ -34,7 +35,7 @@ type SearchResult struct {
 }
 
 // Exec executes the engine executable and wires up the input and output as Readers and Writers.
-func Exec(enginePath string) (*bufio.Reader, *bufio.Writer, error) {
+func execEngine(enginePath string) (*bufio.Reader, *bufio.Writer, error) {
 	fullpath, _ := filepath.Abs(enginePath)
 	cmd := exec.Command(fullpath)
 	cmd.Dir, _ = filepath.Abs(filepath.Dir(enginePath))
@@ -61,4 +62,36 @@ func Exec(enginePath string) (*bufio.Reader, *bufio.Writer, error) {
 	}()
 
 	return r, w, nil
+}
+
+func pub(source chan []byte, dest *bufio.Writer, stop chan struct{}) {
+	for {
+		select {
+		case message := <-source:
+			dest.Write(message) // TODO: error handling
+			dest.WriteByte('\n')
+			dest.Flush()
+		case <-stop:
+			return
+		}
+	}
+}
+
+func sub(source *bufio.Reader, dest chan []byte, stop chan struct{}) {
+	for {
+		line, err := source.ReadBytes('\n')
+		if err == io.EOF {
+			return
+		}
+		if len(line) >= 2 && line[len(line)-2] == '\r' {
+			dest <- line[:len(line)-2]
+		} else if len(line) >= 1 && line[len(line)-1] == '\n' {
+			dest <- line[:len(line)-1]
+		} else {
+			dest <- line
+		}
+		if should(stop) {
+			return
+		}
+	}
 }

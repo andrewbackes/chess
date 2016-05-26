@@ -2,12 +2,15 @@ package book
 
 import (
 	"fmt"
+	"os"
 	"testing"
 )
 
 func TestOpenBook(t *testing.T) {
-	temp := "/Users/Andrew/Downloads/rodent.bin"
-	book, err := FromBin(temp)
+	if os.Getenv("TEST_BOOK") == "" {
+		t.SkipNow()
+	}
+	book, err := FromBin(os.Getenv("TEST_BOOK"))
 	if err != nil {
 		t.Fail()
 	}

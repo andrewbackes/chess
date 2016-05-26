@@ -5,7 +5,8 @@ import (
 	"github.com/andrewbackes/chess/piece"
 )
 
-// Polyglot returns the polyglot hash of the current game position
+// Polyglot returns the polyglot hash of the current game position. For more
+// info you can check out http://hardy.uhasselt.be/Toga/book_format.html
 func (G *Game) Polyglot() (hash uint64) {
 
 	// pieces:
@@ -34,12 +35,24 @@ func (G *Game) Polyglot() (hash uint64) {
 
 	// enpassant:
 	if G.history.enPassant != nil {
-        file, row := indexToFR(*G.history.enPassant())
-        if G.ActiveColor() == piece.White {
-            if 
-        } else {
-            
-        }
+		file, _ := indexToFR(int(*G.history.enPassant))
+		hashit := false
+		rank := []uint{5, 4}[G.ActiveColor()]
+		if file > 0 {
+			p := G.Board().OnSquare(board.NewSquare(uint(file), rank))
+			if p.Color == G.ActiveColor() && p.Type == piece.Pawn {
+				hashit = true
+			}
+		}
+		if file < 7 {
+			p := G.Board().OnSquare(board.NewSquare(uint(file+2), rank)) //+2 b/c NewSquare uses 1-8 for file, not 0-7
+			if p.Color == G.ActiveColor() && p.Type == piece.Pawn {
+				hashit = true
+			}
+		}
+		if hashit {
+			hash ^= randomEnpassant[file]
+		}
 	}
 
 	// turn:

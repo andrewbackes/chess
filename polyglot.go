@@ -34,7 +34,12 @@ func (G *Game) Polyglot() (hash uint64) {
 
 	// enpassant:
 	if G.history.enPassant != nil {
-
+        file, row := indexToFR(*G.history.enPassant())
+        if G.ActiveColor() == piece.White {
+            if 
+        } else {
+            
+        }
 	}
 
 	// turn:

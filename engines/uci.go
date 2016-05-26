@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// UCIEngine represents provides an API for working with UCI chess engines.
+// UCIEngine provides an API for working with UCI chess engines.
 type UCIEngine struct {
 	filepath     string
 	reader       *bufio.Reader
@@ -140,7 +140,7 @@ func (e *UCIEngine) SetBoard(g *chess.Game) {
 }
 
 // BestMove tells the engine to return what it things is the best move for the current game.
-func (e *UCIEngine) BestMove(g *chess.Game) (*SearchResult, error) {
+func (e *UCIEngine) BestMove(g *chess.Game) (*SearchInfo, error) {
 	command := "go"
 
 	s := []string{" wtime ", " btime "}
@@ -154,7 +154,7 @@ func (e *UCIEngine) BestMove(g *chess.Game) (*SearchResult, error) {
 		command += " movestogo " + strconv.FormatInt(m, 10)
 	}
 	timeout := (g.Clock(g.ActiveColor()) * 125) / 100 // 25% buffer on time
-	si := SearchResult{}
+	si := SearchInfo{}
 	commands := map[string]int{}
 	parse := func(info []byte) {
 		parseAnalysis(&si, commands, info)
@@ -163,7 +163,7 @@ func (e *UCIEngine) BestMove(g *chess.Game) (*SearchResult, error) {
 	return &si, nil
 }
 
-func parseAnalysis(si *SearchResult, commands map[string]int, line []byte) {
+func parseAnalysis(si *SearchInfo, commands map[string]int, line []byte) {
 	words := strings.Split(string(line), " ")
 	if len(words) > 0 {
 		if words[0] == "info" {

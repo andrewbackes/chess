@@ -1,4 +1,4 @@
-// Package engines provides tools for working with chess engines.
+// Package engines provides an API for UCI/WinBoard chess engines.
 package engines
 
 import (
@@ -20,14 +20,14 @@ type Engine interface {
 	NewGame() error
 
 	// Search finds the best move for the game.
-	BestMove(*chess.Game) (*SearchResult, error)
+	BestMove(*chess.Game) (*SearchInfo, error)
 
 	// Stop tells the engine to stop doing what ever its doing.
 	Stop() error
 }
 
-// SearchResult is used to transfer information from an engine after searching.
-type SearchResult struct {
+// SearchInfo is used to transfer information from an engine after searching.
+type SearchInfo struct {
 	BestMove string
 	Ponder   string
 	// keys: depth, seldepth, score, lowerbound, upperbound, time, nodes, pv

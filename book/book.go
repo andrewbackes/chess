@@ -3,7 +3,9 @@ package book
 
 import (
 	"encoding/binary"
+	"github.com/andrewbackes/chess/board"
 	"os"
+	"sort"
 )
 
 // Book is a polyglot opening book loaded into memory.
@@ -15,6 +17,7 @@ type Book struct {
 type Move struct {
 	Move   string
 	Weight uint16
+	Learn  uint32
 }
 
 // PolyglotEntry is a line in a polyglot opening book.
@@ -25,9 +28,56 @@ type PolyglotEntry struct {
 	Learn uint32
 }
 
-// FromBin loads a polyglot opening book into memory.
+type byWeight []Move
+
+func (m byWeight) Len() int      { return len(m) }
+func (m byWeight) Swap(i, j int) { t := m[i]; m[i] = m[j]; m[j] = t }
+func (m byWeight) Less(i, j int) bool {
+	if m[i].Weight > m[j].Weight {
+		return true
+	} else if m[i].Weight == m[j].Weight {
+		if m[i].Move > m[j].Move {
+			return true
+		}
+	}
+	return false
+}
+
+// Save saves the opening book in binary format.
+func (b *Book) Save(filename string) error {
+	var file *os.File
+	var err error
+	if _, er := os.Stat(filename); os.IsNotExist(er) {
+		// file doesnt exist
+	} else if er == nil {
+		// file does exist
+		os.Remove(filename)
+	}
+	file, err = os.Create(filename)
+	defer file.Close()
+	if err != nil {
+		return err
+	}
+	for key, moves := range b.Positions {
+		for _, move := range moves {
+			e := PolyglotEntry{
+				Key:   key,
+				Move:  encodedMove(move.Move),
+				Score: move.Weight,
+				Learn: move.Learn,
+			}
+			err = binary.Write(file, binary.BigEndian, &e)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// Open loads a polyglot opening book into memory.
 // filename is the full path to a .bin opening book.
-func FromBin(filename string) (*Book, error) {
+func Open(filename string) (*Book, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, err
@@ -37,6 +87,7 @@ func FromBin(filename string) (*Book, error) {
 		Positions: make(map[uint64][]Move),
 	}
 	entry := PolyglotEntry{}
+	key := uint64(0)
 	for {
 		err := binary.Read(file, binary.BigEndian, &entry)
 		if err != nil {
@@ -47,11 +98,48 @@ func FromBin(filename string) (*Book, error) {
 			mv := Move{
 				Move:   decodeMove(entry.Move),
 				Weight: entry.Score,
+				Learn:  entry.Learn,
 			}
 			book.Positions[entry.Key] = append(book.Positions[entry.Key], mv)
 		}
+		if entry.Key != key {
+			sort.Sort(byWeight(book.Positions[key]))
+			key = entry.Key
+		}
 	}
 	return book, nil
+}
+
+func encodedMove(move string) uint16 {
+	mv := move
+	switch mv {
+	case "e1g1":
+		mv = "e1h1"
+	case "e1c1":
+		mv = "e1a1"
+	case "e8g8":
+		mv = "e8h8"
+	case "e8c8":
+		mv = "e8a8"
+	}
+	from, to := board.Split(board.Move(mv))
+	fromFile, fromRank := indexToFR(int(from))
+	toFile, toRank := indexToFR(int(to))
+	var promo uint16
+	if len(mv) > 4 {
+		promo = map[string]uint16{"": 0, "k": 1, "b": 2, "r": 3, "q": 4}[string(mv[4])]
+	}
+	return (promo << 12) + (uint16(fromRank) << 9) + (uint16(fromFile) << 6) + (uint16(toRank) << 3) + (uint16(toFile))
+}
+
+func indexToFR(index int) (file int, row int) {
+	// 0  --> h1 --> 7,0
+	// 7  --> a1 --> 0,0 (row,file)
+	// 63 --> a8 --> 0,7
+	// 56 --> h8 --> 7,7
+	row = index / 8
+	file = 7 - (index % 8)
+	return
 }
 
 /*
@@ -78,14 +166,31 @@ black long       e8a8
 
 */
 func decodeMove(move uint16) string {
-	/*
-		toFile := bits(move, 0)
-		toRank := bits(move, 1)
-		fromFile := bits(move, 2)
-		fromRank := bits(move, 3)
-		promo := bits(move, 4)
-	*/
-	return "0000"
+	fromRank := bits(move, 3)
+	fromFile := bits(move, 2)
+	from := board.NewSquare(uint(fromFile+1), uint(fromRank+1))
+
+	toRank := bits(move, 1)
+	toFile := bits(move, 0)
+	to := board.NewSquare(uint(toFile+1), uint(toRank+1))
+
+	promo := bits(move, 4)
+	var promoStr string
+	if promo < 4 {
+		promoStr = []string{"", "k", "b", "r", "q"}[promo]
+	}
+	mv := from.String() + to.String() + promoStr
+	switch mv {
+	case "e1h1":
+		return "e1g1"
+	case "e1a1":
+		return "e1c1"
+	case "e8h8":
+		return "e8g8"
+	case "e8a8":
+		return "e8c8"
+	}
+	return (mv)
 }
 
 func bits(move uint16, group uint) uint16 {

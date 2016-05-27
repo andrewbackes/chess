@@ -50,5 +50,5 @@ func (b *Book) addMove(key uint64, move board.Move) {
 			return
 		}
 	}
-	b.Positions[key] = append(b.Positions[key], Move{Move: string(move)})
+	b.Positions[key] = append(b.Positions[key], Move{Move: string(move), Weight: 1})
 }

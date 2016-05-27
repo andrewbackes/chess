@@ -13,6 +13,13 @@ type Book struct {
 	Positions map[uint64][]Move
 }
 
+// New makes a new empty opening book
+func New() *Book {
+	return &Book{
+		Positions: make(map[uint64][]Move),
+	}
+}
+
 // Move is a weighted move in an internally loaded opening book.
 type Move struct {
 	Move   string

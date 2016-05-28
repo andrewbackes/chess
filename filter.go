@@ -1,6 +1,7 @@
 package chess
 
 import (
+	"errors"
 	"strconv"
 	"strings"
 )
@@ -17,7 +18,7 @@ type TagFilter struct {
 }
 
 // NewTagFilter makes a new TagFilter from a string.
-func NewTagFilter(filter string) TagFilter {
+func NewTagFilter(filter string) (TagFilter, error) {
 	operators := []string{">=", "<=", "!=", "==", "=", ">", "<"}
 	for _, op := range operators {
 		if strings.Contains(filter, op) {
@@ -27,11 +28,11 @@ func NewTagFilter(filter string) TagFilter {
 					Tag:      split[0],
 					Operator: op,
 					Operand:  split[1],
-				}
+				}, nil
 			}
 		}
 	}
-	return TagFilter{}
+	return TagFilter{}, errors.New("could not parse filter")
 }
 
 // FilterPGNs filters a slice of PGNs based on a slice of filters.

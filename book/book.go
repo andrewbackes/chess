@@ -10,18 +10,19 @@ import (
 
 // Book is a polyglot opening book loaded into memory.
 type Book struct {
-	Positions map[uint64][]Move
+	Positions map[uint64][]Entry
+	seed      uint64
 }
 
 // New makes a new empty opening book
 func New() *Book {
 	return &Book{
-		Positions: make(map[uint64][]Move),
+		Positions: make(map[uint64][]Entry),
 	}
 }
 
-// Move is a weighted move in an internally loaded opening book.
-type Move struct {
+// Entry is a weighted move in an internally loaded opening book.
+type Entry struct {
 	Move   string
 	Weight uint16
 	Learn  uint32
@@ -35,7 +36,7 @@ type PolyglotEntry struct {
 	Learn uint32
 }
 
-type byWeight []Move
+type byWeight []Entry
 
 func (m byWeight) Len() int      { return len(m) }
 func (m byWeight) Swap(i, j int) { t := m[i]; m[i] = m[j]; m[j] = t }
@@ -66,12 +67,12 @@ func (b *Book) Save(filename string) error {
 		return err
 	}
 	for key, moves := range b.Positions {
-		for _, move := range moves {
+		for _, entry := range moves {
 			e := PolyglotEntry{
 				Key:   key,
-				Move:  encodedMove(move.Move),
-				Score: move.Weight,
-				Learn: move.Learn,
+				Move:  encodedMove(entry.Move),
+				Score: entry.Weight,
+				Learn: entry.Learn,
 			}
 			err = binary.Write(file, binary.BigEndian, &e)
 			if err != nil {
@@ -91,7 +92,7 @@ func Open(filename string) (*Book, error) {
 	}
 	defer file.Close()
 	book := &Book{
-		Positions: make(map[uint64][]Move),
+		Positions: make(map[uint64][]Entry),
 	}
 	entry := PolyglotEntry{}
 	key := uint64(0)
@@ -102,7 +103,7 @@ func Open(filename string) (*Book, error) {
 			break
 		}
 		if entry.Move != 0 {
-			mv := Move{
+			mv := Entry{
 				Move:   decodeMove(entry.Move),
 				Weight: entry.Score,
 				Learn:  entry.Learn,

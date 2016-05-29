@@ -1,7 +1,7 @@
 package board
 
 // Square on the board.
-type Square uint8
+type Square uint16
 
 // Squares on the board.
 const (
@@ -69,6 +69,7 @@ const (
 	C8
 	B8
 	A8
+	NoSquare
 )
 
 // LastSquare is the end of the board.

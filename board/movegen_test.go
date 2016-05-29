@@ -7,7 +7,7 @@ import (
 
 func TestRootMoves(t *testing.T) {
 	b := New()
-	moves := b.Moves(piece.White, nil, [2][2]bool{})
+	moves := b.Moves(piece.White, NoSquare, [2][2]bool{})
 	if len(moves) != 20 {
 		t.Log(moves, len(moves))
 		t.Log(b)
@@ -29,7 +29,7 @@ func TestGenPromotion(t *testing.T) {
 	b := New()
 	b.Clear()
 	b.QuickPut(piece.New(piece.White, piece.Pawn), E7)
-	moves := b.LegalMoves(piece.White, nil, [2][2]bool{})
+	moves := b.LegalMoves(piece.White, NoSquare, [2][2]bool{})
 	expected := []string{"e7e8q", "e7e8r", "e7e8b", "e7e8n"}
 	if len(moves) != len(expected) {
 		t.Fail()
@@ -48,7 +48,7 @@ func TestGenCastles(t *testing.T) {
 	b.QuickPut(piece.New(piece.White, piece.Rook), H1)
 	b.QuickPut(piece.New(piece.White, piece.Rook), A1)
 	rights := [2][2]bool{{true, true}, {true, true}}
-	moves := b.LegalMoves(piece.White, nil, rights)
+	moves := b.LegalMoves(piece.White, NoSquare, rights)
 	expected := []string{"e1g1", "e1c1"}
 	for _, exp := range expected {
 		if _, ok := moves[Move(exp)]; !ok {

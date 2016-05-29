@@ -5,7 +5,7 @@ import (
 )
 
 // LegalMoves returns only the legal moves that can be made.
-func (b *Board) LegalMoves(c piece.Color, enPassant *Square, castlingRights [2][2]bool) map[Move]struct{} {
+func (b *Board) LegalMoves(c piece.Color, enPassant Square, castlingRights [2][2]bool) map[Move]struct{} {
 	legalMoves := make(map[Move]struct{})
 	ml := b.Moves(c, enPassant, castlingRights)
 	for mv := range ml {
@@ -21,7 +21,7 @@ func (b *Board) LegalMoves(c piece.Color, enPassant *Square, castlingRights [2][
 // Moves returns all moves that a player can make but ignores legality.
 // Moves that put the active color into check are included. Castling moves through
 // an attacked square are not included.
-func (b *Board) Moves(c piece.Color, enPassant *Square, castlingRights [2][2]bool) map[Move]struct{} {
+func (b *Board) Moves(c piece.Color, enPassant Square, castlingRights [2][2]bool) map[Move]struct{} {
 	moves := make(map[Move]struct{})
 	add := func(m Move) {
 		moves[m] = struct{}{}
@@ -126,7 +126,7 @@ func (b *Board) genKingMoves(toMove, notToMove piece.Color, castlingRights [2][2
 	}
 }
 
-func (b *Board) genPawnMoves(toMove, notToMove piece.Color, enPassant *Square, add func(Move)) {
+func (b *Board) genPawnMoves(toMove, notToMove piece.Color, enPassant Square, add func(Move)) {
 	pieces := b.bitBoard[toMove][piece.Pawn] &^ pawns_spawn[notToMove] //&^ = AND_NOT
 	for pieces != 0 {
 		from := bitscan(pieces)
@@ -144,8 +144,8 @@ func (b *Board) genPawnMoves(toMove, notToMove piece.Color, enPassant *Square, a
 		}
 		//captures:
 		var enpas uint64
-		if enPassant != nil {
-			enpas = (1 << *enPassant)
+		if enPassant != NoSquare {
+			enpas = (1 << enPassant)
 		}
 		captures := pawn_captures[toMove][from] & (b.occupied(notToMove) | enpas)
 		for captures != 0 {

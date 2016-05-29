@@ -1,7 +1,6 @@
 package chess
 
 import (
-	"fmt"
 	"github.com/andrewbackes/chess/board"
 	"github.com/andrewbackes/chess/piece"
 )
@@ -9,7 +8,6 @@ import (
 // Polyglot returns the polyglot hash of the current game position. For more
 // info you can check out http://hardy.uhasselt.be/Toga/book_format.html
 func (G *Game) Polyglot() (hash uint64) {
-	fmt.Println(G)
 	// pieces:
 	for s := board.Square(0); s <= board.LastSquare; s++ {
 		if p := G.Board().OnSquare(s); p.Type != piece.None {

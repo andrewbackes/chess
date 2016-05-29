@@ -262,18 +262,27 @@ func removeNumbering(line []byte) []byte {
 
 // takes a tag and returns its key and value components.
 // ex: [Event "Testing"] ==> "Event", "Testing"
+// minimum tag: [ T "" ]
 func splitTag(line []byte) ([]byte, []byte) {
-
+	if len(line) < 6 {
+		return nil, nil
+	}
 	// Look for a space:
 	space := 0
-	for i, _ := range line {
+	for i := range line {
 		if line[i] == ' ' {
 			space = i
 			break
 		}
 	}
+	if space == 0 {
+		return nil, nil
+	}
 	key := line[1:space]
-	value := line[space+2 : len(line)-2]
+	var value []byte
+	if len(line)-2 > 0 && space+2 < len(line) {
+		value = line[space+2 : len(line)-2]
+	}
 
 	return key, value
 }

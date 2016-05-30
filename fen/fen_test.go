@@ -1,4 +1,4 @@
-package chess
+package fen
 
 import (
 	"github.com/andrewbackes/chess/game"

@@ -5,7 +5,9 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"github.com/andrewbackes/chess/fen"
 	"github.com/andrewbackes/chess/game"
+	"github.com/andrewbackes/chess/position"
 	"io"
 	"strings"
 )
@@ -47,7 +49,7 @@ type Operation struct {
 // EPD is an Extended Position Description. Position is a FEN like representation
 // of the board. Operations are the operations to perform on that position.
 type EPD struct {
-	Position   string
+	Position   *position.Position
 	Operations []Operation
 }
 
@@ -55,13 +57,14 @@ func (e EPD) String() string {
 	return fmt.Sprint("Position:   ", e.Position, "\nOperations: ", e.Operations)
 }
 
-// Parse turns a string representation of an epd into an object.
-func Parse(epd string) (*EPD, error) {
+// Decode turns a string representation of an epd into an object.
+func Decode(epd string) (*EPD, error) {
 	s := strings.Split(epd, " ")
-	if len(s) <= 4 {
-		return &EPD{Position: epd, Operations: nil}, nil
-	}
 	posStr := strings.Join(s[:4], " ")
+	p, err := fen.Decode(posStr)
+	if len(s) <= 4 {
+		return &EPD{Position: p, Operations: nil}, err
+	}
 	opsStr := strings.TrimRight(strings.Join(s[4:], " "), ";")
 	ops := strings.Split(opsStr, ";")
 	var opers []Operation
@@ -72,13 +75,14 @@ func Parse(epd string) (*EPD, error) {
 		}
 		opers = append(opers, Operation{Code: pair[0], Operand: pair[1]})
 	}
-	return &EPD{Position: posStr, Operations: opers}, nil
+	return &EPD{Position: p, Operations: opers}, nil
 }
 
 // ToGame returns a game based on the position in the EPD provided.
-func ToGame(epd EPD) (*game.Game, error) {
-	g, err := GameFromFEN(epd.Position)
-	return g, err
+func (e EPD) ToGame() *game.Game {
+	g := game.New()
+	g.Position = e.Position
+	return g
 }
 
 // Open loads a file with multiple EPD's. Each EPD needs to be on its own line.
@@ -87,7 +91,7 @@ func Open(file io.Reader) ([]*EPD, error) {
 	var ret []*EPD
 	for scanner.Scan() {
 		line := scanner.Text()
-		epd, err := Parse(line)
+		epd, err := Decode(line)
 		if err != nil {
 			return nil, err
 		}

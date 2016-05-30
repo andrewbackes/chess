@@ -68,28 +68,6 @@ func TestPerftSuitePos(t *testing.T) {
 }
 */
 
-/*
-func divide(G *Game, depth int) map[position.Move]uint64 {
-	div := make(map[position.Move]uint64)
-	//fmt.Println("Depth", depth)
-	var nodes, moveCount uint64
-	ml := G.LegalMoves()
-	toMove := G.ActiveColor()
-	for mv := range ml {
-		temp := *G
-		temp.MakeMove(mv)
-
-		if temp.Check(toMove) == false {
-			//Count it for mate:
-			moveCount++
-			n := perft(&temp, depth-1)
-			div[mv] = n
-			nodes += n
-		}
-	}
-	return div
-}
-*/
 /*******************************************************************************
 
 	Perft Suite:
@@ -134,7 +112,7 @@ func perftSuite(filename string, maxdepth int, failFast bool) error {
 func checkPerft(p *position.Position, depth int, nodes uint64) error {
 	start := time.Now()
 	fmt.Print("\tD", depth, ": ")
-	perftNodes := perft(p, depth)
+	perftNodes := Perft(p, depth)
 	passed := perftNodes == nodes
 	fmt.Print(map[bool]string{
 		true:  "pass. ",
@@ -147,21 +125,4 @@ func checkPerft(p *position.Position, depth int, nodes uint64) error {
 		return errors.New("incorrect node count")
 	}
 	return nil
-}
-
-func perft(p *position.Position, depth int) uint64 {
-	if depth == 0 {
-		return 1
-	}
-	toMove := p.ActiveColor
-	var nodes uint64
-	ml := p.LegalMoves()
-	for mv := range ml {
-		temp := *p
-		temp.MakeMove(mv)
-		if temp.Check(toMove) == false {
-			nodes += perft(&temp, depth-1)
-		}
-	}
-	return nodes
 }

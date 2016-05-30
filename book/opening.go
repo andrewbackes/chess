@@ -9,13 +9,13 @@ import (
 type Opening []Entry
 
 // Apply makes the moves in the opening on the game.
-func Apply(opening Opening, game *game.Game) error {
+func Apply(opening Opening, g *game.Game) error {
 	for _, entry := range opening {
-		move, err := game.ParseMove(entry.Move)
+		move, err := g.Position.ParseMove(entry.Move)
 		if err != nil {
 			return err
 		}
-		if game.MakeMove(move) != game.InProgress {
+		if g.MakeMove(move) != game.InProgress {
 			return errors.New("game ended")
 		}
 	}

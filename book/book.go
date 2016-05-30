@@ -3,7 +3,6 @@ package book
 
 import (
 	"encoding/binary"
-	"github.com/andrewbackes/chess/polyglot"
 	"github.com/andrewbackes/chess/position"
 	"os"
 	"sort"

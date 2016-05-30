@@ -1,4 +1,4 @@
-package chess
+package game
 
 import (
 	"errors"
@@ -208,9 +208,8 @@ func TestStalemate(t *testing.T) {
 
 func gameFromFEN(fen string) (*Game, error) {
 	g := New()
-
 	p, err := fromFEN(fen)
-	g.Position = *p
+	g.Position = p
 	return g, err
 }
 
@@ -252,5 +251,5 @@ func fromFEN(board string) (*position.Position, error) {
 			//b.bitBoard[color[k]][p[k]] |= (1 << uint(63-pos))
 		}
 	}
-	return &b, nil
+	return b, nil
 }

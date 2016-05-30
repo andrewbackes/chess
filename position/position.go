@@ -55,8 +55,8 @@ const (
 
 // New returns a game board in the opening position. If you want
 // a blank board, use Clear().
-func New() Position {
-	p := Position{
+func New() *Position {
+	p := &Position{
 		bitBoard:       [2][6]uint64{},
 		CastlingRights: [2][2]bool{{true, true}, {true, true}},
 		EnPassant:      NoSquare,
@@ -67,8 +67,9 @@ func New() Position {
 	return p
 }
 
-// reduce a Position into one that is comparable for threefold.
-func Simplify(p Position) Simple {
+// Simplify a position into one that is comparable. We just need to exclude the
+// move count information.
+func Simplify(p *Position) Simple {
 	return Simple{
 		bitBoard:       p.bitBoard,
 		EnPassant:      p.EnPassant,

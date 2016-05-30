@@ -1,4 +1,4 @@
-package chess
+package game
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 type Game struct {
 	Tags          map[string]string
 	control       [2]TimeControl
-	Position      position.Position
+	Position      *position.Position
 	Moves         []position.Move
 	positionCache map[position.Simple]int
 }
@@ -94,6 +94,9 @@ func (G *Game) makeMove(m position.Move, from, to position.Square, movingPiece, 
 	G.Position.MakeMove(m)
 	G.Moves = append(G.Moves, m)
 	G.Position.ActiveColor = (G.Position.ActiveColor + 1) % 2
+	if G.ActiveColor() == piece.White {
+		G.Position.MoveNumber++
+	}
 	G.cachePosition()
 }
 

@@ -1,4 +1,4 @@
-package chess
+package game
 
 import (
 	"github.com/andrewbackes/chess/piece"

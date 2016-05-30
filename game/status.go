@@ -1,4 +1,4 @@
-package chess
+package game
 
 type GameStatus uint16
 

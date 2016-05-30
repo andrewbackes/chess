@@ -35,7 +35,7 @@ func TestMovePawn(t *testing.T) {
 	beforeMove := New()
 	afterMove := New()
 	afterMove.MakeMove("e2e4")
-	changed := changedbitBoards(&beforeMove, &afterMove)
+	changed := changedbitBoards(beforeMove, afterMove)
 	t.Log("Changed: ", changed)
 	if _, c := changed[piece.New(piece.White, piece.Pawn)]; !c || len(changed) != 1 {
 		t.Fail()
@@ -46,7 +46,7 @@ func TestMoveKnight(t *testing.T) {
 	beforeMove := New()
 	afterMove := New()
 	afterMove.MakeMove("b1c3")
-	changed := changedbitBoards(&beforeMove, &afterMove)
+	changed := changedbitBoards(beforeMove, afterMove)
 	t.Log("Changed: ", changed)
 	if _, c := changed[piece.New(piece.White, piece.Knight)]; !c || len(changed) != 1 {
 		t.Fail()

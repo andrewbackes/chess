@@ -75,8 +75,8 @@ func Parse(epd string) (*EPD, error) {
 	return &EPD{Position: posStr, Operations: opers}, nil
 }
 
-// Decode returns a game based on the position in the EPD provided.
-func Decode(epd EPD) (*Game, error) {
+// ToGame returns a game based on the position in the EPD provided.
+func ToGame(epd EPD) (*game.Game, error) {
 	g, err := GameFromFEN(epd.Position)
 	return g, err
 }
@@ -87,7 +87,7 @@ func Open(file io.Reader) ([]*EPD, error) {
 	var ret []*EPD
 	for scanner.Scan() {
 		line := scanner.Text()
-		epd, err := ParseEPD(line)
+		epd, err := Parse(line)
 		if err != nil {
 			return nil, err
 		}

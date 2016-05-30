@@ -3,6 +3,7 @@ package diag
 import (
 	"errors"
 	"fmt"
+	"github.com/andrewbackes/chess/epd"
 	"github.com/andrewbackes/chess/position"
 	"os"
 	"strconv"
@@ -13,7 +14,7 @@ import (
 
 func TestPerftSuite(t *testing.T) {
 	f := "perftsuite.epd"
-	d := 3
+	d := 4
 	if strings.ToLower(os.Getenv("TEST_FULL_PERFT_SUITE")) == "true" {
 		d = 6
 	}
@@ -66,6 +67,8 @@ func TestPerftSuitePos(t *testing.T) {
 
 }
 */
+
+/*
 func divide(G *Game, depth int) map[position.Move]uint64 {
 	div := make(map[position.Move]uint64)
 	//fmt.Println("Depth", depth)
@@ -86,7 +89,7 @@ func divide(G *Game, depth int) map[position.Move]uint64 {
 	}
 	return div
 }
-
+*/
 /*******************************************************************************
 
 	Perft Suite:
@@ -99,7 +102,7 @@ func perftSuite(filename string, maxdepth int, failFast bool) error {
 	if err != nil {
 		return err
 	}
-	tests, err := ReadEPD(f)
+	tests, err := epd.Open(f)
 	if err != nil {
 		return err
 	}
@@ -128,15 +131,10 @@ func perftSuite(filename string, maxdepth int, failFast bool) error {
 	return err
 }
 
-func checkPerft(fen string, depth int, nodes uint64) error {
-	G, err := GameFromFEN(fen)
-	//fmt.Println(G.board)
-	if err != nil {
-		return err
-	}
+func checkPerft(p *position.Position, depth int, nodes uint64) error {
 	start := time.Now()
 	fmt.Print("\tD", depth, ": ")
-	perftNodes := perft(G, depth)
+	perftNodes := perft(p, depth)
 	passed := perftNodes == nodes
 	fmt.Print(map[bool]string{
 		true:  "pass. ",
@@ -146,22 +144,21 @@ func checkPerft(fen string, depth int, nodes uint64) error {
 	fmt.Print(lapsed, " ")
 	if !passed {
 		fmt.Println("got", perftNodes, "wanted", nodes)
-		err = errors.New("incorrect node count")
+		return errors.New("incorrect node count")
 	}
-	//fmt.Print("\t")
-	return err
+	return nil
 }
 
-func perft(g *Game, depth int) uint64 {
+func perft(p *position.Position, depth int) uint64 {
 	if depth == 0 {
 		return 1
 	}
-	toMove := g.ActiveColor()
+	toMove := p.ActiveColor
 	var nodes uint64
-	ml := g.LegalMoves()
+	ml := p.LegalMoves()
 	for mv := range ml {
-		temp := *g
-		temp.QuickMove(mv)
+		temp := *p
+		temp.MakeMove(mv)
 		if temp.Check(toMove) == false {
 			nodes += perft(&temp, depth-1)
 		}

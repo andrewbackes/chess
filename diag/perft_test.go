@@ -1,5 +1,6 @@
 package diag
 
+/*
 import (
 	"github.com/andrewbackes/chess"
 	"github.com/andrewbackes/chess/board"
@@ -30,3 +31,4 @@ func TestDivideOutput(t *testing.T) {
 		t.Fail()
 	}
 }
+*/

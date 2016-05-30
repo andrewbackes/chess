@@ -88,15 +88,8 @@ func (G *Game) decompose(m position.Move) (from, to position.Square, movingPiece
 }
 
 func (G *Game) makeMove(m position.Move, from, to position.Square, movingPiece, capturedPiece piece.Piece) {
-	G.adjustMoveCounter(movingPiece, capturedPiece)
-	G.adjustCastlingRights(movingPiece, from, to)
-	G.adjustEnPassant(movingPiece, from, to)
 	G.Position.MakeMove(m)
 	G.Moves = append(G.Moves, m)
-	G.Position.ActiveColor = (G.Position.ActiveColor + 1) % 2
-	if G.ActiveColor() == piece.White {
-		G.Position.MoveNumber++
-	}
 	G.cachePosition()
 }
 
@@ -137,39 +130,6 @@ func (G *Game) illegalMoveStatus() GameStatus {
 		return WhiteIllegalMove
 	}
 	return BlackIllegalMove
-}
-
-func (G *Game) adjustMoveCounter(movingPiece, capturedPiece piece.Piece) {
-	if capturedPiece.Type != piece.None || movingPiece.Type == piece.Pawn {
-		G.Position.FiftyMoveCount = 0
-	} else {
-		G.Position.FiftyMoveCount++
-	}
-}
-
-func (G *Game) adjustEnPassant(movingPiece piece.Piece, from, to position.Square) {
-	if movingPiece.Type == piece.Pawn {
-		G.Position.EnPassant = position.NoSquare
-		if int(from)-int(to) == 16 || int(from)-int(to) == -16 {
-			s := position.Square(int(from) + []int{8, -8}[movingPiece.Color])
-			G.Position.EnPassant = s
-		}
-	} else {
-		G.Position.EnPassant = position.NoSquare
-	}
-}
-
-func (G *Game) adjustCastlingRights(movingPiece piece.Piece, from, to position.Square) {
-	for side := position.ShortSide; side <= position.LongSide; side++ {
-		if movingPiece.Type == piece.King || //King moves
-			(movingPiece.Type == piece.Rook &&
-				from == [2][2]position.Square{{position.H1, position.A1}, {position.H8, position.A8}}[movingPiece.Color][side]) {
-			G.Position.CastlingRights[movingPiece.Color][side] = false
-		}
-		if to == [2][2]position.Square{{position.H8, position.A8}, {position.H1, position.A1}}[movingPiece.Color][side] {
-			G.Position.CastlingRights[[]piece.Color{piece.Black, piece.White}[movingPiece.Color]][side] = false
-		}
-	}
 }
 
 // TODO(andrewbackes): threeFold detection should not have to go through all of the move history.

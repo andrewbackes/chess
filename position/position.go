@@ -152,15 +152,63 @@ func (p *Position) occupied(c piece.Color) uint64 {
 	return mask
 }
 
+func (p *Position) decompose(m Move) (from, to Square, movingPiece, capturedPiece piece.Piece) {
+	from, to = Split(m)
+	movingPiece = p.OnSquare(from)
+	capturedPiece = p.OnSquare(to)
+	return
+}
+
 // MakeMove attempts to make the given move no matter legality or validity.
 // It does not change game state such as en passant or castling rights.
 // What ever move you specify will attempt to be made. If it is illegal
 // or invalid you will get undetermined behavior.
 func (p *Position) MakeMove(m Move) {
-	from, to := Split(m)
-	movingPiece := p.OnSquare(from)
-	capturedPiece := p.OnSquare(to)
+	from, to, movingPiece, capturedPiece := p.decompose(m)
+	p.adjustMoveCounter(movingPiece, capturedPiece)
+	p.adjustCastlingRights(movingPiece, from, to)
+	p.adjustEnPassant(movingPiece, from, to)
+	p.adjustBoard(m, from, to, movingPiece, capturedPiece)
+	p.ActiveColor = (p.ActiveColor + 1) % 2
+	if p.ActiveColor == piece.White {
+		p.MoveNumber++
+	}
+}
 
+func (p *Position) adjustMoveCounter(movingPiece, capturedPiece piece.Piece) {
+	if capturedPiece.Type != piece.None || movingPiece.Type == piece.Pawn {
+		p.FiftyMoveCount = 0
+	} else {
+		p.FiftyMoveCount++
+	}
+}
+
+func (p *Position) adjustEnPassant(movingPiece piece.Piece, from, to Square) {
+	if movingPiece.Type == piece.Pawn {
+		p.EnPassant = NoSquare
+		if int(from)-int(to) == 16 || int(from)-int(to) == -16 {
+			s := Square(int(from) + []int{8, -8}[movingPiece.Color])
+			p.EnPassant = s
+		}
+	} else {
+		p.EnPassant = NoSquare
+	}
+}
+
+func (p *Position) adjustCastlingRights(movingPiece piece.Piece, from, to Square) {
+	for side := ShortSide; side <= LongSide; side++ {
+		if movingPiece.Type == piece.King || //King moves
+			(movingPiece.Type == piece.Rook &&
+				from == [2][2]Square{{H1, A1}, {H8, A8}}[movingPiece.Color][side]) {
+			p.CastlingRights[movingPiece.Color][side] = false
+		}
+		if to == [2][2]Square{{H8, A8}, {H1, A1}}[movingPiece.Color][side] {
+			p.CastlingRights[[]piece.Color{piece.Black, piece.White}[movingPiece.Color]][side] = false
+		}
+	}
+}
+
+func (p *Position) adjustBoard(m Move, from, to Square, movingPiece, capturedPiece piece.Piece) {
 	// Remove captured piece:
 	if capturedPiece.Type != piece.None {
 		p.bitBoard[capturedPiece.Color][capturedPiece.Type] ^= (1 << to)
@@ -195,7 +243,6 @@ func (p *Position) MakeMove(m Move) {
 			p.bitBoard[movingPiece.Color][promotesTo] ^= (1 << to)       // add promoted piece
 		}
 	}
-
 }
 
 // Put places a piece on the square and removes any other piece

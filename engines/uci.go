@@ -3,9 +3,9 @@ package engines
 import (
 	"bufio"
 	"errors"
-	"github.com/andrewbackes/chess"
-	"github.com/andrewbackes/chess/board"
+	"github.com/andrewbackes/chess/game"
 	"github.com/andrewbackes/chess/piece"
+	"github.com/andrewbackes/chess/position"
 	"strconv"
 	"strings"
 	"time"
@@ -19,7 +19,7 @@ type UCIEngine struct {
 	output       chan []byte
 	input        chan []byte
 	stop         chan struct{}
-	lastGameUsed *chess.Game
+	lastGameUsed *game.Game
 }
 
 const (
@@ -116,7 +116,7 @@ func (e *UCIEngine) Stop() error {
 }
 
 // SetBoard sets the engines internal board to that of the games.
-func (e *UCIEngine) SetBoard(g *chess.Game) {
+func (e *UCIEngine) SetBoard(g *game.Game) {
 	/*
 		    if g != e.lastGameUsed {
 				e.NewGame()
@@ -127,10 +127,10 @@ func (e *UCIEngine) SetBoard(g *chess.Game) {
 		pos = g.Tags["FEN"]
 	}
 	moves := ""
-	if len(g.MoveHistory()) > 0 {
+	if len(g.Moves) > 0 {
 		moves = " moves "
-		for _, move := range g.MoveHistory() {
-			if move != board.NullMove {
+		for _, move := range g.Moves {
+			if move != position.NullMove {
 				moves += string(move) + " "
 			}
 		}
@@ -140,7 +140,7 @@ func (e *UCIEngine) SetBoard(g *chess.Game) {
 }
 
 // BestMove tells the engine to return what it things is the best move for the current game.
-func (e *UCIEngine) BestMove(g *chess.Game) (*SearchInfo, error) {
+func (e *UCIEngine) BestMove(g *game.Game) (*SearchInfo, error) {
 	command := "go"
 
 	s := []string{" wtime ", " btime "}

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/andrewbackes/chess/piece"
 	"github.com/andrewbackes/chess/position"
-	"strings"
 	"time"
 )
 
@@ -17,9 +16,9 @@ type Game struct {
 	positionCache map[position.Simple]int
 }
 
-// NewGame returns a fresh game with all of the pieces in the
+// New returns a fresh game with all of the pieces in the
 // opening position.
-func NewGame() *Game {
+func New() *Game {
 	return &Game{
 		control:       [2]TimeControl{},
 		Tags:          make(map[string]string),
@@ -31,7 +30,7 @@ func NewGame() *Game {
 // NewTimedGame does the same thing as NewGame() but sets the
 // time control to what is specified.
 func NewTimedGame(control [2]TimeControl) *Game {
-	g := NewGame()
+	g := New()
 	g.control = control
 	g.control[piece.White].Reset()
 	g.control[piece.Black].Reset()
@@ -46,7 +45,7 @@ func (G *Game) ActiveColor() piece.Color {
 // QuickMove makes the specified move without checking the legality
 // of the move or the status of the game post move.
 func (G *Game) QuickMove(m position.Move) {
-	from, to, movingPiece, capturedPiece = G.decompose(m)
+	from, to, movingPiece, capturedPiece := G.decompose(m)
 	G.makeMove(m, from, to, movingPiece, capturedPiece)
 }
 
@@ -72,7 +71,7 @@ func (G *Game) MakeTimedMove(m position.Move, timeTaken time.Duration) GameStatu
 // such as the en passant square, castling rights, 50 move rule count are also adjusted.
 // The game status after the given move is made is returned.
 func (G *Game) MakeMove(m position.Move) GameStatus {
-	from, to, movingPiece, capturedPiece = G.decompose(m)
+	from, to, movingPiece, capturedPiece := G.decompose(m)
 	if G.illegalMove(movingPiece, m) {
 		defer func() { G.Moves = append(G.Moves, m) }()
 		return G.illegalMoveStatus()
@@ -81,19 +80,20 @@ func (G *Game) MakeMove(m position.Move) GameStatus {
 	return G.Status()
 }
 
-func (G *Game) decompose(m position.Move) (from, to position.Move, movingPiece, capturedPiece position.Move) {
+func (G *Game) decompose(m position.Move) (from, to position.Square, movingPiece, capturedPiece piece.Piece) {
 	from, to = position.Split(m)
-	movingPiece = G.position.OnSquare(from)
-	capturedPiece = G.position.OnSquare(to)
+	movingPiece = G.Position.OnSquare(from)
+	capturedPiece = G.Position.OnSquare(to)
 	return
 }
 
-func (G *Game) makeMove(m position.Move, from, to position.Move, movingPiece, capturedPiece position.Move) {
+func (G *Game) makeMove(m position.Move, from, to position.Square, movingPiece, capturedPiece piece.Piece) {
 	G.adjustMoveCounter(movingPiece, capturedPiece)
 	G.adjustCastlingRights(movingPiece, from, to)
 	G.adjustEnPassant(movingPiece, from, to)
-	G.position.MakeMove(m)
+	G.Position.MakeMove(m)
 	G.Moves = append(G.Moves, m)
+	G.Position.ActiveColor = (G.Position.ActiveColor + 1) % 2
 	G.cachePosition()
 }
 
@@ -110,10 +110,10 @@ func (G *Game) Status() GameStatus {
 	if G.threeFold() {
 		return Threefold
 	}
-	if G.Position.FfiftyMoveCount >= 100 { // we keep track of it in half moves, start at 0
+	if G.Position.FiftyMoveCount >= 100 { // we keep track of it in half moves, start at 0
 		return FiftyMoveRule
 	}
-	if G.position.InsufficientMaterial() {
+	if G.Position.InsufficientMaterial() {
 		return InsufficientMaterial
 	}
 	return InProgress
@@ -138,9 +138,9 @@ func (G *Game) illegalMoveStatus() GameStatus {
 
 func (G *Game) adjustMoveCounter(movingPiece, capturedPiece piece.Piece) {
 	if capturedPiece.Type != piece.None || movingPiece.Type == piece.Pawn {
-		G.Position.FfiftyMoveCount = 0
+		G.Position.FiftyMoveCount = 0
 	} else {
-		G.Position.FfiftyMoveCount++
+		G.Position.FiftyMoveCount++
 	}
 }
 
@@ -186,7 +186,7 @@ func (G *Game) cachePosition() {
 
 // Check returns whether or not the specified color is in check.
 func (G *Game) Check(color piece.Color) bool {
-	return G.Postition.Check(color)
+	return G.Position.Check(color)
 }
 
 // EnPassant returns a pointer to a square or nil if there is not
@@ -197,7 +197,7 @@ func (G *Game) EnPassant() position.Square {
 
 // LegalMoves returns only the legal moves that can be made.
 func (G *Game) LegalMoves() map[position.Move]struct{} {
-	return G.position.LegalMoves()
+	return G.Position.LegalMoves()
 }
 
 // String puts the Board into a pretty print-able format.
@@ -213,11 +213,11 @@ func (G Game) String() string {
 	}
 	enpass := "None"
 	if G.Position.EnPassant <= position.LastSquare {
-		enpass = G.Position.EnPassant
+		enpass = fmt.Sprint(G.Position.EnPassant)
 	}
 	str := "   +---+---+---+---+---+---+---+---+\n"
 	for i := 63; i >= 0; i-- {
-		p := G.position.OnSquare(position.Square(i))
+		p := G.Position.OnSquare(position.Square(i))
 		if i%8 == 7 {
 			str += fmt.Sprint(" ", (i/8)+1, " ")
 		}
@@ -232,7 +232,7 @@ func (G Game) String() string {
 			case 4:
 				str += fmt.Sprint("   Castling Rights: ", rights)
 			case 3:
-				str += fmt.Sprint("   50 Move Rule:    ", G.Position.FfiftyMoveCount)
+				str += fmt.Sprint("   50 Move Rule:    ", G.Position.FiftyMoveCount)
 			case 1:
 				str += fmt.Sprint("   White's Clock:   ", G.control[0].clock, " (", G.control[0].movesLeft, " moves)")
 			case 0:

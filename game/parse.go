@@ -44,7 +44,7 @@ func (G *Game) ParseMove(san string) (position.Move, error) {
 		if (parsed[1] == '7' && parsed[3] == '8') || (parsed[1] == '2' && parsed[3] == '1') {
 			if len(parsed) <= 4 {
 				f, _ := position.Split(position.Move(parsed))
-				p := G.position.OnSquare(f)
+				p := G.Position.OnSquare(f)
 				if p.Type == piece.Pawn {
 					parsed += "q"
 				}
@@ -117,7 +117,7 @@ func (G *Game) originOfPiece(p string, color piece.Color, destination, fromFile,
 
 	// Get all the squares that have our piece on it from the move list:
 	var eligableSquares []string
-	squares := G.position.Find(piece.New(color, pieceMap[p]))
+	squares := G.Position.Find(piece.New(color, pieceMap[p]))
 	for sq := range squares {
 		for _, mv := range eligableMoves {
 			if string(mv[:2]) == sq.String() {

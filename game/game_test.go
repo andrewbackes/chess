@@ -3,8 +3,8 @@ package chess
 import (
 	"errors"
 	"fmt"
-	"github.com/andrewbackes/chess/board"
 	"github.com/andrewbackes/chess/piece"
+	"github.com/andrewbackes/chess/position"
 	"testing"
 	"time"
 )
@@ -14,13 +14,13 @@ func ExampleGame() {
 	// Create a new game:
 	g := NewGame()
 	// Moves can be created based on source and destination squares:
-	f3 := board.NewMove(board.F2, board.F3)
+	f3 := position.NewMove(position.F2, position.F3)
 	g.MakeMove(f3)
 	// They can also be created by parsing algebraic notation:
 	e5, _ := g.ParseMove("e5")
 	g.MakeMove(e5)
 	// Or by using piece coordinate notation:
-	g4 := board.Move("g2g4")
+	g4 := position.Move("g2g4")
 	g.MakeMove(g4)
 	// Another example of SAN:
 	foolsmate, _ := g.ParseMove("Qh4#")
@@ -81,7 +81,7 @@ func TestNewTimedGame(t *testing.T) {
 
 func TestNonexistentMove(t *testing.T) {
 	g := NewGame()
-	mv := board.Move("e4e5")
+	mv := position.Move("e4e5")
 	status := g.MakeMove(mv)
 	if status != WhiteIllegalMove {
 		t.Error("Got: ", status, " Wanted: ", WhiteIllegalMove)
@@ -105,7 +105,7 @@ func TestIllegalCheck(t *testing.T) {
 
 func TestIllegalCastle(t *testing.T) {
 	g, err := GameFromFEN("4k3/8/8/8/6r1/8/8/R3K2R w KQ - 0 1")
-	s := g.MakeMove(board.Move("e1g1"))
+	s := g.MakeMove(position.Move("e1g1"))
 	if err != nil || s != WhiteIllegalMove {
 		t.Fail()
 	}
@@ -134,7 +134,7 @@ func TestTimedOut(t *testing.T) {
 		Moves: 40,
 	}
 	g := NewTimedGame([2]TimeControl{tc, tc})
-	s := g.MakeTimedMove(board.Move("e2e4"), 41*time.Minute)
+	s := g.MakeTimedMove(position.Move("e2e4"), 41*time.Minute)
 	if s != WhiteTimedOut {
 		t.Fail()
 	}
@@ -147,7 +147,7 @@ func timedTestGame() *Game {
 
 func TestTimeIncrement(t *testing.T) {
 	g := timedTestGame()
-	s := g.MakeTimedMove(board.Move("e2e4"), 1*time.Minute)
+	s := g.MakeTimedMove(position.Move("e2e4"), 1*time.Minute)
 	if s != InProgress {
 		t.Error("game should be in progress")
 	}
@@ -158,10 +158,10 @@ func TestTimeIncrement(t *testing.T) {
 
 func TestTimeReset(t *testing.T) {
 	g := timedTestGame()
-	g.MakeTimedMove(board.Move("e2e4"), 5*time.Minute)
-	g.MakeTimedMove(board.Move("e7e5"), 5*time.Minute)
-	g.MakeTimedMove(board.Move("d2d4"), 5*time.Minute)
-	g.MakeTimedMove(board.Move("d7d5"), 5*time.Minute)
+	g.MakeTimedMove(position.Move("e2e4"), 5*time.Minute)
+	g.MakeTimedMove(position.Move("e7e5"), 5*time.Minute)
+	g.MakeTimedMove(position.Move("d2d4"), 5*time.Minute)
+	g.MakeTimedMove(position.Move("d7d5"), 5*time.Minute)
 	if g.control[piece.White].movesLeft != g.control[piece.White].Moves {
 		t.Error(g.control[piece.White].movesLeft, "!=", g.control[piece.White].Moves)
 	}
@@ -180,14 +180,14 @@ func TestFiftyMoveRule(t *testing.T) {
 func TestEnPassantMove(t *testing.T) {
 	fen := "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"
 	g, _ := GameFromFEN(fen)
-	g.QuickMove(board.Move("e2c4"))
-	g.QuickMove(board.Move("c7c5"))
+	g.QuickMove(position.Move("e2c4"))
+	g.QuickMove(position.Move("c7c5"))
 	moves := g.LegalMoves()
 	if _, ok := moves["d5c6"]; !ok {
 		t.Error("missing legal en passant d5c6")
 	}
-	g.QuickMove(board.Move("d5c6"))
-	if g.board.OnSquare(board.C5).Type != piece.None {
+	g.QuickMove(position.Move("d5c6"))
+	if g.position.OnSquare(position.C5).Type != piece.None {
 		t.Error("en passant pawn not captured")
 	}
 }

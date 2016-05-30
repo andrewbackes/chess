@@ -2,8 +2,8 @@ package chess
 
 import (
 	"errors"
-	"github.com/andrewbackes/chess/board"
 	"github.com/andrewbackes/chess/piece"
+	"github.com/andrewbackes/chess/position"
 	"regexp"
 	//"strconv"
 	"strings"
@@ -15,19 +15,19 @@ import (
 // TODO(andrewbackes): ParseMove - What about promotion captures? or ambiguous promotions?
 // BUG(andrewbackes): ParseMove - Illegal move: f7g8 (raw: fxg8=Q)
 // BUG(andrewbackes): ParseMove - Illegal move: move axb8=Q+
-func (G *Game) ParseMove(san string) (board.Move, error) {
+func (G *Game) ParseMove(san string) (position.Move, error) {
 
 	// Check for null move:
 	if san == "0000" {
-		return board.Move(san), nil
+		return position.Move(san), nil
 	}
 	color := G.ActiveColor()
 	// Check for castling:
 	if san == "O-O" {
-		return board.Move([]string{"e1g1", "e8g8"}[color]), nil
+		return position.Move([]string{"e1g1", "e8g8"}[color]), nil
 	}
 	if san == "O-O-O" {
-		return board.Move([]string{"e1c1", "e8c8"}[color]), nil
+		return position.Move([]string{"e1c1", "e8c8"}[color]), nil
 	}
 
 	// Strip uneeded characters:
@@ -43,14 +43,14 @@ func (G *Game) ParseMove(san string) (board.Move, error) {
 		// some engines dont specify the promotion piece, assume queen:
 		if (parsed[1] == '7' && parsed[3] == '8') || (parsed[1] == '2' && parsed[3] == '1') {
 			if len(parsed) <= 4 {
-				f, _ := board.Split(board.Move(parsed))
-				p := G.board.OnSquare(f)
+				f, _ := position.Split(position.Move(parsed))
+				p := G.position.OnSquare(f)
 				if p.Type == piece.Pawn {
 					parsed += "q"
 				}
 			}
 		}
-		return board.Move(parsed), nil
+		return position.Move(parsed), nil
 	}
 
 	//	    (piece)    (from)  (from)  (cap) (dest)      (promotion)        (chk  )
@@ -59,7 +59,7 @@ func (G *Game) ParseMove(san string) (board.Move, error) {
 
 	matched := r.FindStringSubmatch(san)
 	if len(matched) == 0 {
-		return board.Move(san), errors.New("could not parse '" + san + "'")
+		return position.Move(san), errors.New("could not parse '" + san + "'")
 	}
 
 	piece := matched[1]
@@ -76,7 +76,7 @@ func (G *Game) ParseMove(san string) (board.Move, error) {
 
 	origin, err := G.originOfPiece(piece, color, destination, fromFile, fromRank)
 	if err != nil {
-		return board.Move(san), errors.New("could not find source square of '" + san + "'")
+		return position.Move(san), errors.New("could not find source square of '" + san + "'")
 	}
 
 	// Some engines dont tell you to promote to queen, so assume so in that case:
@@ -86,7 +86,7 @@ func (G *Game) ParseMove(san string) (board.Move, error) {
 	//	}
 	//}
 
-	return board.Move(origin + destination + strings.ToLower(promote)), nil
+	return position.Move(origin + destination + strings.ToLower(promote)), nil
 }
 
 func (G *Game) originOfPiece(p string, color piece.Color, destination, fromFile, fromRank string) (string, error) {
@@ -105,7 +105,7 @@ func (G *Game) originOfPiece(p string, color piece.Color, destination, fromFile,
 
 	// Get all legal moves:
 	legalMoves := G.LegalMoves()
-	var eligableMoves []board.Move
+	var eligableMoves []position.Move
 
 	// Grab the legal moves that land on our square:
 	for mv := range legalMoves {
@@ -117,7 +117,7 @@ func (G *Game) originOfPiece(p string, color piece.Color, destination, fromFile,
 
 	// Get all the squares that have our piece on it from the move list:
 	var eligableSquares []string
-	squares := G.board.Find(piece.New(color, pieceMap[p]))
+	squares := G.position.Find(piece.New(color, pieceMap[p]))
 	for sq := range squares {
 		for _, mv := range eligableMoves {
 			if string(mv[:2]) == sq.String() {

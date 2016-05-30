@@ -2,14 +2,14 @@ package chess
 
 import (
 	"errors"
-	"github.com/andrewbackes/chess/board"
+	"fmt"
 	"github.com/andrewbackes/chess/piece"
+	"github.com/andrewbackes/chess/position"
 	"strconv"
 	"strings"
 )
 
-// Encode returns the fen of the current position of the game.
-func Encode(G *Game) string {
+func Encode(p *position.Position) (string, error) {
 
 	pc := [][]string{
 		{"P", "N", "B", "R", "Q", "K", " "},
@@ -19,8 +19,8 @@ func Encode(G *Game) string {
 	var boardstr string
 	// put what is on each square into a squence (including blanks):
 	for i := int(63); i >= 0; i-- {
-		p := G.board.OnSquare(board.Square(i))
-		boardstr += pc[p.Color][p.Type]
+		sq := p.OnSquare(position.Square(i))
+		boardstr += pc[sq.Color][sq.Type]
 		if i%8 == 0 && i > 0 {
 			boardstr += "/"
 		}
@@ -30,13 +30,13 @@ func Encode(G *Game) string {
 		boardstr = strings.Replace(boardstr, strings.Repeat(" ", i), strconv.Itoa(i), -1)
 	}
 	// Player to move:
-	turn := []string{"w", "b"}[G.ActiveColor()]
+	turn := []string{"w", "b"}[p.ActiveColor]
 	// Castling Rights:
 	var rights string
 	castles := [][]string{{"K", "Q"}, {"k", "q"}}
 	for c := piece.White; c <= piece.Black; c++ {
-		for side := board.ShortSide; side <= board.LongSide; side++ {
-			if G.history.castlingRights[c][side] {
+		for side := position.ShortSide; side <= position.LongSide; side++ {
+			if p.CastlingRights[c][side] {
 				rights += castles[c][side]
 			}
 		}
@@ -45,23 +45,20 @@ func Encode(G *Game) string {
 		rights = "-"
 	}
 	// en Passant:
-	var enPas string
-	if G.history.enPassant != nil {
-		enPas = board.Square(*G.history.enPassant).String()
-	} else {
-		enPas = "-"
+	enPas := "-"
+	if p.EnPassant != position.NoSquare {
+		enPas = fmt.Sprint(p.EnPassant)
 	}
 	// Moves and 50 move rule
-	fifty := strconv.Itoa(int(G.history.fiftyMoveCount / 2))
-	move := strconv.Itoa(int(len(G.history.move)/2) + 1)
+	fifty := strconv.Itoa(int(p.FiftyMoveCount / 2))
+	move := strconv.Itoa(p.MoveNumber)
 	// all together:
 	fen := boardstr + " " + turn + " " + rights + " " + enPas + " " + fifty + " " + move
-	return fen
+	return fen, nil
 }
 
 // Decode creates a game from the provided FEN.
-func Decode(fen string) (*Game, error) {
-	G := NewGame()
+func Decode(fen string) (*position.Position, error) {
 	words := strings.Split(fen, " ")
 	if len(words) < 4 {
 		return nil, errors.New("FEN: incomplete fen")
@@ -69,52 +66,46 @@ func Decode(fen string) (*Game, error) {
 	if words[1] != "w" && words[1] != "b" {
 		return nil, errors.New("FEN: can not determine active player")
 	}
-	b, err := board.FromFEN(words[0])
+	p, err := parseBoard(words[0])
 	if err != nil {
 		return nil, err
 	}
-	G.board = *b
-	if len(words) >= 6 {
-		h, _ := parseMoveHistory(words[1], words[5], words[4])
-		G.history = *h
-	} else if strings.ToLower(words[1]) == "b" {
-		// add a null move since we want it to be black's turn.
-		var m []board.Move
-		m = append(m, board.NullMove)
-		G.history.move = m
-	}
-	G.history.castlingRights = parseCastlingRights(words[2])
-	G.history.enPassant = parseEnPassantSquare(words[3])
-	G.history.startingFen = fen
 
-	return G, nil
+	if len(words) >= 6 {
+		appendMoveHistory(words[1], words[5], words[4], p)
+	}
+	if strings.ToLower(words[1]) == "b" {
+		p.ActiveColor = piece.Black
+	}
+	p.CastlingRights = parseCastlingRights(words[2])
+	p.EnPassant = parseEnPassantSquare(words[3])
+
+	return p, nil
 }
 
-func parseMoveHistory(activeColor, moveCount, fiftyMoveCount string) (*gameHistory, error) {
-	h := gameHistory{}
+func appendMoveHistory(activeColor, moveCount, fiftyMoveCount string, pos *position.Position) error {
+
 	fullMoves, err := strconv.ParseUint(moveCount, 10, 0)
 	if err != nil {
-		return nil, errors.New("FEN: could not parse move count")
+		return errors.New("FEN: could not parse move count")
 	}
-	halfMoves := ((fullMoves - 1) * 2) + map[string]uint64{"w": 0, "b": 1}[activeColor]
-	for i := uint64(0); i < halfMoves; i++ {
-		h.move = append(h.move, board.NullMove)
-	}
+	//halfMoves := ((fullMoves - 1) * 2) + map[string]uint64{"w": 0, "b": 1}[activeColor]
+	pos.MoveNumber = int(fullMoves)
 	fmc, err := strconv.ParseUint(fiftyMoveCount, 10, 0)
 	if err != nil {
-		return nil, errors.New("FEN: could not parse fifty move rule count")
+		return errors.New("FEN: could not parse fifty move rule count")
 	}
 	// Since internally we store half moves:
-	h.fiftyMoveCount = (fmc * 2) + map[string]uint64{"w": 0, "b": 1}[activeColor]
-	return &h, nil
+	pos.FiftyMoveCount = (fmc * 2) + map[string]uint64{"w": 0, "b": 1}[activeColor]
+	return nil
 }
 
-func parseEnPassantSquare(sq string) *board.Square {
+func parseEnPassantSquare(sq string) position.Square {
 	if sq != "-" {
-		s := board.ParseSquare(sq)
-		return &s
+		s := position.ParseSquare(sq)
+		return s
 	}
-	return nil
+	return position.NoSquare
 }
 
 func parseCastlingRights(KQkq string) [2][2]bool {
@@ -123,22 +114,21 @@ func parseCastlingRights(KQkq string) [2][2]bool {
 		{strings.Contains(KQkq, "k"), strings.Contains(KQkq, "q")}}
 }
 
-/*
 // GameFromFEN parses the board passed via FEN and returns a board object.
-func FromFEN(position string) (*Board, error) {
-	b := New()
-	b.Clear()
+func parseBoard(board string) (*position.Position, error) {
+	p := position.New()
+	p.Clear()
 	// remove the /'s and replace the numbers with that many spaces
 	// so that there is a 1-1 mapping from bytes to squares.
-	justBoard := strings.Split(position, " ")[0]
+	justBoard := strings.Split(board, " ")[0]
 	parsedBoard := strings.Replace(justBoard, "/", "", 9)
 	for i := 1; i < 9; i++ {
 		parsedBoard = strings.Replace(parsedBoard, strconv.Itoa(i), strings.Repeat(" ", i), -1)
 	}
 	if len(parsedBoard) < 64 {
-		return nil, errors.New("fen: could not parse position")
+		return nil, errors.New("fen: incomplete position")
 	}
-	p := map[rune]piece.Type{
+	pc := map[rune]piece.Type{
 		'P': piece.Pawn, 'p': piece.Pawn,
 		'N': piece.Knight, 'n': piece.Knight,
 		'B': piece.Bishop, 'b': piece.Bishop,
@@ -158,10 +148,9 @@ func FromFEN(position string) (*Board, error) {
 			break
 		}
 		k := rune(parsedBoard[pos])
-		if _, ok := p[k]; ok {
-			b.bitBoard[color[k]][p[k]] |= (1 << uint(63-pos))
+		if _, ok := pc[k]; ok {
+			p.Put(piece.New(color[k], pc[k]), position.Square(63-pos))
 		}
 	}
-	return &b, nil
+	return p, nil
 }
-*/

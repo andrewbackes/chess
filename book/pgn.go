@@ -2,13 +2,14 @@ package book
 
 import (
 	"errors"
-	"github.com/andrewbackes/chess"
-	"github.com/andrewbackes/chess/board"
+	"github.com/andrewbackes/chess/game"
+	"github.com/andrewbackes/chess/pgn"
+	"github.com/andrewbackes/chess/position"
 )
 
 // FromPGN creates an opening book from a PGN. 'depth' is the number of plies
 // to include in the opening book.
-func FromPGN(pgns []*chess.PGN, depth int) (*Book, error) {
+func FromPGN(pgns []*pgn.PGN, depth int) (*Book, error) {
 	if len(pgns) == 0 {
 		return nil, errors.New("no games in pgn")
 	}

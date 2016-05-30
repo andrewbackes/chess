@@ -1,6 +1,7 @@
-package chess
+package polyglot
 
 import (
+	"github.com/andrewbackes/chess/fen"
 	"github.com/andrewbackes/chess/piece"
 	"testing"
 )
@@ -93,12 +94,12 @@ func TestPolyglotHash(t *testing.T) {
 	}
 
 	for i, p := range tests {
-		g, err := GameFromFEN(p.FEN)
+		pos, err := fen.Decode(p.FEN)
 		if err != nil {
 			t.Error(err)
 		}
 		//got := fmt.Sprintf("%s", g.Polyglot())
-		got := g.Polyglot()
+		got := Encode(pos)
 		if got != p.key {
 			t.Log("test index:", i)
 			t.Log("got", got, "wanted", p.key)

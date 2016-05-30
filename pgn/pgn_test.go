@@ -2,8 +2,10 @@ package pgn
 
 import (
 	"fmt"
-	"github.com/andrewbackes/chess/board"
+	"github.com/andrewbackes/chess/fen"
+	"github.com/andrewbackes/chess/game"
 	"github.com/andrewbackes/chess/piece"
+	"github.com/andrewbackes/chess/position"
 	"strings"
 	"testing"
 )
@@ -38,14 +40,25 @@ func TestPGNnullmoves(t *testing.T) {
 3. h5e5 1-0
 
 `
-	g, _ := GameFromFEN("rnbq1bnr/ppppkppp/8/4p2Q/4P3/8/PPPP1PPP/RNB1KBNR w KQ - 1 3")
-	m, err := g.ParseMove("Qxe5#")
+	expectedAlt := `[Result "1-0"]
+[FEN "rnbq1bnr/ppppkppp/8/4p2Q/4P3/8/PPPP1PPP/RNB1KBNR w KQ - 1 3"]
+[Setup "1"]
+
+3. h5e5 1-0
+
+`
+	test := "rnbq1bnr/ppppkppp/8/4p2Q/4P3/8/PPPP1PPP/RNB1KBNR w KQ - 1 3"
+	g, _ := fen.DecodeToGame(test)
+	m, err := g.Position.ParseMove("Qxe5#")
 	if err != nil {
 		t.Error("couldnt parse move")
 	}
 	g.MakeMove(m)
-	if g.PGN().String() != expected {
-		t.Log(g.PGN())
+	got := Encode(g).String()
+	if got != expected && got != expectedAlt {
+		t.Log("wanted:\n", expected)
+		t.Log("or:\n", expectedAlt)
+		t.Log("got:\n", got)
 		t.Fail()
 	}
 }
@@ -56,18 +69,18 @@ func TestPGNoutput(t *testing.T) {
 1. e2e4 e7e5 2. d1h5 e8e7 3. h5e5 1-0
 
 `
-	g := NewGame()
+	g := game.New()
 	moves := []string{"e4", "e5", "Qh5", "Ke7", "Qxe5#"}
 	for _, move := range moves {
-		m, err := g.ParseMove(move)
+		m, err := g.Position.ParseMove(move)
 		if err != nil {
 			t.Error("couldnt parse move")
 		}
 		g.MakeMove(m)
 	}
-	if g.PGN().String() != expected {
+	if Encode(g).String() != expected {
 		fmt.Print("expected:\n'", expected, "'")
-		fmt.Print("got:\n'", g.PGN().String(), "'")
+		fmt.Print("got:\n'", Encode(g), "'")
 		t.Fail()
 	}
 }
@@ -79,7 +92,7 @@ func TestReadOnePGN(t *testing.T) {
 
 1. e2e4 e7e5 2. d1h5 e8e7 3. h5e5 1-0
 `
-	games, err := ReadPGN(strings.NewReader(input))
+	games, err := Open(strings.NewReader(input))
 	if err != nil || len(games) != 1 {
 		t.Log(games)
 		t.Log(err)
@@ -101,7 +114,7 @@ func TestReadTwoPGN(t *testing.T) {
 
 1. e2e4 e7e5 2. d1h5 e8e7 1/2-1/2
 `
-	games, err := ReadPGN(strings.NewReader(input))
+	games, err := Open(strings.NewReader(input))
 	if err != nil || len(games) != 2 {
 		t.Log(games)
 		t.Log(err)
@@ -130,7 +143,7 @@ func TestReadThreePGN(t *testing.T) {
 
 1. e2e4 e7e5 2. d1h5 e8e7 3. h5e5 1-0
 `
-	games, err := ReadPGN(strings.NewReader(input))
+	games, err := Open(strings.NewReader(input))
 	if err != nil || len(games) != 3 {
 		t.Log(games)
 		t.Log(err)
@@ -146,7 +159,7 @@ func TestReadPGN(t *testing.T) {
 
 1. e2e4 e7e5 2. d1h5 e8e7 3. h5e5 1-0
 `
-	games, _ := ReadPGN(strings.NewReader(input))
+	games, _ := Open(strings.NewReader(input))
 	games[0].Tags["Event"] = "one"
 	games[0].Tags["Round"] = "1"
 	games[0].Tags["Result"] = "1-0"
@@ -161,16 +174,16 @@ func TestReadPGN(t *testing.T) {
 }
 
 func TestFromPGN(t *testing.T) {
-	pgn := NewPGN()
+	pgn := New()
 	pgn.Tags["Event"] = "test"
 	pgn.Moves = []string{"e2e4", "e7e5", "d1h5", "e8e7", "h5e5"}
-	game, err := GameFromPGN(pgn)
+	game, err := Decode(pgn)
 	if err != nil {
 		t.Error(err)
 	}
-	moves := game.MoveHistory()
+	moves := game.Moves
 	for i, m := range pgn.Moves {
-		if board.Move(m) != moves[i] {
+		if position.Move(m) != moves[i] {
 			t.Log(moves)
 			t.Fail()
 		}
@@ -214,25 +227,18 @@ func TestParsePGN(t *testing.T) {
 
 1. e2e4 e7e5 2. d1h5 e8e7 3. h5e5 1-0
 `
-	pgn, err := ParsePGN(input)
+	pgn, err := Parse(input)
 	if err != nil || pgn.Tags["Round"] != "1" {
 		t.Fail()
 	}
 }
 
-func TestStatusStringInProgress(t *testing.T) {
-	g := NewGame()
-	if g.statusString() != "*" {
-		t.Fail()
-	}
-}
-
 func TestStatusStringInDraw(t *testing.T) {
-	g := NewGame()
-	g.board.Clear()
-	g.board.QuickPut(piece.New(piece.White, piece.King), board.E1)
-	g.board.QuickPut(piece.New(piece.Black, piece.King), board.E8)
-	if g.statusString() != "1/2-1/2" {
+	g := game.New()
+	g.Position.Clear()
+	g.Position.QuickPut(piece.New(piece.White, piece.King), position.E1)
+	g.Position.QuickPut(piece.New(piece.Black, piece.King), position.E8)
+	if g.Result() != "1/2-1/2" {
 		t.Fail()
 	}
 }

@@ -19,13 +19,13 @@ func ExampleGame() {
 	f3 := position.NewMove(position.F2, position.F3)
 	g.MakeMove(f3)
 	// They can also be created by parsing algebraic notation:
-	e5, _ := g.ParseMove("e5")
+	e5, _ := g.Position.ParseMove("e5")
 	g.MakeMove(e5)
 	// Or by using piece coordinate notation:
 	g4 := position.Move("g2g4")
 	g.MakeMove(g4)
 	// Another example of SAN:
-	foolsmate, _ := g.ParseMove("Qh4#")
+	foolsmate, _ := g.Position.ParseMove("Qh4#")
 	// Making a move also returns the game status:
 	gamestatus := g.MakeMove(foolsmate)
 	fmt.Println(gamestatus == WhiteCheckmated)
@@ -112,7 +112,7 @@ func TestIllegalCastle(t *testing.T) {
 
 func playTestGame(t *testing.T, g *Game, moves []string, expected GameStatus) error {
 	for i, san := range moves {
-		move, err := g.ParseMove(san)
+		move, err := g.Position.ParseMove(san)
 		if err != nil {
 			return err
 		}
@@ -252,4 +252,11 @@ func fromFEN(board string) (*position.Position, error) {
 		}
 	}
 	return b, nil
+}
+
+func TestGameResultInProgress(t *testing.T) {
+	g := New()
+	if g.Result() != "*" {
+		t.Fail()
+	}
 }

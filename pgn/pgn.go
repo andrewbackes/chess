@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"github.com/andrewbackes/chess/board"
 	"github.com/andrewbackes/chess/game"
 	"io"
 	"strings"
@@ -74,7 +73,7 @@ func Decode(pgn *PGN) (*game.Game, error) {
 	g := game.New()
 	g.Tags = pgn.Tags
 	for _, san := range pgn.Moves {
-		move, err := g.ParseMove(san)
+		move, err := g.Position.ParseMove(san)
 		if err != nil {
 			return nil, err
 		}
@@ -98,25 +97,31 @@ func New() *PGN {
 //		G.PGN().UnmarshalText()
 func Encode(G *game.Game) *PGN {
 	pgn := New()
-	G.appendTags()
+	//G.appendTags()
 	pgn.Tags = G.Tags
-	firstRealMove := 0
-	for i, move := range G.MoveHistory() {
-		if move != board.NullMove {
-			firstRealMove = i
-			break
+	pgn.Tags["Result"] = G.Result()
+	/*
+		firstRealMove := 0
+
+		for i, move := range G.Moves {
+			if move != position.NullMove {
+				firstRealMove = i
+				break
+			}
 		}
-	}
-	pgn.FirstMoveNum = firstRealMove/2 + 1
-	for i := firstRealMove; i < len(G.history.move); i++ {
-		pgn.Moves = append(pgn.Moves, string(G.history.move[i]))
+		pgn.FirstMoveNum = firstRealMove/2 + 1
+	*/
+	firstRealMove := G.Position.MoveNumber - (len(G.Moves) / 2)
+	pgn.FirstMoveNum = firstRealMove
+	for i := 0; i < len(G.Moves); i++ {
+		pgn.Moves = append(pgn.Moves, string(G.Moves[i]))
 	}
 	return pgn
 }
 
 // Parse reads a string containing a single PGN and returns a PGN object.
 // To read multiple PGNs from a string use:
-//     ReadPGN(strings.NewReader(multiPgnString))
+//     Open(strings.NewReader(multiPgnString))
 func Parse(pgn string) (*PGN, error) {
 	games, err := Open(strings.NewReader(pgn))
 	if err != nil {

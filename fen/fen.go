@@ -3,6 +3,7 @@ package fen
 import (
 	"errors"
 	"fmt"
+	"github.com/andrewbackes/chess/game"
 	"github.com/andrewbackes/chess/piece"
 	"github.com/andrewbackes/chess/position"
 	"strconv"
@@ -81,6 +82,19 @@ func Decode(fen string) (*position.Position, error) {
 	p.EnPassant = parseEnPassantSquare(words[3])
 
 	return p, nil
+}
+
+// DecodeToGame converts a fen string into a game and sets the appropriate tags.
+func DecodeToGame(fen string) (*game.Game, error) {
+	p, err := Decode(fen)
+	if err != nil {
+		return nil, err
+	}
+	g := game.New()
+	g.Position = p
+	g.Tags["FEN"] = fen
+	g.Tags["Setup"] = "1"
+	return g, nil
 }
 
 func appendMoveHistory(activeColor, moveCount, fiftyMoveCount string, pos *position.Position) error {

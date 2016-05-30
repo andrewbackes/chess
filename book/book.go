@@ -3,7 +3,8 @@ package book
 
 import (
 	"encoding/binary"
-	"github.com/andrewbackes/chess/board"
+	"github.com/andrewbackes/chess/polyglot"
+	"github.com/andrewbackes/chess/position"
 	"os"
 	"sort"
 )
@@ -130,7 +131,7 @@ func encodedMove(move string) uint16 {
 	case "e8c8":
 		mv = "e8a8"
 	}
-	from, to := board.Split(board.Move(mv))
+	from, to := position.Split(position.Move(mv))
 	fromFile, fromRank := indexToFR(int(from))
 	toFile, toRank := indexToFR(int(to))
 	var promo uint16
@@ -176,11 +177,11 @@ black long       e8a8
 func decodeMove(move uint16) string {
 	fromRank := bits(move, 3)
 	fromFile := bits(move, 2)
-	from := board.NewSquare(uint(fromFile+1), uint(fromRank+1))
+	from := position.NewSquare(uint(fromFile+1), uint(fromRank+1))
 
 	toRank := bits(move, 1)
 	toFile := bits(move, 0)
-	to := board.NewSquare(uint(toFile+1), uint(toRank+1))
+	to := position.NewSquare(uint(toFile+1), uint(toRank+1))
 
 	promo := bits(move, 4)
 	var promoStr string

@@ -1,4 +1,4 @@
-package board
+package position
 
 // Move is a chess move on the board.
 type Move string

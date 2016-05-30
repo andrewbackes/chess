@@ -1,4 +1,4 @@
-package board
+package position
 
 import (
 	"github.com/andrewbackes/chess/piece"

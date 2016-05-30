@@ -1,4 +1,4 @@
-package board
+package position
 
 // Square on the board.
 type Square uint16

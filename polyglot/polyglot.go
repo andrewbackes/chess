@@ -1,3 +1,4 @@
+// Package polyglot encodes/decodes chess positions into polyglot hashes.
 package polyglot
 
 import (

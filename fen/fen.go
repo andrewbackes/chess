@@ -1,3 +1,5 @@
+// Package fen is for encoding/decoding chess positions into fen format.
+// You can also decode straight into a playable game.
 package fen
 
 import (
@@ -10,7 +12,8 @@ import (
 	"strings"
 )
 
-func Encode(p *position.Position) (string, error) {
+// Encode will take a position
+func Encode(p *position.Position) (fen string, err error) {
 
 	pc := [][]string{
 		{"P", "N", "B", "R", "Q", "K", " "},
@@ -54,7 +57,7 @@ func Encode(p *position.Position) (string, error) {
 	fifty := strconv.Itoa(int(p.FiftyMoveCount / 2))
 	move := strconv.Itoa(p.MoveNumber)
 	// all together:
-	fen := boardstr + " " + turn + " " + rights + " " + enPas + " " + fifty + " " + move
+	fen = boardstr + " " + turn + " " + rights + " " + enPas + " " + fifty + " " + move
 	return fen, nil
 }
 

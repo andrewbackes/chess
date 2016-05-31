@@ -1,3 +1,4 @@
+// Package game handles chess games. You can create timed and untimed games.
 package game
 
 import (

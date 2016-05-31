@@ -1,3 +1,6 @@
+// Package epd is for working with Extended Position Description.
+// You can decode and/or open edp files. Combine this with the engines
+// package to really get some cool stuff going on.
 package epd
 
 import (

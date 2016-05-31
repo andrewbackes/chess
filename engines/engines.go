@@ -4,7 +4,7 @@ package engines
 import (
 	"bufio"
 	"errors"
-	"github.com/andrewbackes/chess"
+	"github.com/andrewbackes/chess/game"
 	"io"
 	"os/exec"
 	"path/filepath"
@@ -20,7 +20,7 @@ type Engine interface {
 	NewGame() error
 
 	// Search finds the best move for the game.
-	BestMove(*chess.Game) (*SearchInfo, error)
+	BestMove(*game.Game) (*SearchInfo, error)
 
 	// Stop tells the engine to stop doing what ever its doing.
 	Stop() error

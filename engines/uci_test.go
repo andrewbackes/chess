@@ -2,7 +2,7 @@ package engines
 
 import (
 	"bufio"
-	"github.com/andrewbackes/chess"
+	"github.com/andrewbackes/chess/game"
 	"os"
 	"strings"
 	"testing"
@@ -94,7 +94,7 @@ func TestUCIBestMove(t *testing.T) {
 	if err != nil {
 		t.Fail()
 	}
-	g := chess.NewGame()
+	g := game.New()
 	sr, err := e.BestMove(g)
 	if sr == nil || sr.BestMove != "e2e4" || sr.Ponder != "d7d5" {
 		t.Log(sr)

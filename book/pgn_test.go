@@ -3,7 +3,7 @@ package book
 import (
 	//"fmt"
 	"fmt"
-	"github.com/andrewbackes/chess"
+	"github.com/andrewbackes/chess/pgn"
 	"strings"
 	"testing"
 )
@@ -21,7 +21,7 @@ func TestFromPGN(t *testing.T) {
 
 1. e2e4 e7e5 2. d1h5 e8e7 1/2-1/2
 `
-	pgns, _ := chess.ReadPGN(strings.NewReader(input))
+	pgns, _ := pgn.Open(strings.NewReader(input))
 	book, _ := FromPGN(pgns, 4)
 	fmt.Println(book)
 }

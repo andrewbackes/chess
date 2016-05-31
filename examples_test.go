@@ -1,3 +1,4 @@
+// Package chess contains examples for the other packages in this repo.
 package chess
 
 import (

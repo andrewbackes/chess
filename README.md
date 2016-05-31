@@ -19,7 +19,7 @@ For details you can visit the [godoc](https://godoc.org/github.com/andrewbackes/
 ## How to get it
 If you have your GOPATH set in the recommended way ([golang.org](https://golang.org/doc/code.html#GOPATH)) then you can use `go get`:
 
-```go get github.com/andrewbackes/chess```
+```go get github.com/andrewbackes/chess/<pkg name>```
 
 otherwise you can clone the repo.
 

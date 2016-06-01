@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"errors"
 	"github.com/andrewbackes/chess/game"
+	"github.com/andrewbackes/chess/position"
 	"io"
 	"os/exec"
 	"path/filepath"
@@ -21,6 +22,10 @@ type Engine interface {
 
 	// Search finds the best move for the game.
 	BestMove(*game.Game) (*SearchInfo, error)
+
+	// Think starts the engine deciding the best move for the given position.
+	// It is non-blocking and the output is put into the output channel.
+	Think(*position.Position) (output chan map[string]string)
 
 	// Stop tells the engine to stop doing what ever its doing.
 	Stop() error

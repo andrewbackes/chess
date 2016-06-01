@@ -3,6 +3,7 @@ package engines
 import (
 	"bufio"
 	"errors"
+	"github.com/andrewbackes/chess/fen"
 	"github.com/andrewbackes/chess/game"
 	"github.com/andrewbackes/chess/piece"
 	"github.com/andrewbackes/chess/position"
@@ -65,6 +66,14 @@ func should(stop chan struct{}) bool {
 	default:
 	}
 	return false
+}
+
+func (e *UCIEngine) resetStop() {
+	select {
+	case <-e.stop:
+		e.stop = make(chan struct{})
+	default:
+	}
 }
 
 func (e *UCIEngine) initialize() error {
@@ -139,8 +148,52 @@ func (e *UCIEngine) SetBoard(g *game.Game) {
 	e.input <- []byte(command)
 }
 
+func (e *UCIEngine) setPosition(p *position.Position) error {
+	f, err := fen.Encode(p)
+	if err != nil {
+		return err
+	}
+	command := "position " + f
+	e.input <- []byte(command)
+	return nil
+}
+
+// Think will do an infinite search on the provided position. It is non-blocking
+// and returns a buffered channel where the engine's output is streamed.
+func (e *UCIEngine) Think(p *position.Position) (output chan map[string]string, err error) {
+	e.resetStop()
+	err = e.setPosition(p)
+	if err != nil {
+		return
+	}
+	output = make(chan map[string]string, 128)
+	commands := uciCommands()
+	parse := func(info []byte) {
+		m := infoToMap(commands, info)
+		if m != nil {
+			output <- m
+		}
+	}
+	e.sendAndWait([]byte("go infinite"), "bestmove ", 8760*time.Hour, parse)
+	return
+}
+
+func infoToMap(commands map[string]int, line []byte) map[string]string {
+	words := strings.Split(string(line), " ")
+	if len(words) > 0 {
+		if words[0] == "info" {
+			if info := parseInfo(words, commands); info != nil {
+				return info
+			}
+		}
+	}
+	return nil
+}
+
 // BestMove tells the engine to return what it things is the best move for the current game.
 func (e *UCIEngine) BestMove(g *game.Game) (*SearchInfo, error) {
+	e.resetStop()
+	e.SetBoard(g)
 	command := "go"
 
 	s := []string{" wtime ", " btime "}
@@ -155,7 +208,7 @@ func (e *UCIEngine) BestMove(g *game.Game) (*SearchInfo, error) {
 	}
 	timeout := (g.Clock(g.ActiveColor()) * 125) / 100 // 25% buffer on time
 	si := SearchInfo{}
-	commands := map[string]int{}
+	commands := uciCommands()
 	parse := func(info []byte) {
 		parseAnalysis(&si, commands, info)
 	}

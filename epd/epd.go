@@ -94,11 +94,15 @@ func Open(file io.Reader) ([]*EPD, error) {
 	var ret []*EPD
 	for scanner.Scan() {
 		line := scanner.Text()
-		epd, err := Decode(line)
-		if err != nil {
-			return nil, err
+		trimmed := strings.TrimSpace(line)
+		// Check for comments:
+		if len(trimmed) > 0 && trimmed[0] != '#' {
+			epd, err := Decode(trimmed)
+			if err != nil {
+				return nil, err
+			}
+			ret = append(ret, epd)
 		}
-		ret = append(ret, epd)
 	}
 	return ret, nil
 }

@@ -73,10 +73,12 @@ func Decode(epd string) (*EPD, error) {
 	var opers []Operation
 	for _, op := range ops {
 		pair := strings.Split(strings.TrimSpace(op), " ")
-		if len(pair) != 2 {
+		if len(pair) < 2 {
 			return nil, errors.New("epd: could not parse operation")
 		}
-		opers = append(opers, Operation{Code: pair[0], Operand: pair[1]})
+		o := pair[0]
+		v := strings.Join(pair[1:], " ")
+		opers = append(opers, Operation{Code: o, Operand: v})
 	}
 	return &EPD{Position: p, Operations: opers}, nil
 }

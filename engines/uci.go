@@ -113,9 +113,10 @@ func (e *UCIEngine) Close() error {
 }
 
 // NewGame tells the engine that we will be passing positions and thinking on a new game.
-func (e *UCIEngine) NewGame() {
+func (e *UCIEngine) NewGame() error {
 	e.input <- []byte("ucinewgame")
 	e.isReady()
+	return nil
 }
 
 // Stop sends a command to the engine to stop what it is doing.
@@ -153,28 +154,26 @@ func (e *UCIEngine) setPosition(p *position.Position) error {
 	if err != nil {
 		return err
 	}
-	command := "position " + f
+	command := "position fen " + f
 	e.input <- []byte(command)
 	return nil
 }
 
 // Think will do an infinite search on the provided position. It is non-blocking
 // and returns a buffered channel where the engine's output is streamed.
-func (e *UCIEngine) Think(p *position.Position) (output chan map[string]string, err error) {
+func (e *UCIEngine) Think(p *position.Position) (output chan string, err error) {
 	e.resetStop()
 	err = e.setPosition(p)
 	if err != nil {
 		return
 	}
-	output = make(chan map[string]string, 128)
-	commands := uciCommands()
+	output = make(chan string, 2048)
 	parse := func(info []byte) {
-		m := infoToMap(commands, info)
-		if m != nil {
-			output <- m
+		if info != nil {
+			output <- string(info)
 		}
 	}
-	e.sendAndWait([]byte("go infinite"), "bestmove ", 8760*time.Hour, parse)
+	go e.sendAndWait([]byte("go infinite"), "bestmove ", 8760*time.Hour, parse)
 	return
 }
 

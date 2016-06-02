@@ -25,7 +25,7 @@ type Engine interface {
 
 	// Think starts the engine deciding the best move for the given position.
 	// It is non-blocking and the output is put into the output channel.
-	Think(*position.Position) (output chan map[string]string)
+	Think(*position.Position) (output chan string, err error)
 
 	// Stop tells the engine to stop doing what ever its doing.
 	Stop() error
@@ -99,4 +99,12 @@ func sub(source *bufio.Reader, dest chan []byte, stop chan struct{}) {
 			return
 		}
 	}
+}
+
+func IsUCI(filename string) bool {
+	return false
+}
+
+func IsWinboard(filename string) bool {
+	return false
 }

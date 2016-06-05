@@ -63,6 +63,9 @@ func (e EPD) String() string {
 // Decode turns a string representation of an epd into an object.
 func Decode(epd string) (*EPD, error) {
 	s := strings.Split(epd, " ")
+	if len(s) < 4 {
+		return nil, errors.New("incomplete epd")
+	}
 	posStr := strings.Join(s[:4], " ")
 	p, err := fen.Decode(posStr)
 	if len(s) <= 4 {

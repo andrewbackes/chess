@@ -10,7 +10,9 @@ func TestOpenBook(t *testing.T) {
 	if os.Getenv("TEST_BOOK") == "" {
 		t.SkipNow()
 	}
-	book, err := Open(os.Getenv("TEST_BOOK"))
+	file, _ := os.Open(os.Getenv("TEST_BOOK"))
+	defer file.Close()
+	book, err := Read(file)
 	if err != nil {
 		t.Fail()
 	}
@@ -37,7 +39,9 @@ func TestOpenSaveOpen(t *testing.T) {
 	if os.Getenv("TEST_BOOK") == "" {
 		t.SkipNow()
 	}
-	opened, err := Open(os.Getenv("TEST_BOOK"))
+	file, _ := os.Open(os.Getenv("TEST_BOOK"))
+	defer file.Close()
+	opened, err := Read(file)
 	if err != nil {
 		t.Error(err)
 	}
@@ -45,7 +49,9 @@ func TestOpenSaveOpen(t *testing.T) {
 	if err := opened.Save(dest); err != nil {
 		t.Error(err)
 	}
-	saved, err := Open(dest)
+	d, _ := os.Open(dest)
+	defer file.Close()
+	saved, err := Read(d)
 	if err != nil {
 		t.Error(err)
 	}

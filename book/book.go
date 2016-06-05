@@ -4,6 +4,7 @@ package book
 import (
 	"encoding/binary"
 	"github.com/andrewbackes/chess/position"
+	"io"
 	"os"
 	"sort"
 )
@@ -67,6 +68,7 @@ func (b *Book) Save(filename string) error {
 		return err
 	}
 	for key, moves := range b.Positions {
+		sort.Sort(byWeight(moves))
 		for _, entry := range moves {
 			e := PolyglotEntry{
 				Key:   key,
@@ -83,21 +85,16 @@ func (b *Book) Save(filename string) error {
 	return nil
 }
 
-// Open loads a polyglot opening book into memory.
-// filename is the full path to a .bin opening book.
-func Open(filename string) (*Book, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
+// Read loads a polyglot opening book into memory.
+// binFile is the already opened polyglot bin file.
+func Read(binFile io.Reader) (*Book, error) {
 	book := &Book{
 		Positions: make(map[uint64][]Entry),
 	}
 	entry := PolyglotEntry{}
 	key := uint64(0)
 	for {
-		err := binary.Read(file, binary.BigEndian, &entry)
+		err := binary.Read(binFile, binary.BigEndian, &entry)
 		if err != nil {
 			// EOF
 			break

@@ -13,7 +13,7 @@ func TestCorrectNumber(t *testing.T) {
 
 1. e2e4 e7e5 2. d1h5 e8e7 3. h5e5 1-0
 `
-	pgns, _ := pgn.Open(strings.NewReader(input))
+	pgns, _ := pgn.Read(strings.NewReader(input))
 	book, _ := FromPGN(pgns, 4)
 
 	if len(book.Positions) != 4 {

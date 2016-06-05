@@ -121,9 +121,9 @@ func Encode(G *game.Game) *PGN {
 
 // Parse reads a string containing a single PGN and returns a PGN object.
 // To read multiple PGNs from a string use:
-//     Open(strings.NewReader(multiPgnString))
+//     Read(strings.NewReader(multiPgnString))
 func Parse(pgn string) (*PGN, error) {
-	games, err := Open(strings.NewReader(pgn))
+	games, err := Read(strings.NewReader(pgn))
 	if err != nil {
 		return nil, err
 	}
@@ -133,9 +133,9 @@ func Parse(pgn string) (*PGN, error) {
 	return games[0], nil
 }
 
-// Open reads the passed file line by line. Each game that is read is loaded
+// Read reads the passed file line by line. Each game that is read is loaded
 // into a PGN. If you want to load a PGN fron a string you can use ParsePGN(your_pgn_str)
-func Open(file io.Reader) ([]*PGN, error) {
+func Read(file io.Reader) ([]*PGN, error) {
 	var GameList []*PGN
 	// Read line by line:
 	scanner := bufio.NewScanner(file)

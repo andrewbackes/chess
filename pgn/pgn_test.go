@@ -92,7 +92,7 @@ func TestReadOnePGN(t *testing.T) {
 
 1. e2e4 e7e5 2. d1h5 e8e7 3. h5e5 1-0
 `
-	games, err := Open(strings.NewReader(input))
+	games, err := Read(strings.NewReader(input))
 	if err != nil || len(games) != 1 {
 		t.Log(games)
 		t.Log(err)
@@ -114,7 +114,7 @@ func TestReadTwoPGN(t *testing.T) {
 
 1. e2e4 e7e5 2. d1h5 e8e7 1/2-1/2
 `
-	games, err := Open(strings.NewReader(input))
+	games, err := Read(strings.NewReader(input))
 	if err != nil || len(games) != 2 {
 		t.Log(games)
 		t.Log(err)
@@ -143,7 +143,7 @@ func TestReadThreePGN(t *testing.T) {
 
 1. e2e4 e7e5 2. d1h5 e8e7 3. h5e5 1-0
 `
-	games, err := Open(strings.NewReader(input))
+	games, err := Read(strings.NewReader(input))
 	if err != nil || len(games) != 3 {
 		t.Log(games)
 		t.Log(err)
@@ -159,7 +159,7 @@ func TestReadPGN(t *testing.T) {
 
 1. e2e4 e7e5 2. d1h5 e8e7 3. h5e5 1-0
 `
-	games, _ := Open(strings.NewReader(input))
+	games, _ := Read(strings.NewReader(input))
 	games[0].Tags["Event"] = "one"
 	games[0].Tags["Round"] = "1"
 	games[0].Tags["Result"] = "1-0"

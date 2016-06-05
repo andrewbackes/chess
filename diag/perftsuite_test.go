@@ -80,7 +80,7 @@ func perftSuite(filename string, maxdepth int, failFast bool) error {
 	if err != nil {
 		return err
 	}
-	tests, err := epd.Open(f)
+	tests, err := epd.Read(f)
 	if err != nil {
 		return err
 	}

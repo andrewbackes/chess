@@ -93,8 +93,8 @@ func (e EPD) ToGame() *game.Game {
 	return g
 }
 
-// Open loads a file with multiple EPD's. Each EPD needs to be on its own line.
-func Open(file io.Reader) ([]*EPD, error) {
+// Read loads a file with multiple EPD's. Each EPD needs to be on its own line.
+func Read(file io.Reader) ([]*EPD, error) {
 	scanner := bufio.NewScanner(file)
 	var ret []*EPD
 	for scanner.Scan() {

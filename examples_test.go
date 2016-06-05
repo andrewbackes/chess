@@ -58,7 +58,8 @@ func ExamplePlayTimedGame() {
 
 func ExamplePrintGMGames() {
 	f, _ := os.Open("myfile.pgn")
-	unfiltered, _ := pgn.Open(f)
+	defer f.Close()
+	unfiltered, _ := pgn.Read(f)
 	filtered := pgn.Filter(unfiltered, pgn.NewTagFilter("WhiteElo>2600"), pgn.NewTagFilter("BlackElo>2600"))
 	for _, game := range filtered {
 		fmt.Println(game)

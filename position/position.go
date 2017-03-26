@@ -38,7 +38,7 @@ type Position struct {
 	EnPassant      Square      `json:"enPassant,omitempty" bson:"enPassant,omitempty"`
 	CastlingRights [2][2]bool  `json:"castlingRights,omitempty" bson:"castlingRights,omitempty"`
 	ActiveColor    piece.Color `json:"activeColor,omitempty" bson:"activeColor,omitempty"`
-	MoveNumber     int         `json:"MoveNumber" bson:"MoveNumber"`
+	MoveNumber     int         `json:"moveNumber" bson:"moveNumber"`
 }
 
 type Simple struct {

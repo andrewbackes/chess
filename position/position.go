@@ -34,11 +34,11 @@ type Position struct {
 	// bitBoard has one bitBoard per player per color.
 	bitBoard [2][6]uint64 //[player][piece]
 
-	FiftyMoveCount uint64
-	EnPassant      Square
-	CastlingRights [2][2]bool
-	ActiveColor    piece.Color
-	MoveNumber     int
+	FiftyMoveCount uint64      `json:"fiftyMoveCount,omitempty" bson:"fiftyMoveCount,omitempty"`
+	EnPassant      Square      `json:"enPassant,omitempty" bson:"enPassant,omitempty"`
+	CastlingRights [2][2]bool  `json:"castlingRights,omitempty" bson:"castlingRights,omitempty"`
+	ActiveColor    piece.Color `json:"activeColor,omitempty" bson:"activeColor,omitempty"`
+	MoveNumber     int         `json:"MoveNumber" bson:"MoveNumber"`
 }
 
 type Simple struct {

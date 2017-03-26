@@ -28,6 +28,14 @@ const (
 	None
 )
 
+func (T Type) String() string {
+	if T == None {
+		return " "
+	}
+	abbrev := [6]string{"p", "n", "b", "r", "q", "k"}
+	return abbrev[T]
+}
+
 // Piece represents a chess piece.
 type Piece struct {
 	Color Color

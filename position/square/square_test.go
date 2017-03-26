@@ -1,4 +1,4 @@
-package position
+package square
 
 import (
 	"testing"

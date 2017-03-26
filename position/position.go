@@ -36,8 +36,8 @@ type Position struct {
 
 	FiftyMoveCount uint64      `json:"fiftyMoveCount,omitempty" bson:"fiftyMoveCount,omitempty"`
 	EnPassant      Square      `json:"enPassant,omitempty" bson:"enPassant,omitempty"`
-	CastlingRights [2][2]bool  `json:"castlingRights,omitempty" bson:"castlingRights,omitempty"`
-	ActiveColor    piece.Color `json:"activeColor,omitempty" bson:"activeColor,omitempty"`
+	CastlingRights [2][2]bool  `json:"castlingRights" bson:"castlingRights"`
+	ActiveColor    piece.Color `json:"activeColor" bson:"activeColor"`
 	MoveNumber     int         `json:"moveNumber" bson:"moveNumber"`
 }
 

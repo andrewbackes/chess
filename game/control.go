@@ -4,12 +4,13 @@ import (
 	"time"
 )
 
+// TimeControl represents the time contraints for a chess game.
 // TODO(andrewbackes): new TimeControl from parsed string. ex: 40/40
 type TimeControl struct {
-	Time      time.Duration
-	Increment time.Duration
-	Moves     int64
-	Repeating bool
+	Time      time.Duration `json:"time,omitempty"`
+	Increment time.Duration `json:"increment,omitempty"`
+	Moves     int64         `json:"moves,omitempty"`
+	Repeating bool          `json:"repeating,omitempty"`
 	clock     time.Duration
 	movesLeft int64
 }

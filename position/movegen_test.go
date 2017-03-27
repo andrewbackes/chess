@@ -2,6 +2,7 @@ package position
 
 import (
 	"github.com/andrewbackes/chess/piece"
+	"github.com/andrewbackes/chess/position/square"
 	"testing"
 )
 
@@ -30,14 +31,17 @@ func TestCheck(t *testing.T) {
 func TestGenPromotion(t *testing.T) {
 	b := New()
 	b.Clear()
-	b.QuickPut(piece.New(piece.White, piece.Pawn), E7)
+	b.QuickPut(piece.New(piece.White, piece.Pawn), square.E7)
 	moves := b.LegalMoves()
-	expected := []string{"e7e8q", "e7e8r", "e7e8b", "e7e8n"}
+	expected := map[string]struct{}{"e7e8q": {}, "e7e8r": {}, "e7e8b": {}, "e7e8n": {}}
+	t.Log("Got", moves, "Expected", expected)
 	if len(moves) != len(expected) {
+		t.Log(len(moves), "!=", len(expected))
 		t.Fail()
 	}
-	for _, exp := range expected {
-		if _, ok := moves[Move(exp)]; !ok {
+	for k := range moves {
+		if _, exists := expected[(*k).String()]; !exists {
+			t.Log("Missing", (*k).String())
 			t.Fail()
 		}
 	}
@@ -46,13 +50,21 @@ func TestGenPromotion(t *testing.T) {
 func TestGenCastles(t *testing.T) {
 	b := New()
 	b.Clear()
-	b.QuickPut(piece.New(piece.White, piece.King), E1)
-	b.QuickPut(piece.New(piece.White, piece.Rook), H1)
-	b.QuickPut(piece.New(piece.White, piece.Rook), A1)
+	b.QuickPut(piece.New(piece.White, piece.King), square.E1)
+	b.QuickPut(piece.New(piece.White, piece.Rook), square.H1)
+	b.QuickPut(piece.New(piece.White, piece.Rook), square.A1)
 	moves := b.LegalMoves()
 	expected := []string{"e1g1", "e1c1"}
 	for _, exp := range expected {
-		if _, ok := moves[Move(exp)]; !ok {
+		contains := false
+		for k, _ := range moves {
+			if (*k).String() == exp {
+				contains = true
+				break
+			}
+		}
+		if !contains {
+			t.Log("Missing", exp)
 			t.Fail()
 		}
 	}

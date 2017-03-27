@@ -114,7 +114,7 @@ func Encode(G *game.Game) *PGN {
 	firstRealMove := G.Position.MoveNumber - (len(G.Moves) / 2)
 	pgn.FirstMoveNum = firstRealMove
 	for i := 0; i < len(G.Moves); i++ {
-		pgn.Moves = append(pgn.Moves, string(G.Moves[i]))
+		pgn.Moves = append(pgn.Moves, G.Moves[i].String())
 	}
 	return pgn
 }

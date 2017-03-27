@@ -1,4 +1,4 @@
-package position
+package square
 
 import (
 	"testing"
@@ -12,12 +12,12 @@ func TestSquareToString(t *testing.T) {
 	}
 }
 
-func TestNewSquare(t *testing.T) {
+func TestNew(t *testing.T) {
 	squares := []Square{
-		NewSquare(1, 1),
-		NewSquare(8, 1),
-		NewSquare(1, 8),
-		NewSquare(8, 8),
+		New(1, 1),
+		New(8, 1),
+		New(1, 8),
+		New(8, 8),
 	}
 	expected := []Square{
 		A1, H1, A8, H8,

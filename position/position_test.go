@@ -3,10 +3,12 @@ package position
 import (
 	"fmt"
 	"github.com/andrewbackes/chess/piece"
+	"github.com/andrewbackes/chess/position/move"
+	"github.com/andrewbackes/chess/position/square"
 	"testing"
 )
 
-func piecesOnSquare(b *Position, s Square) int {
+func piecesOnSquare(b *Position, s square.Square) int {
 	count := 0
 	for c := piece.White; c <= piece.Black; c++ {
 		for p := piece.Pawn; p <= piece.King; p++ {
@@ -34,7 +36,7 @@ func changedbitBoards(before, after *Position) map[piece.Piece]struct{} {
 func TestMovePawn(t *testing.T) {
 	beforeMove := New()
 	afterMove := New()
-	afterMove.MakeMove("e2e4")
+	afterMove.MakeMove(move.Parse("e2e4"))
 	changed := changedbitBoards(beforeMove, afterMove)
 	t.Log("Changed: ", changed)
 	if _, c := changed[piece.New(piece.White, piece.Pawn)]; !c || len(changed) != 1 {
@@ -45,7 +47,7 @@ func TestMovePawn(t *testing.T) {
 func TestMoveKnight(t *testing.T) {
 	beforeMove := New()
 	afterMove := New()
-	afterMove.MakeMove("b1c3")
+	afterMove.MakeMove(move.Parse("b1c3"))
 	changed := changedbitBoards(beforeMove, afterMove)
 	t.Log("Changed: ", changed)
 	if _, c := changed[piece.New(piece.White, piece.Knight)]; !c || len(changed) != 1 {
@@ -56,8 +58,8 @@ func TestMoveKnight(t *testing.T) {
 func TestPutOnOccSquare(t *testing.T) {
 	b := New()
 	b.Clear()
-	b.QuickPut(piece.New(piece.White, piece.Pawn), E2)
-	b.Put(piece.New(piece.Black, piece.Queen), E2)
+	b.QuickPut(piece.New(piece.White, piece.Pawn), square.E2)
+	b.Put(piece.New(piece.Black, piece.Queen), square.E2)
 	if b.bitBoard[piece.White][piece.Pawn] != 0 {
 		t.Fail()
 	}
@@ -69,7 +71,7 @@ func TestFind(t *testing.T) {
 	if len(s) != 1 {
 		t.Fail()
 	}
-	if _, ok := s[E1]; !ok {
+	if _, ok := s[square.E1]; !ok {
 		t.Fail()
 	}
 }
@@ -103,15 +105,16 @@ func TestInsufMaterial(t *testing.T) {
 func TestKandBvKandOpB(t *testing.T) {
 	b := New()
 	b.Clear()
-	b.QuickPut(piece.New(piece.White, piece.Bishop), A1)
-	b.QuickPut(piece.New(piece.Black, piece.Bishop), B1)
-	b.QuickPut(piece.New(piece.White, piece.King), A8)
-	b.QuickPut(piece.New(piece.Black, piece.King), H1)
+	b.QuickPut(piece.New(piece.White, piece.Bishop), square.A1)
+	b.QuickPut(piece.New(piece.Black, piece.Bishop), square.B1)
+	b.QuickPut(piece.New(piece.White, piece.King), square.A8)
+	b.QuickPut(piece.New(piece.Black, piece.King), square.H1)
 	if b.InsufficientMaterial() != false {
 		t.Fail()
 	}
 }
 
+/*
 func TestBoardPrint(t *testing.T) {
 	expected := `+---+---+---+---+---+---+---+---+
 | r | n | b | q | k | b | n | r |
@@ -136,22 +139,25 @@ func TestBoardPrint(t *testing.T) {
 		t.Error(got)
 	}
 }
+*/
 
 func TestCapture(t *testing.T) {
 	b := New()
 	b.Clear()
-	b.QuickPut(piece.New(piece.White, piece.King), E4)
-	b.QuickPut(piece.New(piece.Black, piece.King), A8)
-	b.QuickPut(piece.New(piece.Black, piece.Pawn), E5)
-	b.MakeMove(Move("e4e5"))
+	b.QuickPut(piece.New(piece.White, piece.King), square.E4)
+	b.QuickPut(piece.New(piece.Black, piece.King), square.A8)
+	b.QuickPut(piece.New(piece.Black, piece.Pawn), square.E5)
+	b.MakeMove(move.Parse("e4e5"))
 	for c := piece.White; c <= piece.Black; c++ {
 		for p := piece.Pawn; p < piece.King; p++ {
 			if b.bitBoard[c][p] != 0 {
+				t.Log(BitBoard(b.bitBoard[c][p]))
 				t.Fail()
 			}
 		}
 	}
 	if b.bitBoard[piece.White][piece.King] == 0 || b.bitBoard[piece.Black][piece.King] == 0 {
+		t.Log("==0")
 		t.Fail()
 	}
 }
@@ -159,12 +165,12 @@ func TestCapture(t *testing.T) {
 func TestShortCastle(t *testing.T) {
 	b := New()
 	b.Clear()
-	b.QuickPut(piece.New(piece.Black, piece.King), A8)
-	b.QuickPut(piece.New(piece.White, piece.King), E1)
-	b.QuickPut(piece.New(piece.White, piece.Rook), H1)
-	b.MakeMove(Move("e1g1"))
-	if b.bitBoard[piece.White][piece.King] != (1<<G1) ||
-		b.bitBoard[piece.White][piece.Rook] != (1<<F1) {
+	b.QuickPut(piece.New(piece.Black, piece.King), square.A8)
+	b.QuickPut(piece.New(piece.White, piece.King), square.E1)
+	b.QuickPut(piece.New(piece.White, piece.Rook), square.H1)
+	b.MakeMove(move.Parse("e1g1"))
+	if b.bitBoard[piece.White][piece.King] != (1<<square.G1) ||
+		b.bitBoard[piece.White][piece.Rook] != (1<<square.F1) {
 		t.Fail()
 	}
 }
@@ -172,12 +178,12 @@ func TestShortCastle(t *testing.T) {
 func TestLongCastle(t *testing.T) {
 	b := New()
 	b.Clear()
-	b.QuickPut(piece.New(piece.Black, piece.King), H8)
-	b.QuickPut(piece.New(piece.White, piece.King), E1)
-	b.QuickPut(piece.New(piece.White, piece.Rook), A1)
-	b.MakeMove(Move("e1c1"))
-	if b.bitBoard[piece.White][piece.King] != (1<<C1) ||
-		b.bitBoard[piece.White][piece.Rook] != (1<<D1) {
+	b.QuickPut(piece.New(piece.Black, piece.King), square.H8)
+	b.QuickPut(piece.New(piece.White, piece.King), square.E1)
+	b.QuickPut(piece.New(piece.White, piece.Rook), square.A1)
+	b.MakeMove(move.Parse("e1c1"))
+	if b.bitBoard[piece.White][piece.King] != (1<<square.C1) ||
+		b.bitBoard[piece.White][piece.Rook] != (1<<square.D1) {
 		fmt.Println(BitBoard(b.bitBoard[piece.White][piece.King]))
 		fmt.Println("--Rook:--")
 		fmt.Println(BitBoard(b.bitBoard[piece.White][piece.Rook]))

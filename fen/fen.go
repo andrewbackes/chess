@@ -5,9 +5,9 @@ package fen
 import (
 	"errors"
 	"fmt"
-	"github.com/andrewbackes/chess/game"
 	"github.com/andrewbackes/chess/piece"
 	"github.com/andrewbackes/chess/position"
+	"github.com/andrewbackes/chess/position/square"
 	"strconv"
 	"strings"
 )
@@ -15,16 +15,11 @@ import (
 // Encode will take a position
 func Encode(p *position.Position) (fen string, err error) {
 
-	pc := [][]string{
-		{"P", "N", "B", "R", "Q", "K", " "},
-		{"p", "n", "b", "r", "q", "k", " "},
-		{" ", " ", " ", " ", " ", " ", " "}}
-
 	var boardstr string
 	// put what is on each square into a squence (including blanks):
 	for i := int(63); i >= 0; i-- {
-		sq := p.OnSquare(position.Square(i))
-		boardstr += pc[sq.Color][sq.Type]
+		sq := p.OnSquare(square.Square(i))
+		boardstr += sq.String()
 		if i%8 == 0 && i > 0 {
 			boardstr += "/"
 		}
@@ -50,7 +45,7 @@ func Encode(p *position.Position) (fen string, err error) {
 	}
 	// en Passant:
 	enPas := "-"
-	if p.EnPassant != position.NoSquare {
+	if p.EnPassant != square.NoSquare {
 		enPas = fmt.Sprint(p.EnPassant)
 	}
 	// Moves and 50 move rule
@@ -87,6 +82,7 @@ func Decode(fen string) (*position.Position, error) {
 	return p, nil
 }
 
+/*
 // DecodeToGame converts a fen string into a game and sets the appropriate tags.
 func DecodeToGame(fen string) (*game.Game, error) {
 	p, err := Decode(fen)
@@ -99,6 +95,7 @@ func DecodeToGame(fen string) (*game.Game, error) {
 	g.Tags["Setup"] = "1"
 	return g, nil
 }
+*/
 
 func appendMoveHistory(activeColor, moveCount, fiftyMoveCount string, pos *position.Position) error {
 
@@ -117,12 +114,11 @@ func appendMoveHistory(activeColor, moveCount, fiftyMoveCount string, pos *posit
 	return nil
 }
 
-func parseEnPassantSquare(sq string) position.Square {
+func parseEnPassantSquare(sq string) square.Square {
 	if sq != "-" {
-		s := position.ParseSquare(sq)
-		return s
+		return square.Parse(sq)
 	}
-	return position.NoSquare
+	return square.NoSquare
 }
 
 func parseCastlingRights(KQkq string) [2][2]bool {
@@ -166,7 +162,7 @@ func parseBoard(board string) (*position.Position, error) {
 		}
 		k := rune(parsedBoard[pos])
 		if _, ok := pc[k]; ok {
-			p.Put(piece.New(color[k], pc[k]), position.Square(63-pos))
+			p.Put(piece.New(color[k], pc[k]), square.Square(63-pos))
 		}
 	}
 	return p, nil

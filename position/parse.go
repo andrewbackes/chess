@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/andrewbackes/chess/piece"
 	"github.com/andrewbackes/chess/position/move"
+	"github.com/andrewbackes/chess/position/square"
 	"regexp"
 	"strings"
 )
@@ -108,8 +109,7 @@ func (p *Position) originOfPiece(pc string, color piece.Color, destination, from
 
 	// Grab the legal moves that land on our square:
 	for mv := range legalMoves {
-		dest := mv.To()
-		if string(dest) == destination {
+		if mv.To() == square.Parse(destination) {
 			eligableMoves = append(eligableMoves, mv)
 		}
 	}

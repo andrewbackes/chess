@@ -7,7 +7,8 @@ import (
 	"github.com/andrewbackes/chess/fen"
 	"github.com/andrewbackes/chess/game"
 	"github.com/andrewbackes/chess/pgn"
-	"github.com/andrewbackes/chess/position"
+	"github.com/andrewbackes/chess/position/move"
+	"github.com/andrewbackes/chess/position/square"
 	"os"
 	"time"
 )
@@ -16,13 +17,13 @@ func ExampleFoolsMate() {
 	// Create a new game:
 	g := game.New()
 	// Moves can be created based on source and destination squares:
-	f3 := position.NewMove(position.F2, position.F3)
+	f3 := move.Move{Source: square.F2, Destination: square.F3}
 	g.MakeMove(f3)
 	// They can also be created by parsing algebraic notation:
 	e5, _ := g.Position.ParseMove("e5")
 	g.MakeMove(e5)
 	// Or by using piece coordinate notation:
-	g4 := position.Move("g2g4")
+	g4 := move.Parse("g2g4")
 	g.MakeMove(g4)
 	// Another example of SAN:
 	foolsmate, _ := g.Position.ParseMove("Qh4#")
@@ -37,7 +38,7 @@ func ExampleTimedGame() {
 	forBlack := game.NewTimeControl(1*time.Minute, 40, 0, true)
 	tc := [2]game.TimeControl{forWhite, forBlack}
 	g := game.NewTimedGame(tc)
-	g.MakeTimedMove(position.Move("e2e4"), 1*time.Minute)
+	g.MakeTimedMove(move.Parse("e2e4"), 1*time.Minute)
 }
 
 func ExamplePlayTimedGame() {
@@ -73,11 +74,4 @@ func ExampleSaavedraPositionFEN() {
 	encoded, _ := fen.Encode(decoded)
 	fmt.Println(encoded)
 	// Will Output: the inputted FEN
-}
-
-func ExampleSaavedraPositionMoves() {
-	game, _ := fen.DecodeToGame("8/8/1KP5/3r4/8/8/8/k7 w - - 0 1")
-	moves := game.LegalMoves()
-	fmt.Println(moves)
-	// Will Output: map[b6b7:{} b6a7:{} c6c7:{} b6a6:{} b6c7:{}]
 }

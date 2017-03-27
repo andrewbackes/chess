@@ -3,7 +3,8 @@ package book
 
 import (
 	"encoding/binary"
-	"github.com/andrewbackes/chess/position"
+	"github.com/andrewbackes/chess/position/move"
+	"github.com/andrewbackes/chess/position/square"
 	"io"
 	"os"
 	"sort"
@@ -24,7 +25,7 @@ func New() *Book {
 
 // Entry is a weighted move in an internally loaded opening book.
 type Entry struct {
-	Move   string
+	Move   move.Move
 	Weight uint16
 	Learn  uint32
 }
@@ -45,7 +46,7 @@ func (m byWeight) Less(i, j int) bool {
 	if m[i].Weight > m[j].Weight {
 		return true
 	} else if m[i].Weight == m[j].Weight {
-		if m[i].Move > m[j].Move {
+		if m[i].Move.String() > m[j].Move.String() {
 			return true
 		}
 	}
@@ -115,26 +116,21 @@ func Read(binFile io.Reader) (*Book, error) {
 	return book, nil
 }
 
-func encodedMove(move string) uint16 {
-	mv := move
-	switch mv {
+func encodedMove(mv move.Move) uint16 {
+	switch mv.String() {
 	case "e1g1":
-		mv = "e1h1"
+		mv = move.Parse("e1h1")
 	case "e1c1":
-		mv = "e1a1"
+		mv = move.Parse("e1a1")
 	case "e8g8":
-		mv = "e8h8"
+		mv = move.Parse("e8h8")
 	case "e8c8":
-		mv = "e8a8"
+		mv = move.Parse("e8a8")
 	}
-	from, to := position.Split(position.Move(mv))
+	from, to := mv.From(), mv.To()
 	fromFile, fromRank := indexToFR(int(from))
 	toFile, toRank := indexToFR(int(to))
-	var promo uint16
-	if len(mv) > 4 {
-		promo = map[string]uint16{"": 0, "k": 1, "b": 2, "r": 3, "q": 4}[string(mv[4])]
-	}
-	return (promo << 12) + (uint16(fromRank) << 9) + (uint16(fromFile) << 6) + (uint16(toRank) << 3) + (uint16(toFile))
+	return (uint16(mv.Promote) << 12) + (uint16(fromRank) << 9) + (uint16(fromFile) << 6) + (uint16(toRank) << 3) + (uint16(toFile))
 }
 
 func indexToFR(index int) (file int, row int) {
@@ -170,16 +166,16 @@ black short      e8h8
 black long       e8a8
 
 */
-func decodeMove(move uint16) string {
-	fromRank := bits(move, 3)
-	fromFile := bits(move, 2)
-	from := position.NewSquare(uint(fromFile+1), uint(fromRank+1))
+func decodeMove(m uint16) move.Move {
+	fromRank := bits(m, 3)
+	fromFile := bits(m, 2)
+	from := square.New(uint(fromFile+1), uint(fromRank+1))
 
-	toRank := bits(move, 1)
-	toFile := bits(move, 0)
-	to := position.NewSquare(uint(toFile+1), uint(toRank+1))
+	toRank := bits(m, 1)
+	toFile := bits(m, 0)
+	to := square.New(uint(toFile+1), uint(toRank+1))
 
-	promo := bits(move, 4)
+	promo := bits(m, 4)
 	var promoStr string
 	if promo < 4 {
 		promoStr = []string{"", "k", "b", "r", "q"}[promo]
@@ -187,15 +183,15 @@ func decodeMove(move uint16) string {
 	mv := from.String() + to.String() + promoStr
 	switch mv {
 	case "e1h1":
-		return "e1g1"
+		return move.Parse("e1g1")
 	case "e1a1":
-		return "e1c1"
+		return move.Parse("e1c1")
 	case "e8h8":
-		return "e8g8"
+		return move.Parse("e8g8")
 	case "e8a8":
-		return "e8c8"
+		return move.Parse("e8c8")
 	}
-	return (mv)
+	return move.Parse(mv)
 }
 
 func bits(move uint16, group uint) uint16 {

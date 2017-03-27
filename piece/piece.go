@@ -1,6 +1,10 @@
 // Package piece provides tools for working with chess pieces.
 package piece
 
+import (
+	"strings"
+)
+
 // Color is the color of a piece or square.
 type Color uint8
 
@@ -19,14 +23,26 @@ type Type uint8
 
 // Possible pieces.
 const (
-	Pawn Type = iota
+	None Type = iota
+	Pawn
 	Knight
 	Bishop
 	Rook
 	Queen
 	King
-	None
 )
+
+func (T Type) String() string {
+	return map[Type]string{
+		None:   " ",
+		Pawn:   "p",
+		Knight: "n",
+		Bishop: "b",
+		Rook:   "r",
+		Queen:  "q",
+		King:   "k",
+	}[T]
+}
 
 // Piece represents a chess piece.
 type Piece struct {
@@ -36,11 +52,11 @@ type Piece struct {
 
 // String returns a pretty print version of the piece.
 func (P Piece) String() string {
-	if P.Type == None {
-		return " "
+	t := P.Type.String()
+	if P.Color == White {
+		return strings.ToUpper(t)
 	}
-	abbrev := [2][6]string{{"P", "N", "B", "R", "Q", "K"}, {"p", "n", "b", "r", "q", "k"}}
-	return abbrev[P.Color][P.Type]
+	return t
 }
 
 // Figurine returns a chess piece icon
@@ -48,11 +64,10 @@ func (P Piece) Figurine() string {
 	if P.Color == NoColor || P.Type == None {
 		return " "
 	}
-	figurines := [][]rune{
-		{0x2659, 0x2658, 0x2657, 0x2656, 0x2655, 0x2654},
-		{0x265F, 0x265E, 0x265D, 0x265C, 0x265B, 0x265A},
-	}
-	return string(figurines[P.Color][P.Type])
+	return string(map[Color]map[Type]rune{
+		White: {Pawn: 0x2659, Knight: 0x2658, Bishop: 0x2657, Rook: 0x2656, Queen: 0x2655, King: 0x2654},
+		Black: {Pawn: 0x265F, Knight: 0x265E, Bishop: 0x265D, Rook: 0x265C, Queen: 0x265B, King: 0x265A},
+	}[P.Color][P.Type])
 }
 
 // New returns a new chess piece type.

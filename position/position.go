@@ -5,6 +5,8 @@ package position
 import (
 	"fmt"
 	"github.com/andrewbackes/chess/piece"
+	"github.com/andrewbackes/chess/position/move"
+	"github.com/andrewbackes/chess/position/square"
 )
 
 // BitBoard is a 64 bit integer where each bit represents a square on
@@ -32,18 +34,17 @@ func (b BitBoard) String() string {
 // Position represents the state of a game during a player's turn.
 type Position struct {
 	// bitBoard has one bitBoard per player per color.
-	bitBoard [2][6]uint64 //[player][piece]
-
-	FiftyMoveCount uint64      `json:"fiftyMoveCount,omitempty" bson:"fiftyMoveCount,omitempty"`
-	EnPassant      Square      `json:"enPassant,omitempty" bson:"enPassant,omitempty"`
-	CastlingRights [2][2]bool  `json:"castlingRights" bson:"castlingRights"`
-	ActiveColor    piece.Color `json:"activeColor" bson:"activeColor"`
-	MoveNumber     int         `json:"moveNumber" bson:"moveNumber"`
+	bitBoard       map[piece.Color]map[piece.Type]uint64
+	FiftyMoveCount uint64        `json:"fiftyMoveCount,omitempty" bson:"fiftyMoveCount,omitempty"`
+	EnPassant      square.Square `json:"enPassant,omitempty" bson:"enPassant,omitempty"`
+	CastlingRights [2][2]bool    `json:"castlingRights" bson:"castlingRights"`
+	ActiveColor    piece.Color   `json:"activeColor" bson:"activeColor"`
+	MoveNumber     int           `json:"moveNumber" bson:"moveNumber"`
 }
 
 type Simple struct {
-	bitBoard       [2][6]uint64
-	EnPassant      Square
+	bitBoard       map[piece.Color]map[piece.Type]uint64
+	EnPassant      square.Square
 	CastlingRights [2][2]bool
 	ActiveColor    piece.Color
 }
@@ -53,18 +54,45 @@ const (
 	LongSide, queenSide uint = 1, 1
 )
 
+func newBitboards() map[piece.Color]map[piece.Type]uint64 {
+	m := make(map[piece.Color]map[piece.Type]uint64)
+	b := make(map[piece.Type]uint64)
+	w := make(map[piece.Type]uint64)
+	m[piece.White] = w
+	m[piece.Black] = b
+	return m
+}
+
 // New returns a game board in the opening position. If you want
 // a blank board, use Clear().
 func New() *Position {
 	p := &Position{
-		bitBoard:       [2][6]uint64{},
+		bitBoard:       newBitboards(),
 		CastlingRights: [2][2]bool{{true, true}, {true, true}},
-		EnPassant:      NoSquare,
+		EnPassant:      square.NoSquare,
 		MoveNumber:     1,
 		ActiveColor:    piece.White,
 	}
 	p.Reset()
 	return p
+}
+
+// Copy a position.
+func Copy(p *Position) *Position {
+	n := &Position{
+		bitBoard:       newBitboards(),
+		EnPassant:      p.EnPassant,
+		CastlingRights: p.CastlingRights,
+		ActiveColor:    p.ActiveColor,
+		MoveNumber:     p.MoveNumber,
+	}
+	for k, v := range p.bitBoard[piece.White] {
+		n.bitBoard[piece.White][k] = v
+	}
+	for k, v := range p.bitBoard[piece.Black] {
+		n.bitBoard[piece.Black][k] = v
+	}
+	return n
 }
 
 // Simplify a position into one that is comparable. We just need to exclude the
@@ -82,13 +110,13 @@ func Simplify(p *Position) Simple {
 func (p Position) String() (str string) {
 	str += "+---+---+---+---+---+---+---+---+\n"
 	for i := 1; i <= 64; i++ {
-		square := Square(64 - i)
+		sq := square.Square(64 - i)
 		str += "|"
 		noPiece := true
 		for c := range p.bitBoard {
 			for j := range p.bitBoard[c] {
-				if ((1 << square) & p.bitBoard[c][j]) != 0 {
-					str += fmt.Sprint(" ", p.OnSquare(square), " ")
+				if ((1 << sq) & p.bitBoard[c][j]) != 0 {
+					str += fmt.Sprint(" ", p.OnSquare(sq), " ")
 					noPiece = false
 				}
 			}
@@ -96,10 +124,10 @@ func (p Position) String() (str string) {
 		if noPiece {
 			str += "   "
 		}
-		if square%8 == 0 {
+		if sq%8 == 0 {
 			str += "|\n"
 			str += "+---+---+---+---+---+---+---+---+"
-			if square < LastSquare {
+			if sq < square.LastSquare {
 				str += "\n"
 			}
 		}
@@ -109,26 +137,26 @@ func (p Position) String() (str string) {
 
 // Clear empties the Board.
 func (p *Position) Clear() {
-	p.bitBoard = [2][6]uint64{}
+	p.bitBoard = newBitboards()
 }
 
 // Reset puts the pieces in the new game position.
 func (p *Position) Reset() {
 	// puts the pieces in their starting/newgame positions
-	for color := uint(0); color < 2; color = color + 1 {
+	for color := piece.Color(0); color < 2; color = color + 1 {
 		//Pawns first:
 		p.bitBoard[color][piece.Pawn] = 255 << (8 + (color * 8 * 5))
 		//Then the rest of the pieces:
-		p.bitBoard[color][piece.Knight] = (1 << (B1 + Square(color*8*7))) ^ (1 << (G1 + Square(color*8*7)))
-		p.bitBoard[color][piece.Bishop] = (1 << (C1 + Square(color*8*7))) ^ (1 << (F1 + Square(color*8*7)))
-		p.bitBoard[color][piece.Rook] = (1 << (A1 + Square(color*8*7))) ^ (1 << (H1 + Square(color*8*7)))
-		p.bitBoard[color][piece.Queen] = (1 << (D1 + Square(color*8*7)))
-		p.bitBoard[color][piece.King] = (1 << (E1 + Square(color*8*7)))
+		p.bitBoard[color][piece.Knight] = (1 << (square.B1 + square.Square(color*8*7))) ^ (1 << (square.G1 + square.Square(color*8*7)))
+		p.bitBoard[color][piece.Bishop] = (1 << (square.C1 + square.Square(color*8*7))) ^ (1 << (square.F1 + square.Square(color*8*7)))
+		p.bitBoard[color][piece.Rook] = (1 << (square.A1 + square.Square(color*8*7))) ^ (1 << (square.H1 + square.Square(color*8*7)))
+		p.bitBoard[color][piece.Queen] = (1 << (square.D1 + square.Square(color*8*7)))
+		p.bitBoard[color][piece.King] = (1 << (square.E1 + square.Square(color*8*7)))
 	}
 }
 
 // OnSquare returns the piece that is on the specified square.
-func (p *Position) OnSquare(s Square) piece.Piece {
+func (p *Position) OnSquare(s square.Square) piece.Piece {
 	for c := piece.White; c <= piece.Black; c++ {
 		for pc := piece.Pawn; pc <= piece.King; pc++ {
 			if (p.bitBoard[c][pc] & (1 << s)) != 0 {
@@ -152,18 +180,15 @@ func (p *Position) occupied(c piece.Color) uint64 {
 	return mask
 }
 
-func (p *Position) decompose(m Move) (from, to Square, movingPiece, capturedPiece piece.Piece) {
-	from, to = Split(m)
-	movingPiece = p.OnSquare(from)
-	capturedPiece = p.OnSquare(to)
-	return
+func (p *Position) decompose(m move.Move) (from, to square.Square, movingPiece, capturedPiece piece.Piece) {
+	return m.From(), m.To(), p.OnSquare(m.From()), p.OnSquare(m.To())
 }
 
 // MakeMove attempts to make the given move no matter legality or validity.
 // It does not change game state such as en passant or castling rights.
 // What ever move you specify will attempt to be made. If it is illegal
 // or invalid you will get undetermined behavior.
-func (p *Position) MakeMove(m Move) {
+func (p *Position) MakeMove(m move.Move) {
 	from, to, movingPiece, capturedPiece := p.decompose(m)
 	p.adjustMoveCounter(movingPiece, capturedPiece)
 	p.adjustCastlingRights(movingPiece, from, to)
@@ -183,32 +208,32 @@ func (p *Position) adjustMoveCounter(movingPiece, capturedPiece piece.Piece) {
 	}
 }
 
-func (p *Position) adjustEnPassant(movingPiece piece.Piece, from, to Square) {
+func (p *Position) adjustEnPassant(movingPiece piece.Piece, from, to square.Square) {
 	if movingPiece.Type == piece.Pawn {
-		p.EnPassant = NoSquare
+		p.EnPassant = square.NoSquare
 		if int(from)-int(to) == 16 || int(from)-int(to) == -16 {
-			s := Square(int(from) + []int{8, -8}[movingPiece.Color])
+			s := square.Square(int(from) + []int{8, -8}[movingPiece.Color])
 			p.EnPassant = s
 		}
 	} else {
-		p.EnPassant = NoSquare
+		p.EnPassant = square.NoSquare
 	}
 }
 
-func (p *Position) adjustCastlingRights(movingPiece piece.Piece, from, to Square) {
+func (p *Position) adjustCastlingRights(movingPiece piece.Piece, from, to square.Square) {
 	for side := ShortSide; side <= LongSide; side++ {
 		if movingPiece.Type == piece.King || //King moves
 			(movingPiece.Type == piece.Rook &&
-				from == [2][2]Square{{H1, A1}, {H8, A8}}[movingPiece.Color][side]) {
+				from == [2][2]square.Square{{square.H1, square.A1}, {square.H8, square.A8}}[movingPiece.Color][side]) {
 			p.CastlingRights[movingPiece.Color][side] = false
 		}
-		if to == [2][2]Square{{H8, A8}, {H1, A1}}[movingPiece.Color][side] {
+		if to == [2][2]square.Square{{square.H8, square.A8}, {square.H1, square.A1}}[movingPiece.Color][side] {
 			p.CastlingRights[[]piece.Color{piece.Black, piece.White}[movingPiece.Color]][side] = false
 		}
 	}
 }
 
-func (p *Position) adjustBoard(m Move, from, to Square, movingPiece, capturedPiece piece.Piece) {
+func (p *Position) adjustBoard(m move.Move, from, to square.Square, movingPiece, capturedPiece piece.Piece) {
 	// Remove captured piece:
 	if capturedPiece.Type != piece.None {
 		p.bitBoard[capturedPiece.Color][capturedPiece.Type] ^= (1 << to)
@@ -219,10 +244,10 @@ func (p *Position) adjustBoard(m Move, from, to Square, movingPiece, capturedPie
 
 	// Castle:
 	if movingPiece.Type == piece.King {
-		if from == (E1+Square(56*uint8(movingPiece.Color))) && (to == G1+Square(56*uint8(movingPiece.Color))) {
-			p.bitBoard[movingPiece.Color][piece.Rook] ^= (1 << (H1 + Square(56*movingPiece.Color))) | (1 << (F1 + Square(56*movingPiece.Color)))
-		} else if from == E1+Square(56*uint8(movingPiece.Color)) && (to == C1+Square(56*uint8(movingPiece.Color))) {
-			p.bitBoard[movingPiece.Color][piece.Rook] ^= (1 << (A1 + Square(56*(movingPiece.Color)))) | (1 << (D1 + Square(56*(movingPiece.Color))))
+		if from == (square.E1+square.Square(56*uint8(movingPiece.Color))) && (to == square.G1+square.Square(56*uint8(movingPiece.Color))) {
+			p.bitBoard[movingPiece.Color][piece.Rook] ^= (1 << (square.H1 + square.Square(56*movingPiece.Color))) | (1 << (square.F1 + square.Square(56*movingPiece.Color)))
+		} else if from == square.E1+square.Square(56*uint8(movingPiece.Color)) && (to == square.C1+square.Square(56*uint8(movingPiece.Color))) {
+			p.bitBoard[movingPiece.Color][piece.Rook] ^= (1 << (square.A1 + square.Square(56*(movingPiece.Color)))) | (1 << (square.D1 + square.Square(56*(movingPiece.Color))))
 		}
 	}
 
@@ -237,17 +262,16 @@ func (p *Position) adjustBoard(m Move, from, to Square, movingPiece, capturedPie
 			}
 		}
 		// Handle Promotions:
-		promotesTo := promotedPiece(m)
-		if promotesTo != piece.None {
+		if m.Promote != piece.None {
 			p.bitBoard[movingPiece.Color][movingPiece.Type] ^= (1 << to) // remove piece.Pawn
-			p.bitBoard[movingPiece.Color][promotesTo] ^= (1 << to)       // add promoted piece
+			p.bitBoard[movingPiece.Color][m.Promote] ^= (1 << to)        // add promoted piece
 		}
 	}
 }
 
 // Put places a piece on the square and removes any other piece
 // that may be on that square.
-func (p *Position) Put(pp piece.Piece, s Square) {
+func (p *Position) Put(pp piece.Piece, s square.Square) {
 	pc := p.OnSquare(s)
 	if pc.Type != piece.None {
 		p.bitBoard[pc.Color][pc.Type] ^= (1 << s)
@@ -257,17 +281,17 @@ func (p *Position) Put(pp piece.Piece, s Square) {
 
 // QuickPut places a piece on the square without removing
 // any piece that may already be on that square.
-func (p *Position) QuickPut(pc piece.Piece, s Square) {
+func (p *Position) QuickPut(pc piece.Piece, s square.Square) {
 	p.bitBoard[pc.Color][pc.Type] |= (1 << s)
 }
 
 // Find returns the squares that hold the specified piece.
-func (p *Position) Find(pc piece.Piece) map[Square]struct{} {
-	s := make(map[Square]struct{})
+func (p *Position) Find(pc piece.Piece) map[square.Square]struct{} {
+	s := make(map[square.Square]struct{})
 	bits := p.bitBoard[pc.Color][pc.Type]
 	for bits != 0 {
 		sq := bitscan(bits)
-		s[Square(sq)] = struct{}{}
+		s[square.Square(sq)] = struct{}{}
 		bits ^= (1 << sq)
 	}
 	return s
@@ -332,6 +356,6 @@ func (p *Position) InsufficientMaterial() bool {
 // Check returns whether or not the specified color is in check.
 func (p *Position) Check(color piece.Color) bool {
 	opponent := []piece.Color{piece.Black, piece.White}[color]
-	kingsq := Square(bitscan(p.bitBoard[color][piece.King]))
+	kingsq := square.Square(bitscan(p.bitBoard[color][piece.King]))
 	return p.Threatened(kingsq, opponent)
 }

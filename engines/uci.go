@@ -7,6 +7,7 @@ import (
 	"github.com/andrewbackes/chess/game"
 	"github.com/andrewbackes/chess/piece"
 	"github.com/andrewbackes/chess/position"
+	"github.com/andrewbackes/chess/position/move"
 	"strconv"
 	"strings"
 	"time"
@@ -139,9 +140,9 @@ func (e *UCIEngine) SetBoard(g *game.Game) {
 	moves := ""
 	if len(g.Moves) > 0 {
 		moves = " moves "
-		for _, move := range g.Moves {
-			if move != position.NullMove {
-				moves += string(move) + " "
+		for _, m := range g.Moves {
+			if m != move.Null {
+				moves += m.String() + " "
 			}
 		}
 	}

@@ -5,7 +5,7 @@ import (
 	"github.com/andrewbackes/chess/game"
 	"github.com/andrewbackes/chess/pgn"
 	"github.com/andrewbackes/chess/polyglot"
-	"github.com/andrewbackes/chess/position"
+	"github.com/andrewbackes/chess/position/move"
 )
 
 // FromPGN creates an opening book from a PGN. 'depth' is the number of plies
@@ -30,7 +30,7 @@ func (b *Book) addPgn(pgn *pgn.PGN, depth int) {
 	g := game.New()
 	type pair struct {
 		key  uint64
-		move position.Move
+		move move.Move
 	}
 	var staged []pair
 	for d, m := range pgn.Moves {
@@ -53,14 +53,14 @@ func (b *Book) addPgn(pgn *pgn.PGN, depth int) {
 	}
 }
 
-func (b *Book) addMove(key uint64, move position.Move) {
+func (b *Book) addMove(key uint64, m move.Move) {
 	ml := b.Positions[key]
 	for i := range ml {
-		if string(ml[i].Move) == string(move) {
+		if ml[i].Move == m {
 			ml[i].Weight++
 			b.Positions[key] = ml
 			return
 		}
 	}
-	b.Positions[key] = append(b.Positions[key], Entry{Move: string(move), Weight: 1})
+	b.Positions[key] = append(b.Positions[key], Entry{Move: m, Weight: 1})
 }

@@ -5,10 +5,23 @@ import (
 	"github.com/andrewbackes/chess/fen"
 	"github.com/andrewbackes/chess/game"
 	"github.com/andrewbackes/chess/piece"
-	"github.com/andrewbackes/chess/position"
+	"github.com/andrewbackes/chess/position/move"
+	"github.com/andrewbackes/chess/position/square"
 	"strings"
 	"testing"
 )
+
+func decodeToGame(f string) (*game.Game, error) {
+	p, err := fen.Decode(f)
+	if err != nil {
+		return nil, err
+	}
+	g := game.New()
+	g.Position = p
+	g.Tags["FEN"] = f
+	g.Tags["Setup"] = "1"
+	return g, nil
+}
 
 func TestPGNString(t *testing.T) {
 	str := `[Event ""]
@@ -48,7 +61,7 @@ func TestPGNnullmoves(t *testing.T) {
 
 `
 	test := "rnbq1bnr/ppppkppp/8/4p2Q/4P3/8/PPPP1PPP/RNB1KBNR w KQ - 1 3"
-	g, _ := fen.DecodeToGame(test)
+	g, _ := decodeToGame(test)
 	m, err := g.Position.ParseMove("Qxe5#")
 	if err != nil {
 		t.Error("couldnt parse move")
@@ -183,7 +196,7 @@ func TestFromPGN(t *testing.T) {
 	}
 	moves := game.Moves
 	for i, m := range pgn.Moves {
-		if position.Move(m) != moves[i] {
+		if move.Parse(m) != moves[i] {
 			t.Log(moves)
 			t.Fail()
 		}
@@ -236,8 +249,8 @@ func TestParsePGN(t *testing.T) {
 func TestStatusStringInDraw(t *testing.T) {
 	g := game.New()
 	g.Position.Clear()
-	g.Position.QuickPut(piece.New(piece.White, piece.King), position.E1)
-	g.Position.QuickPut(piece.New(piece.Black, piece.King), position.E8)
+	g.Position.QuickPut(piece.New(piece.White, piece.King), square.E1)
+	g.Position.QuickPut(piece.New(piece.Black, piece.King), square.E8)
 	if g.Result() != "1/2-1/2" {
 		t.Fail()
 	}

@@ -46,7 +46,10 @@ func Parse(algebraic string) Move {
 
 // String will return the move in PCN format.
 func (m Move) String() string {
-	return m.Source.Algebraic() + m.Destination.Algebraic() + m.Promote.String()
+	if m.Promote.String() != " " {
+		return m.Source.Algebraic() + m.Destination.Algebraic() + m.Promote.String()
+	}
+	return m.Source.Algebraic() + m.Destination.Algebraic()
 }
 
 // From returns the source square of the move.

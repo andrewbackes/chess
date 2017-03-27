@@ -34,6 +34,16 @@ func (b BitBoard) String() string {
 // Position represents the state of a game during a player's turn.
 type Position struct {
 	// bitBoard has one bitBoard per player per color.
+	// TODO(andrewbackes): When bitboard was changed to a map vs [2][6]uint64 array,
+	// the time to run unit tests increased from around 1 minute to around 7 minutes.
+	// It should probably be changed back. The change was made because piece.Type None
+	// was moved to the from the the None, Pawn, ..., King iota for the const piece.Type.
+	// When Pawn was first it was very easy to use arrays, but with None first, it messed
+	// everything up. To fix it, just make a BitBoards struct that is backed by the array
+	// with the appropriate getters and setters. Also remember, if that doesn't fix it,
+	// then it has something to do with move.Move being changed from a string to a
+	// struct with many more members. Check the v1.0 tag for the well performing unit
+	// tests.
 	bitBoard       map[piece.Color]map[piece.Type]uint64
 	FiftyMoveCount uint64        `json:"fiftyMoveCount,omitempty" bson:"fiftyMoveCount,omitempty"`
 	EnPassant      square.Square `json:"enPassant,omitempty" bson:"enPassant,omitempty"`

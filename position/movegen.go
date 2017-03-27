@@ -11,7 +11,7 @@ func (p *Position) LegalMoves() map[move.Move]struct{} {
 	legalMoves := make(map[move.Move]struct{})
 	ml := p.Moves()
 	for mv := range ml {
-		temp := *p
+		temp := Copy(p)
 		temp.MakeMove(mv)
 		if temp.Check(p.ActiveColor) == false {
 			legalMoves[mv] = struct{}{}

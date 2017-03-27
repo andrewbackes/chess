@@ -18,15 +18,15 @@ func (p *Position) ParseMove(san string) (move.Move, error) {
 
 	// Check for null move:
 	if san == "0000" {
-		return *move.Parse(san), nil
+		return move.Parse(san), nil
 	}
 	color := p.ActiveColor
 	// Check for castling:
 	if san == "O-O" {
-		return *move.Parse([]string{"e1g1", "e8g8"}[color]), nil
+		return move.Parse([]string{"e1g1", "e8g8"}[color]), nil
 	}
 	if san == "O-O-O" {
-		return *move.Parse([]string{"e1c1", "e8c8"}[color]), nil
+		return move.Parse([]string{"e1c1", "e8c8"}[color]), nil
 	}
 
 	// Strip uneeded characters:
@@ -49,7 +49,7 @@ func (p *Position) ParseMove(san string) (move.Move, error) {
 				}
 			}
 		}
-		return *move.Parse(parsed), nil
+		return move.Parse(parsed), nil
 	}
 
 	//	    (piece)    (from)  (from)  (cap) (dest)      (promotion)        (chk  )
@@ -58,7 +58,7 @@ func (p *Position) ParseMove(san string) (move.Move, error) {
 
 	matched := r.FindStringSubmatch(san)
 	if len(matched) == 0 {
-		return *move.Parse(san), errors.New("could not parse '" + san + "'")
+		return move.Parse(san), errors.New("could not parse '" + san + "'")
 	}
 
 	piece := matched[1]
@@ -75,7 +75,7 @@ func (p *Position) ParseMove(san string) (move.Move, error) {
 
 	origin, err := p.originOfPiece(piece, color, destination, fromFile, fromRank)
 	if err != nil {
-		return *move.Parse(san), errors.New("could not find source square of '" + san + "'")
+		return move.Parse(san), errors.New("could not find source square of '" + san + "'")
 	}
 
 	// Some engines dont tell you to promote to queen, so assume so in that case:
@@ -85,7 +85,7 @@ func (p *Position) ParseMove(san string) (move.Move, error) {
 	//	}
 	//}
 
-	return *move.Parse(origin + destination + strings.ToLower(promote)), nil
+	return move.Parse(origin + destination + strings.ToLower(promote)), nil
 }
 
 func (p *Position) originOfPiece(pc string, color piece.Color, destination, fromFile, fromRank string) (string, error) {

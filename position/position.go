@@ -34,8 +34,7 @@ func (b BitBoard) String() string {
 // Position represents the state of a game during a player's turn.
 type Position struct {
 	// bitBoard has one bitBoard per player per color.
-	bitBoard [2][6]uint64 //[player][piece]
-
+	bitBoard       map[piece.Color]map[piece.Type]uint64
 	FiftyMoveCount uint64        `json:"fiftyMoveCount,omitempty" bson:"fiftyMoveCount,omitempty"`
 	EnPassant      square.Square `json:"enPassant,omitempty" bson:"enPassant,omitempty"`
 	CastlingRights [2][2]bool    `json:"castlingRights" bson:"castlingRights"`
@@ -44,7 +43,7 @@ type Position struct {
 }
 
 type Simple struct {
-	bitBoard       [2][6]uint64
+	bitBoard       map[piece.Color]map[piece.Type]uint64
 	EnPassant      square.Square
 	CastlingRights [2][2]bool
 	ActiveColor    piece.Color
@@ -55,11 +54,20 @@ const (
 	LongSide, queenSide uint = 1, 1
 )
 
+func newBitboards() map[piece.Color]map[piece.Type]uint64 {
+	m := make(map[piece.Color]map[piece.Type]uint64)
+	b := make(map[piece.Type]uint64)
+	w := make(map[piece.Type]uint64)
+	m[piece.White] = w
+	m[piece.Black] = b
+	return m
+}
+
 // New returns a game board in the opening position. If you want
 // a blank board, use Clear().
 func New() *Position {
 	p := &Position{
-		bitBoard:       [2][6]uint64{},
+		bitBoard:       newBitboards(),
 		CastlingRights: [2][2]bool{{true, true}, {true, true}},
 		EnPassant:      square.NoSquare,
 		MoveNumber:     1,
@@ -67,6 +75,24 @@ func New() *Position {
 	}
 	p.Reset()
 	return p
+}
+
+// Copy a position.
+func Copy(p *Position) *Position {
+	n := &Position{
+		bitBoard:       newBitboards(),
+		EnPassant:      p.EnPassant,
+		CastlingRights: p.CastlingRights,
+		ActiveColor:    p.ActiveColor,
+		MoveNumber:     p.MoveNumber,
+	}
+	for k, v := range p.bitBoard[piece.White] {
+		n.bitBoard[piece.White][k] = v
+	}
+	for k, v := range p.bitBoard[piece.Black] {
+		n.bitBoard[piece.Black][k] = v
+	}
+	return n
 }
 
 // Simplify a position into one that is comparable. We just need to exclude the
@@ -80,18 +106,17 @@ func Simplify(p *Position) Simple {
 	}
 }
 
-/*
 // String puts the Board into a pretty print-able format.
 func (p Position) String() (str string) {
 	str += "+---+---+---+---+---+---+---+---+\n"
 	for i := 1; i <= 64; i++ {
-		square := Square(64 - i)
+		sq := square.Square(64 - i)
 		str += "|"
 		noPiece := true
 		for c := range p.bitBoard {
 			for j := range p.bitBoard[c] {
-				if ((1 << square) & p.bitBoard[c][j]) != 0 {
-					str += fmt.Sprint(" ", p.OnSquare(square), " ")
+				if ((1 << sq) & p.bitBoard[c][j]) != 0 {
+					str += fmt.Sprint(" ", p.OnSquare(sq), " ")
 					noPiece = false
 				}
 			}
@@ -99,27 +124,26 @@ func (p Position) String() (str string) {
 		if noPiece {
 			str += "   "
 		}
-		if square%8 == 0 {
+		if sq%8 == 0 {
 			str += "|\n"
 			str += "+---+---+---+---+---+---+---+---+"
-			if square < LastSquare {
+			if sq < square.LastSquare {
 				str += "\n"
 			}
 		}
 	}
 	return
 }
-*/
 
 // Clear empties the Board.
 func (p *Position) Clear() {
-	p.bitBoard = [2][6]uint64{}
+	p.bitBoard = newBitboards()
 }
 
 // Reset puts the pieces in the new game position.
 func (p *Position) Reset() {
 	// puts the pieces in their starting/newgame positions
-	for color := uint(0); color < 2; color = color + 1 {
+	for color := piece.Color(0); color < 2; color = color + 1 {
 		//Pawns first:
 		p.bitBoard[color][piece.Pawn] = 255 << (8 + (color * 8 * 5))
 		//Then the rest of the pieces:
@@ -157,7 +181,7 @@ func (p *Position) occupied(c piece.Color) uint64 {
 }
 
 func (p *Position) decompose(m move.Move) (from, to square.Square, movingPiece, capturedPiece piece.Piece) {
-	return m.To(), m.From(), p.OnSquare(m.From()), p.OnSquare(m.To())
+	return m.From(), m.To(), p.OnSquare(m.From()), p.OnSquare(m.To())
 }
 
 // MakeMove attempts to make the given move no matter legality or validity.

@@ -15,7 +15,7 @@ import (
 // TODO(andrewbackes): ParseMove - What about promotion captures? or ambiguous promotions?
 // BUG(andrewbackes): ParseMove - Illegal move: f7g8 (raw: fxg8=Q)
 // BUG(andrewbackes): ParseMove - Illegal move: move axb8=Q+
-func (p *Position) ParseMove(san string) (move.Move, error) {
+func (p *Position) ParseMove(san string) (*move.Move, error) {
 
 	// Check for null move:
 	if san == "0000" {
@@ -105,12 +105,12 @@ func (p *Position) originOfPiece(pc string, color piece.Color, destination, from
 
 	// Get all legal moves:
 	legalMoves := p.LegalMoves()
-	var eligableMoves []move.Move
+	var eligableMoves []*move.Move
 
 	// Grab the legal moves that land on our square:
 	for mv := range legalMoves {
 		if mv.To() == square.Parse(destination) {
-			eligableMoves = append(eligableMoves, mv)
+			eligableMoves = append(eligableMoves, &mv)
 		}
 	}
 

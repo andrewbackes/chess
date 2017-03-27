@@ -2,7 +2,6 @@ package position
 
 import (
 	"github.com/andrewbackes/chess/piece"
-	"github.com/andrewbackes/chess/position/move"
 	"github.com/andrewbackes/chess/position/square"
 	"testing"
 )
@@ -34,12 +33,15 @@ func TestGenPromotion(t *testing.T) {
 	b.Clear()
 	b.QuickPut(piece.New(piece.White, piece.Pawn), square.E7)
 	moves := b.LegalMoves()
-	expected := []string{"e7e8q", "e7e8r", "e7e8b", "e7e8n"}
+	expected := map[string]struct{}{"e7e8q": {}, "e7e8r": {}, "e7e8b": {}, "e7e8n": {}}
+	t.Log("Got", moves, "Expected", expected)
 	if len(moves) != len(expected) {
+		t.Log(len(moves), "!=", len(expected))
 		t.Fail()
 	}
-	for _, exp := range expected {
-		if _, ok := moves[move.Parse(exp)]; !ok {
+	for k := range moves {
+		if _, exists := expected[(*k).String()]; !exists {
+			t.Log("Missing", (*k).String())
 			t.Fail()
 		}
 	}
@@ -54,7 +56,15 @@ func TestGenCastles(t *testing.T) {
 	moves := b.LegalMoves()
 	expected := []string{"e1g1", "e1c1"}
 	for _, exp := range expected {
-		if _, ok := moves[move.Parse(exp)]; !ok {
+		contains := false
+		for k, _ := range moves {
+			if (*k).String() == exp {
+				contains = true
+				break
+			}
+		}
+		if !contains {
+			t.Log("Missing", exp)
 			t.Fail()
 		}
 	}

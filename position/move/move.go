@@ -21,7 +21,7 @@ var (
 )
 
 // Parse takes a move in PCN format and return a Move struct.
-func Parse(algebraic string) Move {
+func Parse(algebraic string) *Move {
 	if len(algebraic) >= 4 {
 		from := square.Parse(algebraic[0:2])
 		to := square.Parse(algebraic[2:4])
@@ -34,14 +34,14 @@ func Parse(algebraic string) Move {
 			}
 			promote = p[string(algebraic[len(algebraic)-1])]
 		}
-		return Move{
+		return &Move{
 			Source:      from,
 			Destination: to,
 			Promote:     promote,
 		}
 	}
 	// unexpected input
-	return Null
+	return &Null
 }
 
 // String will return the move in PCN format.

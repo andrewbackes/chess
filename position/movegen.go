@@ -14,7 +14,7 @@ func (p *Position) LegalMoves() map[move.Move]struct{} {
 		temp := Copy(p)
 		temp.MakeMove(mv)
 		if temp.Check(p.ActiveColor) == false {
-			legalMoves[mv] = struct{}{}
+			legalMoves[*mv] = struct{}{}
 		}
 	}
 	return legalMoves
@@ -23,9 +23,9 @@ func (p *Position) LegalMoves() map[move.Move]struct{} {
 // Moves returns all moves that a player can make but ignores legality.
 // Moves that put the active color into check are included. Castling moves through
 // an attacked square are not included.
-func (p *Position) Moves() map[move.Move]struct{} {
-	moves := make(map[move.Move]struct{})
-	add := func(m move.Move) {
+func (p *Position) Moves() map[*move.Move]struct{} {
+	moves := make(map[*move.Move]struct{})
+	add := func(m *move.Move) {
 		moves[m] = struct{}{}
 	}
 	notToMove := piece.Color((p.ActiveColor + 1) % 2)
@@ -37,7 +37,7 @@ func (p *Position) Moves() map[move.Move]struct{} {
 	return moves
 }
 
-func (p *Position) genKnightMoves(toMove, notToMove piece.Color, add func(move.Move)) {
+func (p *Position) genKnightMoves(toMove, notToMove piece.Color, add func(*move.Move)) {
 	//piece.Knights:
 	pieces := p.bitBoard[toMove][piece.Knight]
 	for pieces != 0 {
@@ -45,14 +45,14 @@ func (p *Position) genKnightMoves(toMove, notToMove piece.Color, add func(move.M
 		destinations := knight_moves[from] &^ p.occupied(toMove)
 		for destinations != 0 {
 			to := bitscan(destinations)
-			add(move.Move{Source: square.Square(from), Destination: square.Square(to), Promote: piece.None})
+			add(&move.Move{Source: square.Square(from), Destination: square.Square(to), Promote: piece.None})
 			destinations ^= (1 << to)
 		}
 		pieces ^= (1 << from)
 	}
 }
 
-func (p *Position) genDiagnalMoves(toMove, notToMove piece.Color, add func(move.Move)) {
+func (p *Position) genDiagnalMoves(toMove, notToMove piece.Color, add func(*move.Move)) {
 	// piece.Bishops/piece.Queens:
 	pieces := p.bitBoard[toMove][piece.Bishop] | p.bitBoard[toMove][piece.Queen]
 	direction := [4][65]uint64{ne, nw, se, sw}
@@ -66,7 +66,7 @@ func (p *Position) genDiagnalMoves(toMove, notToMove piece.Color, add func(move.
 			destinations &^= p.occupied(toMove)
 			for destinations != 0 {
 				to := bitscan(destinations)
-				add(move.Move{Source: square.Square(from), Destination: square.Square(to), Promote: piece.None})
+				add(&move.Move{Source: square.Square(from), Destination: square.Square(to), Promote: piece.None})
 				destinations ^= (1 << to)
 			}
 		}
@@ -74,7 +74,7 @@ func (p *Position) genDiagnalMoves(toMove, notToMove piece.Color, add func(move.
 	}
 }
 
-func (p *Position) genStraightMoves(toMove, notToMove piece.Color, add func(move.Move)) {
+func (p *Position) genStraightMoves(toMove, notToMove piece.Color, add func(*move.Move)) {
 	// Rooks/piece.Queens:
 	pieces := p.bitBoard[toMove][piece.Rook] | p.bitBoard[toMove][piece.Queen]
 	direction := [4][65]uint64{north, west, south, east}
@@ -88,7 +88,7 @@ func (p *Position) genStraightMoves(toMove, notToMove piece.Color, add func(move
 			destinations &^= p.occupied(toMove)
 			for destinations != 0 {
 				to := bitscan(destinations)
-				add(move.Move{Source: square.Square(from), Destination: square.Square(to), Promote: piece.None})
+				add(&move.Move{Source: square.Square(from), Destination: square.Square(to), Promote: piece.None})
 				destinations ^= (1 << to)
 			}
 		}
@@ -96,14 +96,14 @@ func (p *Position) genStraightMoves(toMove, notToMove piece.Color, add func(move
 	}
 }
 
-func (p *Position) genKingMoves(toMove, notToMove piece.Color, castlingRights [2][2]bool, add func(move.Move)) {
+func (p *Position) genKingMoves(toMove, notToMove piece.Color, castlingRights [2][2]bool, add func(*move.Move)) {
 	pieces := p.bitBoard[toMove][piece.King]
 	{
 		from := bitscan(pieces)
 		destinations := king_moves[from] &^ p.occupied(toMove)
 		for destinations != 0 {
 			to := bitscan(destinations)
-			add(move.Move{Source: square.Square(from), Destination: square.Square(to), Promote: piece.None})
+			add(&move.Move{Source: square.Square(from), Destination: square.Square(to), Promote: piece.None})
 			destinations ^= (1 << to)
 		}
 		// Castles:
@@ -112,7 +112,7 @@ func (p *Position) genKingMoves(toMove, notToMove piece.Color, castlingRights [2
 				if (p.Threatened([]square.Square{square.F1, square.F8}[toMove], notToMove) == false) &&
 					(p.Threatened([]square.Square{square.G1, square.G8}[toMove], notToMove) == false) &&
 					(p.Threatened([]square.Square{square.E1, square.E8}[toMove], notToMove) == false) {
-					add(move.Move{Source: square.Square(from), Destination: []square.Square{square.G1, square.G8}[toMove], Promote: piece.None})
+					add(&move.Move{Source: square.Square(from), Destination: []square.Square{square.G1, square.G8}[toMove], Promote: piece.None})
 				}
 			}
 		}
@@ -121,14 +121,14 @@ func (p *Position) genKingMoves(toMove, notToMove piece.Color, castlingRights [2
 				if (p.Threatened([]square.Square{square.D1, square.D8}[toMove], notToMove) == false) &&
 					(p.Threatened([]square.Square{square.C1, square.C8}[toMove], notToMove) == false) &&
 					(p.Threatened([]square.Square{square.E1, square.E8}[toMove], notToMove) == false) {
-					add(move.Move{Source: square.Square(from), Destination: []square.Square{square.C1, square.C8}[toMove], Promote: piece.None})
+					add(&move.Move{Source: square.Square(from), Destination: []square.Square{square.C1, square.C8}[toMove], Promote: piece.None})
 				}
 			}
 		}
 	}
 }
 
-func (p *Position) genPawnMoves(toMove, notToMove piece.Color, enPassant square.Square, add func(move.Move)) {
+func (p *Position) genPawnMoves(toMove, notToMove piece.Color, enPassant square.Square, add func(*move.Move)) {
 	pieces := p.bitBoard[toMove][piece.Pawn] &^ pawns_spawn[notToMove] //&^ = AND_NOT
 	for pieces != 0 {
 		from := bitscan(pieces)
@@ -136,12 +136,12 @@ func (p *Position) genPawnMoves(toMove, notToMove piece.Color, enPassant square.
 		advance := pawn_advances[toMove][from] &^ p.occupied(piece.BothColors)
 		if advance != 0 {
 			to := bitscan(advance)
-			add(move.Move{Source: square.Square(from), Destination: square.Square(to), Promote: piece.None})
+			add(&move.Move{Source: square.Square(from), Destination: square.Square(to), Promote: piece.None})
 
 			advance = pawn_double_advances[toMove][from] &^ p.occupied(piece.BothColors)
 			if advance != 0 {
 				to = bitscan(advance)
-				add(move.Move{Source: square.Square(from), Destination: square.Square(to), Promote: piece.None})
+				add(&move.Move{Source: square.Square(from), Destination: square.Square(to), Promote: piece.None})
 			}
 		}
 		//captures:
@@ -152,7 +152,7 @@ func (p *Position) genPawnMoves(toMove, notToMove piece.Color, enPassant square.
 		captures := pawn_captures[toMove][from] & (p.occupied(notToMove) | enpas)
 		for captures != 0 {
 			to := bitscan(captures)
-			add(move.Move{Source: square.Square(from), Destination: square.Square(to), Promote: piece.None})
+			add(&move.Move{Source: square.Square(from), Destination: square.Square(to), Promote: piece.None})
 			captures ^= (1 << to)
 		}
 
@@ -168,7 +168,7 @@ func (p *Position) genPawnMoves(toMove, notToMove piece.Color, enPassant square.
 			to := bitscan(destinations)
 			p := []piece.Type{piece.Queen, piece.Rook, piece.Bishop, piece.Knight}
 			for i := 0; i < 4; i++ {
-				add(move.Move{Source: square.Square(from), Destination: square.Square(to), Promote: p[i]})
+				add(&move.Move{Source: square.Square(from), Destination: square.Square(to), Promote: p[i]})
 			}
 			destinations ^= (1 << to)
 		}

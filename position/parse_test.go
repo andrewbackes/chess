@@ -18,7 +18,7 @@ func TestParseNoPromo(t *testing.T) {
 	p.QuickPut(piece.New(piece.White, piece.King), square.E1)
 	p.QuickPut(piece.New(piece.Black, piece.King), square.A8)
 	m, _ := p.ParseMove("e7e8")
-	if m != move.Parse("e7e8q") {
+	if *m != *move.Parse("e7e8q") {
 		t.Fail()
 	}
 }

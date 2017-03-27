@@ -17,7 +17,7 @@ func ExampleFoolsMate() {
 	// Create a new game:
 	g := game.New()
 	// Moves can be created based on source and destination squares:
-	f3 := move.Move{Source: square.F2, Destination: square.F3}
+	f3 := &move.Move{Source: square.F2, Destination: square.F3}
 	g.MakeMove(f3)
 	// They can also be created by parsing algebraic notation:
 	e5, _ := g.Position.ParseMove("e5")

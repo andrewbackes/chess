@@ -48,7 +48,7 @@ func (G *Game) ActiveColor() piece.Color {
 
 // QuickMove makes the specified move without checking the legality
 // of the move or the status of the game post move.
-func (G *Game) QuickMove(m move.Move) {
+func (G *Game) QuickMove(m *move.Move) {
 	from, to, movingPiece, capturedPiece := G.decompose(m)
 	G.makeMove(m, from, to, movingPiece, capturedPiece)
 }
@@ -57,7 +57,7 @@ func (G *Game) QuickMove(m move.Move) {
 // of the move to the player's clock. If the player goes over time, then
 // the TimedOut game status is returned. In that case, the move is not
 // added to the game history.
-func (G *Game) MakeTimedMove(m move.Move, timeTaken time.Duration) GameStatus {
+func (G *Game) MakeTimedMove(m *move.Move, timeTaken time.Duration) GameStatus {
 	color := G.ActiveColor()
 	G.control[color].clock -= timeTaken
 	if G.control[color].clock <= 0 {
@@ -74,26 +74,26 @@ func (G *Game) MakeTimedMove(m move.Move, timeTaken time.Duration) GameStatus {
 // MakeMove makes the specified move on the game position. Game state information
 // such as the en passant square, castling rights, 50 move rule count are also adjusted.
 // The game status after the given move is made is returned.
-func (G *Game) MakeMove(m move.Move) GameStatus {
+func (G *Game) MakeMove(m *move.Move) GameStatus {
 	from, to, movingPiece, capturedPiece := G.decompose(m)
 	if G.illegalMove(movingPiece, m) {
-		defer func() { G.Moves = append(G.Moves, m) }()
+		defer func() { G.Moves = append(G.Moves, *m) }()
 		return G.illegalMoveStatus()
 	}
 	G.makeMove(m, from, to, movingPiece, capturedPiece)
 	return G.Status()
 }
 
-func (G *Game) decompose(m move.Move) (from, to square.Square, movingPiece, capturedPiece piece.Piece) {
+func (G *Game) decompose(m *move.Move) (from, to square.Square, movingPiece, capturedPiece piece.Piece) {
 	from, to = m.From(), m.To()
 	movingPiece = G.Position.OnSquare(from)
 	capturedPiece = G.Position.OnSquare(to)
 	return
 }
 
-func (G *Game) makeMove(m move.Move, from, to square.Square, movingPiece, capturedPiece piece.Piece) {
+func (G *Game) makeMove(m *move.Move, from, to square.Square, movingPiece, capturedPiece piece.Piece) {
 	G.Position.MakeMove(m)
-	G.Moves = append(G.Moves, m)
+	G.Moves = append(G.Moves, *m)
 	G.cachePosition()
 }
 
@@ -119,11 +119,11 @@ func (G *Game) Status() GameStatus {
 	return InProgress
 }
 
-func (G *Game) illegalMove(p piece.Piece, m move.Move) bool {
+func (G *Game) illegalMove(p piece.Piece, m *move.Move) bool {
 	if p.Color == piece.Neither || p.Type == piece.None {
 		return true
 	}
-	if _, legal := G.LegalMoves()[m]; !legal {
+	if _, legal := G.LegalMoves()[*m]; !legal {
 		return true
 	}
 	return false

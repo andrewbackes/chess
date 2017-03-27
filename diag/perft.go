@@ -17,7 +17,7 @@ func Divide(p *position.Position, depth int) map[move.Move]uint64 {
 	toMove := p.ActiveColor
 	for mv := range ml {
 		temp := position.Copy(p)
-		temp.MakeMove(mv)
+		temp.MakeMove(&mv)
 		if temp.Check(toMove) == false {
 			//Count it for mate:
 			moveCount++
@@ -40,7 +40,7 @@ func Perft(p *position.Position, depth int) uint64 {
 	ml := p.LegalMoves()
 	for mv := range ml {
 		temp := position.Copy(p)
-		temp.MakeMove(mv)
+		temp.MakeMove(&mv)
 		if temp.Check(toMove) == false {
 			nodes += Perft(temp, depth-1)
 		}

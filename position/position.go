@@ -180,7 +180,7 @@ func (p *Position) occupied(c piece.Color) uint64 {
 	return mask
 }
 
-func (p *Position) decompose(m move.Move) (from, to square.Square, movingPiece, capturedPiece piece.Piece) {
+func (p *Position) decompose(m *move.Move) (from, to square.Square, movingPiece, capturedPiece piece.Piece) {
 	return m.From(), m.To(), p.OnSquare(m.From()), p.OnSquare(m.To())
 }
 
@@ -188,7 +188,7 @@ func (p *Position) decompose(m move.Move) (from, to square.Square, movingPiece, 
 // It does not change game state such as en passant or castling rights.
 // What ever move you specify will attempt to be made. If it is illegal
 // or invalid you will get undetermined behavior.
-func (p *Position) MakeMove(m move.Move) {
+func (p *Position) MakeMove(m *move.Move) {
 	from, to, movingPiece, capturedPiece := p.decompose(m)
 	p.adjustMoveCounter(movingPiece, capturedPiece)
 	p.adjustCastlingRights(movingPiece, from, to)
@@ -233,7 +233,7 @@ func (p *Position) adjustCastlingRights(movingPiece piece.Piece, from, to square
 	}
 }
 
-func (p *Position) adjustBoard(m move.Move, from, to square.Square, movingPiece, capturedPiece piece.Piece) {
+func (p *Position) adjustBoard(m *move.Move, from, to square.Square, movingPiece, capturedPiece piece.Piece) {
 	// Remove captured piece:
 	if capturedPiece.Type != piece.None {
 		p.bitBoard[capturedPiece.Color][capturedPiece.Type] ^= (1 << to)

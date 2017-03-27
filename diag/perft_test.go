@@ -28,7 +28,7 @@ func TestDivideOutput(t *testing.T) {
 	if len(m) != 3 {
 		t.Fail()
 	}
-	if m[move.Parse("a1b1")] != 1 || m[move.Parse("a1b2")] != 1 || m[move.Parse("a1a2")] != 1 {
+	if m[*move.Parse("a1b1")] != 1 || m[*move.Parse("a1b2")] != 1 || m[*move.Parse("a1a2")] != 1 {
 		t.Fail()
 	}
 }

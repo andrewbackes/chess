@@ -59,13 +59,6 @@ type Position struct {
 	Clocks    map[piece.Color]time.Duration `json:"clock" bson:"clock"`
 }
 
-type Simple struct {
-	bitBoard       map[piece.Color]map[piece.Type]uint64
-	EnPassant      square.Square
-	CastlingRights [2][2]bool
-	ActiveColor    piece.Color
-}
-
 type Side uint
 
 const (

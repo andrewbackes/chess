@@ -18,6 +18,9 @@ const (
 	NoColor    Color = 2
 )
 
+// Colors can be used to loop through the colors via range.
+var Colors = [2]Color{White, Black}
+
 // Type is a player's piece. Ex: King, Queen, etc.
 type Type uint8
 

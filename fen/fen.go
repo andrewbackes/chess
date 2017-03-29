@@ -121,10 +121,10 @@ func parseEnPassantSquare(sq string) square.Square {
 	return square.NoSquare
 }
 
-func parseCastlingRights(KQkq string) [2][2]bool {
-	return [2][2]bool{
-		{strings.Contains(KQkq, "K"), strings.Contains(KQkq, "Q")},
-		{strings.Contains(KQkq, "k"), strings.Contains(KQkq, "q")}}
+func parseCastlingRights(KQkq string) map[piece.Color]map[position.Side]bool {
+	return map[piece.Color]map[position.Side]bool{
+		piece.White: {position.ShortSide: strings.Contains(KQkq, "K"), position.LongSide: strings.Contains(KQkq, "Q")},
+		piece.Black: {position.ShortSide: strings.Contains(KQkq, "k"), position.LongSide: strings.Contains(KQkq, "q")}}
 }
 
 // GameFromFEN parses the board passed via FEN and returns a board object.

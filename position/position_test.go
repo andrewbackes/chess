@@ -35,8 +35,7 @@ func changedbitBoards(before, after *Position) map[piece.Piece]struct{} {
 
 func TestMovePawn(t *testing.T) {
 	beforeMove := New()
-	afterMove := New()
-	afterMove.MakeMove(move.Parse("e2e4"))
+	afterMove := beforeMove.MakeMove(move.Parse("e2e4"))
 	changed := changedbitBoards(beforeMove, afterMove)
 	t.Log("Changed: ", changed)
 	if _, c := changed[piece.New(piece.White, piece.Pawn)]; !c || len(changed) != 1 {
@@ -46,8 +45,7 @@ func TestMovePawn(t *testing.T) {
 
 func TestMoveKnight(t *testing.T) {
 	beforeMove := New()
-	afterMove := New()
-	afterMove.MakeMove(move.Parse("b1c3"))
+	afterMove := beforeMove.MakeMove(move.Parse("b1c3"))
 	changed := changedbitBoards(beforeMove, afterMove)
 	t.Log("Changed: ", changed)
 	if _, c := changed[piece.New(piece.White, piece.Knight)]; !c || len(changed) != 1 {
@@ -147,16 +145,16 @@ func TestCapture(t *testing.T) {
 	b.QuickPut(piece.New(piece.White, piece.King), square.E4)
 	b.QuickPut(piece.New(piece.Black, piece.King), square.A8)
 	b.QuickPut(piece.New(piece.Black, piece.Pawn), square.E5)
-	b.MakeMove(move.Parse("e4e5"))
+	result := b.MakeMove(move.Parse("e4e5"))
 	for c := piece.White; c <= piece.Black; c++ {
 		for p := piece.Pawn; p < piece.King; p++ {
-			if b.bitBoard[c][p] != 0 {
-				t.Log(BitBoard(b.bitBoard[c][p]))
+			if result.bitBoard[c][p] != 0 {
+				t.Log(BitBoard(result.bitBoard[c][p]))
 				t.Fail()
 			}
 		}
 	}
-	if b.bitBoard[piece.White][piece.King] == 0 || b.bitBoard[piece.Black][piece.King] == 0 {
+	if result.bitBoard[piece.White][piece.King] == 0 || result.bitBoard[piece.Black][piece.King] == 0 {
 		t.Log("==0")
 		t.Fail()
 	}
@@ -168,9 +166,9 @@ func TestShortCastle(t *testing.T) {
 	b.QuickPut(piece.New(piece.Black, piece.King), square.A8)
 	b.QuickPut(piece.New(piece.White, piece.King), square.E1)
 	b.QuickPut(piece.New(piece.White, piece.Rook), square.H1)
-	b.MakeMove(move.Parse("e1g1"))
-	if b.bitBoard[piece.White][piece.King] != (1<<square.G1) ||
-		b.bitBoard[piece.White][piece.Rook] != (1<<square.F1) {
+	result := b.MakeMove(move.Parse("e1g1"))
+	if result.bitBoard[piece.White][piece.King] != (1<<square.G1) ||
+		result.bitBoard[piece.White][piece.Rook] != (1<<square.F1) {
 		t.Fail()
 	}
 }
@@ -181,12 +179,12 @@ func TestLongCastle(t *testing.T) {
 	b.QuickPut(piece.New(piece.Black, piece.King), square.H8)
 	b.QuickPut(piece.New(piece.White, piece.King), square.E1)
 	b.QuickPut(piece.New(piece.White, piece.Rook), square.A1)
-	b.MakeMove(move.Parse("e1c1"))
-	if b.bitBoard[piece.White][piece.King] != (1<<square.C1) ||
-		b.bitBoard[piece.White][piece.Rook] != (1<<square.D1) {
-		fmt.Println(BitBoard(b.bitBoard[piece.White][piece.King]))
+	result := b.MakeMove(move.Parse("e1c1"))
+	if result.bitBoard[piece.White][piece.King] != (1<<square.C1) ||
+		result.bitBoard[piece.White][piece.Rook] != (1<<square.D1) {
+		fmt.Println(BitBoard(result.bitBoard[piece.White][piece.King]))
 		fmt.Println("--Rook:--")
-		fmt.Println(BitBoard(b.bitBoard[piece.White][piece.Rook]))
+		fmt.Println(BitBoard(result.bitBoard[piece.White][piece.Rook]))
 		t.Fail()
 	}
 }

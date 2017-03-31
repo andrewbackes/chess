@@ -5,6 +5,7 @@ package position
 import (
 	"fmt"
 	"github.com/andrewbackes/chess/piece"
+	"github.com/andrewbackes/chess/polyglot"
 	"github.com/andrewbackes/chess/position/board"
 	"github.com/andrewbackes/chess/position/move"
 	"github.com/andrewbackes/chess/position/square"
@@ -50,8 +51,8 @@ type Position struct {
 	MoveNumber     int    `json:"moveNumber" bson:"moveNumber"`
 	FiftyMoveCount uint64 `json:"fiftyMoveCount,omitempty" bson:"fiftyMoveCount,omitempty"`
 	// ThreeFoldCount keeps track of how many times a certain position has been seen in the game so far.
-	ThreeFoldCount map[uint64]int `json:"threeFoldCount,omitempty" bson:"threeFoldCount,omitempty"`
-	EnPassant      square.Square  `json:"enPassant,omitempty" bson:"enPassant,omitempty"`
+	ThreeFoldCount map[polyglot.Hash]int `json:"threeFoldCount,omitempty" bson:"threeFoldCount,omitempty"`
+	EnPassant      square.Square         `json:"enPassant,omitempty" bson:"enPassant,omitempty"`
 	//CastlingRights [2][2]bool     `json:"castlingRights" bson:"castlingRights"`
 	CastlingRights map[piece.Color]map[board.Side]bool `json:"castlingRights" bson:"castlingRights"`
 	ActiveColor    piece.Color                         `json:"activeColor" bson:"activeColor"`
@@ -89,7 +90,7 @@ func New() *Position {
 		EnPassant:      square.NoSquare,
 		CastlingRights: NewCastlingRights(),
 		FiftyMoveCount: 0,
-		ThreeFoldCount: make(map[uint64]int),
+		ThreeFoldCount: make(map[polyglot.Hash]int),
 		MovesLeft:      make(map[piece.Color]int),
 		Clocks:         make(map[piece.Color]time.Duration),
 	}
@@ -106,7 +107,7 @@ func Copy(p *Position) *Position {
 		EnPassant:      p.EnPassant,
 		FiftyMoveCount: p.FiftyMoveCount,
 		CastlingRights: make(map[piece.Color]map[board.Side]bool),
-		ThreeFoldCount: make(map[uint64]int),
+		ThreeFoldCount: make(map[polyglot.Hash]int),
 		MovesLeft:      make(map[piece.Color]int),
 		Clocks:         make(map[piece.Color]time.Duration),
 		LastMove:       p.LastMove,
@@ -247,18 +248,33 @@ func (p *Position) decompose(m move.Move) (from, to square.Square, movingPiece, 
 // It does not change game state such as en passant or castling rights.
 // What ever move you specify will attempt to be made. If it is illegal
 // or invalid you will get undetermined behavior.
-func (p *Position) MakeMove(m move.Move) {
-	from, to, movingPiece, capturedPiece := p.decompose(m)
-	p.adjustMoveCounter(movingPiece, capturedPiece)
-	p.adjustCastlingRights(movingPiece, from, to)
-	p.adjustEnPassant(movingPiece, from, to)
-	p.adjustBoard(m, from, to, movingPiece, capturedPiece)
-	p.ActiveColor = (p.ActiveColor + 1) % 2
-	if p.ActiveColor == piece.White {
-		p.MoveNumber++
+func (p *Position) MakeMove(m move.Move) *Position {
+	q := Copy(p)
+	from, to, movingPiece, capturedPiece := q.decompose(m)
+	q.adjustMoveCounter(movingPiece, capturedPiece)
+	q.adjustCastlingRights(movingPiece, from, to)
+	q.adjustEnPassant(movingPiece, from, to)
+	q.adjustBoard(m, from, to, movingPiece, capturedPiece)
+	q.ActiveColor = (q.ActiveColor + 1) % 2
+	if q.ActiveColor == piece.White {
+		q.MoveNumber++
 	}
-	p.LastMove = m
+	q.LastMove = m
+	q.adjustThreeFoldCounter()
+	return q
+}
 
+func (p *Position) adjustThreeFoldCounter() {
+	hash := polyglot.Encode(p)
+	if p.FiftyMoveCount == 0 {
+		p.ThreeFoldCount = make(map[polyglot.Hash]int)
+	}
+	if count, exists := p.ThreeFoldCount[hash]; exists {
+		count++
+		p.ThreeFoldCount[hash] = count
+	} else {
+		p.ThreeFoldCount[hash] = 1
+	}
 }
 
 func (p *Position) adjustMoveCounter(movingPiece, capturedPiece piece.Piece) {

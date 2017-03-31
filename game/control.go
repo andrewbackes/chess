@@ -11,8 +11,6 @@ type TimeControl struct {
 	Increment time.Duration `json:"increment,omitempty"`
 	Moves     int64         `json:"moves,omitempty"`
 	Repeating bool          `json:"repeating,omitempty"`
-	clock     time.Duration
-	movesLeft int64
 }
 
 // NewTimeControl creates a time control where 'time' is the time per control,
@@ -25,10 +23,10 @@ func NewTimeControl(time time.Duration, moves int64, inc time.Duration, repeatin
 		Moves:     moves,
 		Increment: inc,
 		Repeating: repeating,
-		movesLeft: moves,
 	}
 }
 
+/*
 // Reset adds the time control to the clock current clock value.
 func (t *TimeControl) Reset() {
 	t.clock += t.Time
@@ -40,3 +38,4 @@ func (t *TimeControl) Clear() {
 	t.clock = 0
 	t.movesLeft = 0
 }
+*/

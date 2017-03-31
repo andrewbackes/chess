@@ -5,6 +5,7 @@ package position
 import (
 	"fmt"
 	"github.com/andrewbackes/chess/piece"
+	"github.com/andrewbackes/chess/position/board"
 	"github.com/andrewbackes/chess/position/move"
 	"github.com/andrewbackes/chess/position/square"
 	"time"
@@ -52,22 +53,13 @@ type Position struct {
 	ThreeFoldCount map[uint64]int `json:"threeFoldCount,omitempty" bson:"threeFoldCount,omitempty"`
 	EnPassant      square.Square  `json:"enPassant,omitempty" bson:"enPassant,omitempty"`
 	//CastlingRights [2][2]bool     `json:"castlingRights" bson:"castlingRights"`
-	CastlingRights map[piece.Color]map[Side]bool `json:"castlingRights" bson:"castlingRights"`
-	ActiveColor    piece.Color                   `json:"activeColor" bson:"activeColor"`
+	CastlingRights map[piece.Color]map[board.Side]bool `json:"castlingRights" bson:"castlingRights"`
+	ActiveColor    piece.Color                         `json:"activeColor" bson:"activeColor"`
 	// MovesLeft in the time control.
 	MovesLeft map[piece.Color]int           `json:"movesLeft" bson:"movesLeft"`
 	Clocks    map[piece.Color]time.Duration `json:"clock" bson:"clock"`
+	LastMove  move.Move
 }
-
-type Side uint
-
-const (
-	ShortSide, kingSide = Side(0), Side(0)
-	LongSide, queenSide = Side(1), Side(1)
-)
-
-// Sides is used to range through the sides of the board.
-var Sides = [2]Side{ShortSide, LongSide}
 
 func newBitboards() map[piece.Color]map[piece.Type]uint64 {
 	m := make(map[piece.Color]map[piece.Type]uint64)
@@ -80,10 +72,10 @@ func newBitboards() map[piece.Color]map[piece.Type]uint64 {
 
 // NewCastlingRights returns castling rights set to their default
 // settings.
-func NewCastlingRights() map[piece.Color]map[Side]bool {
-	return map[piece.Color]map[Side]bool{
-		piece.White: {ShortSide: true, LongSide: true},
-		piece.Black: {ShortSide: true, LongSide: true},
+func NewCastlingRights() map[piece.Color]map[board.Side]bool {
+	return map[piece.Color]map[board.Side]bool{
+		piece.White: {board.ShortSide: true, board.LongSide: true},
+		piece.Black: {board.ShortSide: true, board.LongSide: true},
 	}
 }
 
@@ -105,7 +97,7 @@ func New() *Position {
 	return p
 }
 
-// Copy a position.
+// Copy makes an exact copy of the position.
 func Copy(p *Position) *Position {
 	n := &Position{
 		bitBoard:       newBitboards(),
@@ -113,10 +105,11 @@ func Copy(p *Position) *Position {
 		ActiveColor:    p.ActiveColor,
 		EnPassant:      p.EnPassant,
 		FiftyMoveCount: p.FiftyMoveCount,
-		CastlingRights: make(map[piece.Color]map[Side]bool),
+		CastlingRights: make(map[piece.Color]map[board.Side]bool),
 		ThreeFoldCount: make(map[uint64]int),
 		MovesLeft:      make(map[piece.Color]int),
 		Clocks:         make(map[piece.Color]time.Duration),
+		LastMove:       p.LastMove,
 	}
 	for k, v := range p.ThreeFoldCount {
 		n.ThreeFoldCount[k] = v
@@ -125,8 +118,8 @@ func Copy(p *Position) *Position {
 		for k, v := range p.bitBoard[color] {
 			n.bitBoard[color][k] = v
 		}
-		n.CastlingRights[color] = make(map[Side]bool)
-		for _, side := range Sides {
+		n.CastlingRights[color] = make(map[board.Side]bool)
+		for _, side := range board.Sides {
 			n.CastlingRights[color][side] = p.CastlingRights[color][side]
 		}
 		n.MovesLeft[color] = p.MovesLeft[color]
@@ -135,18 +128,42 @@ func Copy(p *Position) *Position {
 	return n
 }
 
-// Simplify a position into one that is comparable. We just need to exclude the
-// move count information.
-/*
-func Simplify(p *Position) Simple {
-	return Simple{
-		bitBoard:       p.bitBoard,
-		EnPassant:      p.EnPassant,
-		CastlingRights: p.CastlingRights,
-		ActiveColor:    p.ActiveColor,
+// Equals compares two positions for the same active player, position of the
+// pieces, castling rights and en passant. It does not compare how much time
+// is left on the clock or how many moves are left in the time control.
+func (p *Position) Equals(q *Position) bool {
+	if p.ActiveColor != q.ActiveColor {
+		return false
 	}
+	if p.EnPassant != q.EnPassant {
+		return false
+	}
+	for _, color := range piece.Colors {
+		for k := range p.bitBoard[color] {
+			if p.bitBoard[color][k] != q.bitBoard[color][k] {
+				return false
+			}
+		}
+		for _, side := range board.Sides {
+			if p.CastlingRights[color][side] != q.CastlingRights[color][side] {
+				return false
+			}
+		}
+	}
+	return true
 }
-*/
+
+func (p *Position) GetCastlingRights() map[piece.Color]map[board.Side]bool {
+	return p.CastlingRights
+}
+
+func (p *Position) GetActiveColor() piece.Color {
+	return p.ActiveColor
+}
+
+func (p *Position) GetEnPassant() square.Square {
+	return p.EnPassant
+}
 
 // String puts the Board into a pretty print-able format.
 func (p Position) String() (str string) {
@@ -240,6 +257,8 @@ func (p *Position) MakeMove(m move.Move) {
 	if p.ActiveColor == piece.White {
 		p.MoveNumber++
 	}
+	p.LastMove = m
+
 }
 
 func (p *Position) adjustMoveCounter(movingPiece, capturedPiece piece.Piece) {
@@ -263,7 +282,7 @@ func (p *Position) adjustEnPassant(movingPiece piece.Piece, from, to square.Squa
 }
 
 func (p *Position) adjustCastlingRights(movingPiece piece.Piece, from, to square.Square) {
-	for side := ShortSide; side <= LongSide; side++ {
+	for side := board.ShortSide; side <= board.LongSide; side++ {
 		if movingPiece.Type == piece.King || //King moves
 			(movingPiece.Type == piece.Rook &&
 				from == [2][2]square.Square{{square.H1, square.A1}, {square.H8, square.A8}}[movingPiece.Color][side]) {

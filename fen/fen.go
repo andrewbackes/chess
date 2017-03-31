@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/andrewbackes/chess/piece"
 	"github.com/andrewbackes/chess/position"
+	"github.com/andrewbackes/chess/position/board"
 	"github.com/andrewbackes/chess/position/square"
 	"strconv"
 	"strings"
@@ -34,7 +35,7 @@ func Encode(p *position.Position) (fen string, err error) {
 	var rights string
 	castles := [][]string{{"K", "Q"}, {"k", "q"}}
 	for c := piece.White; c <= piece.Black; c++ {
-		for side := position.ShortSide; side <= position.LongSide; side++ {
+		for side := board.ShortSide; side <= board.LongSide; side++ {
 			if p.CastlingRights[c][side] {
 				rights += castles[c][side]
 			}
@@ -121,10 +122,10 @@ func parseEnPassantSquare(sq string) square.Square {
 	return square.NoSquare
 }
 
-func parseCastlingRights(KQkq string) map[piece.Color]map[position.Side]bool {
-	return map[piece.Color]map[position.Side]bool{
-		piece.White: {position.ShortSide: strings.Contains(KQkq, "K"), position.LongSide: strings.Contains(KQkq, "Q")},
-		piece.Black: {position.ShortSide: strings.Contains(KQkq, "k"), position.LongSide: strings.Contains(KQkq, "q")}}
+func parseCastlingRights(KQkq string) map[piece.Color]map[board.Side]bool {
+	return map[piece.Color]map[board.Side]bool{
+		piece.White: {board.ShortSide: strings.Contains(KQkq, "K"), board.LongSide: strings.Contains(KQkq, "Q")},
+		piece.Black: {board.ShortSide: strings.Contains(KQkq, "k"), board.LongSide: strings.Contains(KQkq, "q")}}
 }
 
 // GameFromFEN parses the board passed via FEN and returns a board object.

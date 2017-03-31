@@ -13,37 +13,39 @@ import (
 
 // Game represents a chess game.
 type Game struct {
-	Tags          map[string]string
-	control       [2]TimeControl
-	Position      *position.Position
-	Moves         []move.Move
-	positionCache map[uint64]int
+	Tags      map[string]string
+	control   map[piece.Color]TimeControl
+	Positions []*position.Position
 }
 
 // New returns a fresh game with all of the pieces in the
 // opening position.
 func New() *Game {
 	return &Game{
-		control:       [2]TimeControl{},
-		Tags:          make(map[string]string),
-		Position:      position.New(),
-		positionCache: make(map[uint64]int),
+		control:   nil,
+		Tags:      make(map[string]string),
+		Positions: []*position.Position{position.New()},
 	}
 }
 
 // NewTimedGame does the same thing as NewGame() but sets the
 // time control to what is specified.
-func NewTimedGame(control [2]TimeControl) *Game {
+func NewTimedGame(control map[piece.Color]TimeControl) *Game {
 	g := New()
-	g.control = control
-	g.control[piece.White].Reset()
-	g.control[piece.Black].Reset()
+	for _, c := range piece.Colors {
+		g.control[c] = control[c]
+	}
 	return g
+}
+
+// Position returns the current position of the game.
+func (G *Game) Position() *position.Position {
+	return G.Positions[len(G.Positions)-1]
 }
 
 // ActiveColor returns the color of the player whos turn it is.
 func (G *Game) ActiveColor() piece.Color {
-	return G.Position.ActiveColor
+	return G.Position().ActiveColor
 }
 
 // QuickMove makes the specified move without checking the legality
@@ -57,6 +59,7 @@ func (G *Game) QuickMove(m move.Move) {
 // of the move to the player's clock. If the player goes over time, then
 // the TimedOut game status is returned. In that case, the move is not
 // added to the game history.
+/*
 func (G *Game) MakeTimedMove(m move.Move, timeTaken time.Duration) GameStatus {
 	color := G.ActiveColor()
 	G.control[color].clock -= timeTaken
@@ -70,6 +73,7 @@ func (G *Game) MakeTimedMove(m move.Move, timeTaken time.Duration) GameStatus {
 	}
 	return status
 }
+*/
 
 // MakeMove makes the specified move on the game position. Game state information
 // such as the en passant square, castling rights, 50 move rule count are also adjusted.
@@ -86,14 +90,15 @@ func (G *Game) MakeMove(m move.Move) GameStatus {
 
 func (G *Game) decompose(m move.Move) (from, to square.Square, movingPiece, capturedPiece piece.Piece) {
 	from, to = m.From(), m.To()
-	movingPiece = G.Position.OnSquare(from)
-	capturedPiece = G.Position.OnSquare(to)
+	movingPiece = G.Position().OnSquare(from)
+	capturedPiece = G.Position().OnSquare(to)
 	return
 }
 
 func (G *Game) makeMove(m move.Move, from, to square.Square, movingPiece, capturedPiece piece.Piece) {
-	G.Position.MakeMove(m)
-	G.Moves = append(G.Moves, m)
+	newPos := position.Copy(G.Position())
+	newPos.MakeMove(m)
+	G.Positions = append(G.Positions, newPos)
 	G.cachePosition()
 }
 
@@ -110,10 +115,10 @@ func (G *Game) Status() GameStatus {
 	if G.threeFold() {
 		return Threefold
 	}
-	if G.Position.FiftyMoveCount >= 100 { // we keep track of it in half moves, start at 0
+	if G.Position().FiftyMoveCount >= 100 { // we keep track of it in half moves, start at 0
 		return FiftyMoveRule
 	}
-	if G.Position.InsufficientMaterial() {
+	if G.Position().InsufficientMaterial() {
 		return InsufficientMaterial
 	}
 	return InProgress
@@ -166,7 +171,7 @@ func (G *Game) EnPassant() square.Square {
 
 // LegalMoves returns only the legal moves that can be made.
 func (G *Game) LegalMoves() map[move.Move]struct{} {
-	return G.Position.LegalMoves()
+	return G.Position().LegalMoves()
 }
 
 // String puts the Board into a pretty print-able format.

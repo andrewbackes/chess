@@ -255,6 +255,8 @@ func (p *Position) MakeMove(m move.Move) *Position {
 	q.adjustCastlingRights(movingPiece, from, to)
 	q.adjustEnPassant(movingPiece, from, to)
 	q.adjustBoard(m, from, to, movingPiece, capturedPiece)
+	q.Clocks[q.ActiveColor] -= m.Duration
+	q.MovesLeft[q.ActiveColor]--
 	q.ActiveColor = (q.ActiveColor + 1) % 2
 	if q.ActiveColor == piece.White {
 		q.MoveNumber++

@@ -9,7 +9,7 @@ import (
 type TimeControl struct {
 	Time      time.Duration `json:"time,omitempty"`
 	Increment time.Duration `json:"increment,omitempty"`
-	Moves     int64         `json:"moves,omitempty"`
+	Moves     int           `json:"moves,omitempty"`
 	Repeating bool          `json:"repeating,omitempty"`
 }
 
@@ -17,7 +17,7 @@ type TimeControl struct {
 // 'moves' is the number of moves allotted for that time control, 'inc' is the amount
 // of time added after each move, and 'repeating' is whether the time control starts
 // over once 'moves' has been met.
-func NewTimeControl(time time.Duration, moves int64, inc time.Duration, repeating bool) TimeControl {
+func NewTimeControl(time time.Duration, moves int, inc time.Duration, repeating bool) TimeControl {
 	return TimeControl{
 		Time:      time,
 		Moves:     moves,

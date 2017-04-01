@@ -18,6 +18,13 @@ const (
 	NoColor    Color = 2
 )
 
+func (c Color) String() string {
+	return map[Color]string{
+		White: "White",
+		Black: "Black",
+	}[c]
+}
+
 // Colors can be used to loop through the colors via range.
 var Colors = [2]Color{White, Black}
 

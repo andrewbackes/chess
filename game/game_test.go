@@ -132,10 +132,14 @@ func TestTimedOut(t *testing.T) {
 		Moves: 40,
 	}
 	g := NewTimedGame(map[piece.Color]TimeControl{piece.White: tc, piece.Black: tc})
+	t.Log(g)
 	m := move.Parse("e2e4")
 	m.Duration = 41 * time.Minute
-	s, _ := g.MakeMove(m)
+	s, e := g.MakeMove(m)
 	if s != WhiteTimedOut {
+		t.Log(g)
+		t.Log(g.LegalMoves())
+		t.Log(s, e)
 		t.Fail()
 	}
 }
@@ -181,6 +185,8 @@ func TestFiftyMoveRule(t *testing.T) {
 	moves := []string{"Rd8", "Kxh4", "Rg8", "Be4", "Rg1", "Nh5+", "Ke6", "Ng3", "Kf6", "Kg4", "Ra1", "Bd5", "Ra5", "Bf3", "Ra1", "Kf4", "Ke6", "Nc5+", "Kd6", "Nge4+", "Ke7", "Ke5", "Rf1", "Bg4", "Rg1", "Be6", "Re1", "Bc8", "Rc1", "Kd4", "Rd1", "Nd3", "Kf7", "Ke3", "Ra1", "Kf4", "Ke7", "Nb4", "Rc1", "Nd5+", "Kf7", "Bd7", "Rf1", "Ke5", "Ra1", "Ng5+", "Kg6", "Nf3", "Kg7", "Bg4", "Kg6", "Nf4+", "Kg7", "Nd4", "Re1", "Kf5", "Rc1", "Be2", "Re1", "Bh5", "Ra1", "Nfe6+", "Kh6", "Be8", "Ra8", "Bc6", "Ra1", "Kf6", "Kh7", "Ng5+", "Kh8", "Nde6", "Ra6", "Be8", "Ra8", "Bh5", "Ra1", "Bg6", "Rf1", "Ke7", "Ra1", "Nf7+", "Kg8", "Nh6+", "Kh8", "Nf5", "Ra7", "Kf6", "Ra1", "Ne3", "Re1", "Nd5", "Rg1", "Bf5", "Rf1", "Ndf4", "Ra1", "Ng6+", "Kg8", "Ne7+", "Kh8", "Ng6+"}
 	err := playTestGame(t, g, moves, FiftyMoveRule)
 	if err != nil {
+		t.Log(g)
+		t.Log(g.LegalMoves())
 		t.Error(err)
 	}
 }
@@ -220,7 +226,7 @@ func TestStalemate(t *testing.T) {
 func gameFromFEN(fen string) (*Game, error) {
 	g := New()
 	p, err := fromFEN(fen)
-	g.Positions = append(g.Positions, p)
+	g.Positions[0] = p
 	return g, err
 }
 

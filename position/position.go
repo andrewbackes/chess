@@ -51,9 +51,8 @@ type Position struct {
 	MoveNumber     int    `json:"moveNumber" bson:"moveNumber"`
 	FiftyMoveCount uint64 `json:"fiftyMoveCount,omitempty" bson:"fiftyMoveCount,omitempty"`
 	// ThreeFoldCount keeps track of how many times a certain position has been seen in the game so far.
-	ThreeFoldCount map[polyglot.Hash]int `json:"threeFoldCount,omitempty" bson:"threeFoldCount,omitempty"`
-	EnPassant      square.Square         `json:"enPassant,omitempty" bson:"enPassant,omitempty"`
-	//CastlingRights [2][2]bool     `json:"castlingRights" bson:"castlingRights"`
+	ThreeFoldCount map[polyglot.Hash]int               `json:"threeFoldCount,omitempty" bson:"threeFoldCount,omitempty"`
+	EnPassant      square.Square                       `json:"enPassant,omitempty" bson:"enPassant,omitempty"`
 	CastlingRights map[piece.Color]map[board.Side]bool `json:"castlingRights" bson:"castlingRights"`
 	ActiveColor    piece.Color                         `json:"activeColor" bson:"activeColor"`
 	// MovesLeft in the time control.
@@ -164,6 +163,14 @@ func (p *Position) GetActiveColor() piece.Color {
 
 func (p *Position) GetEnPassant() square.Square {
 	return p.EnPassant
+}
+
+func (p *Position) GetFiftyMoveCount() uint64 {
+	return p.FiftyMoveCount
+}
+
+func (p *Position) GetMoveNumber() int {
+	return p.MoveNumber
 }
 
 // String puts the Board into a pretty print-able format.

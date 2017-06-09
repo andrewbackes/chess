@@ -18,6 +18,27 @@ const (
 	InsufficientMaterial            //4096
 )
 
+func (g GameStatus) String() string {
+	return map[GameStatus]string{
+		InProgress:           "In progress",
+		BlackCheckmated:      "White checkmated Black",
+		WhiteCheckmated:      "Black checkmated White",
+		BlackTimedOut:        "Black ran out of time",
+		WhiteTimedOut:        "White ran out of time",
+		BlackResigned:        "Black resigned",
+		WhiteResigned:        "White resigned",
+		BlackIllegalMove:     "Black made an illegal move",
+		WhiteIllegalMove:     "White made an illegal move",
+		Threefold:            "Draw by threefold repetition",
+		FiftyMoveRule:        "Draw by Fifty move rule",
+		Stalemate:            "Draw by stalemate",
+		InsufficientMaterial: "Draw by insufficient material",
+		WhiteWon:             "White won",
+		BlackWon:             "Black won",
+		Draw:                 "Draw",
+	}[g]
+}
+
 const (
 	WhiteWon GameStatus = (BlackCheckmated | BlackTimedOut | BlackResigned | BlackIllegalMove)
 	BlackWon GameStatus = (WhiteCheckmated | WhiteTimedOut | WhiteResigned | WhiteIllegalMove)

@@ -4,24 +4,16 @@ package polyglot
 import (
 	"github.com/andrewbackes/chess/piece"
 	"github.com/andrewbackes/chess/position/board"
+	"github.com/andrewbackes/chess/position/reader"
 	"github.com/andrewbackes/chess/position/square"
 )
-
-// PositionReader is the minimum set of methods a position representation
-// needs to implement in order to encode it.
-type PositionReader interface {
-	OnSquare(square.Square) piece.Piece
-	GetCastlingRights() map[piece.Color]map[board.Side]bool
-	GetActiveColor() piece.Color
-	GetEnPassant() square.Square
-}
 
 // Hash is a polyglot encoding of the given position.
 type Hash uint64
 
 // Encode returns the polyglot hash of the current game position. For more
 // info you can check out http://hardy.uhasselt.be/Toga/book_format.html
-func Encode(p PositionReader) Hash {
+func Encode(p reader.PositionReader) Hash {
 	var hash uint64
 	// pieces:
 	for s := square.Square(0); s <= square.LastSquare; s++ {

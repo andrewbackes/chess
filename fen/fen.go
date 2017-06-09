@@ -8,13 +8,14 @@ import (
 	"github.com/andrewbackes/chess/piece"
 	"github.com/andrewbackes/chess/position"
 	"github.com/andrewbackes/chess/position/board"
+	"github.com/andrewbackes/chess/position/reader"
 	"github.com/andrewbackes/chess/position/square"
 	"strconv"
 	"strings"
 )
 
 // Encode will take a position
-func Encode(p *position.Position) (fen string, err error) {
+func Encode(p reader.PositionReader) (fen string, err error) {
 
 	var boardstr string
 	// put what is on each square into a squence (including blanks):
@@ -30,13 +31,13 @@ func Encode(p *position.Position) (fen string, err error) {
 		boardstr = strings.Replace(boardstr, strings.Repeat(" ", i), strconv.Itoa(i), -1)
 	}
 	// Player to move:
-	turn := []string{"w", "b"}[p.ActiveColor]
+	turn := []string{"w", "b"}[p.GetActiveColor()]
 	// Castling Rights:
 	var rights string
 	castles := [][]string{{"K", "Q"}, {"k", "q"}}
 	for c := piece.White; c <= piece.Black; c++ {
 		for side := board.ShortSide; side <= board.LongSide; side++ {
-			if p.CastlingRights[c][side] {
+			if p.GetCastlingRights()[c][side] {
 				rights += castles[c][side]
 			}
 		}
@@ -46,18 +47,18 @@ func Encode(p *position.Position) (fen string, err error) {
 	}
 	// en Passant:
 	enPas := "-"
-	if p.EnPassant != square.NoSquare {
-		enPas = fmt.Sprint(p.EnPassant)
+	if p.GetEnPassant() != square.NoSquare {
+		enPas = fmt.Sprint(p.GetEnPassant())
 	}
 	// Moves and 50 move rule
-	fifty := strconv.Itoa(int(p.FiftyMoveCount / 2))
-	move := strconv.Itoa(p.MoveNumber)
+	fifty := strconv.Itoa(int(p.GetFiftyMoveCount() / 2))
+	move := strconv.Itoa(p.GetMoveNumber())
 	// all together:
 	fen = boardstr + " " + turn + " " + rights + " " + enPas + " " + fifty + " " + move
 	return fen, nil
 }
 
-// Decode creates a game from the provided FEN.
+// Decode creates a game position from the provided FEN.
 func Decode(fen string) (*position.Position, error) {
 	words := strings.Split(fen, " ")
 	if len(words) < 4 {

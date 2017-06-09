@@ -67,7 +67,7 @@ func (G *Game) MakeMove(m move.Move) (GameStatus, error) {
 		return G.illegalMoveStatus(), fmt.Errorf("%s illegal move %s", G.Position().ActiveColor, m)
 	}
 	G.makeMove(m, from, to, movingPiece, capturedPiece)
-	if G.Position().Clocks[movingPiece.Color] <= 0 {
+	if G.Position().Clocks[movingPiece.Color] < 0 {
 		return map[piece.Color]GameStatus{piece.White: WhiteTimedOut, piece.Black: BlackTimedOut}[movingPiece.Color], nil
 	}
 	G.Position().Clocks[movingPiece.Color] += G.control[movingPiece.Color].Increment
@@ -115,7 +115,8 @@ func (G *Game) illegalMove(p piece.Piece, m move.Move) bool {
 	if p.Color == piece.Neither || p.Type == piece.None {
 		return true
 	}
-	if _, legal := G.LegalMoves()[m]; !legal {
+	n := move.Move{Source: m.Source, Destination: m.Destination, Promote: m.Promote}
+	if _, exists := G.LegalMoves()[n]; !exists {
 		return true
 	}
 	return false

@@ -39,7 +39,7 @@ func (p *Position) Moves() map[move.Move]struct{} {
 
 func (p *Position) genKnightMoves(toMove, notToMove piece.Color, add func(move.Move)) {
 	//piece.Knights:
-	pieces := p.bitBoard[toMove][piece.Knight]
+	pieces := p.BitBoard[toMove][piece.Knight]
 	for pieces != 0 {
 		from := bitscan(pieces)
 		destinations := knight_moves[from] &^ p.occupied(toMove)
@@ -54,7 +54,7 @@ func (p *Position) genKnightMoves(toMove, notToMove piece.Color, add func(move.M
 
 func (p *Position) genDiagnalMoves(toMove, notToMove piece.Color, add func(move.Move)) {
 	// piece.Bishops/piece.Queens:
-	pieces := p.bitBoard[toMove][piece.Bishop] | p.bitBoard[toMove][piece.Queen]
+	pieces := p.BitBoard[toMove][piece.Bishop] | p.BitBoard[toMove][piece.Queen]
 	direction := [4][65]uint64{ne, nw, se, sw}
 	scan := [4]func(uint64) uint{bsf, bsf, bsr, bsr}
 	for pieces != 0 {
@@ -76,7 +76,7 @@ func (p *Position) genDiagnalMoves(toMove, notToMove piece.Color, add func(move.
 
 func (p *Position) genStraightMoves(toMove, notToMove piece.Color, add func(move.Move)) {
 	// Rooks/piece.Queens:
-	pieces := p.bitBoard[toMove][piece.Rook] | p.bitBoard[toMove][piece.Queen]
+	pieces := p.BitBoard[toMove][piece.Rook] | p.BitBoard[toMove][piece.Queen]
 	direction := [4][65]uint64{north, west, south, east}
 	scan := [4]func(uint64) uint{bsf, bsf, bsr, bsr}
 	for pieces != 0 {
@@ -97,7 +97,7 @@ func (p *Position) genStraightMoves(toMove, notToMove piece.Color, add func(move
 }
 
 func (p *Position) genKingMoves(toMove, notToMove piece.Color, castlingRights map[piece.Color]map[board.Side]bool, add func(move.Move)) {
-	pieces := p.bitBoard[toMove][piece.King]
+	pieces := p.BitBoard[toMove][piece.King]
 	{
 		from := bitscan(pieces)
 		destinations := king_moves[from] &^ p.occupied(toMove)
@@ -129,7 +129,7 @@ func (p *Position) genKingMoves(toMove, notToMove piece.Color, castlingRights ma
 }
 
 func (p *Position) genPawnMoves(toMove, notToMove piece.Color, enPassant square.Square, add func(move.Move)) {
-	pieces := p.bitBoard[toMove][piece.Pawn] &^ pawns_spawn[notToMove] //&^ = AND_NOT
+	pieces := p.BitBoard[toMove][piece.Pawn] &^ pawns_spawn[notToMove] //&^ = AND_NOT
 	for pieces != 0 {
 		from := bitscan(pieces)
 		//advances:
@@ -159,7 +159,7 @@ func (p *Position) genPawnMoves(toMove, notToMove piece.Color, enPassant square.
 		pieces ^= (1 << from)
 	}
 	// Promotions:
-	pieces = p.bitBoard[toMove][piece.Pawn] & pawns_spawn[notToMove]
+	pieces = p.BitBoard[toMove][piece.Pawn] & pawns_spawn[notToMove]
 	for pieces != 0 {
 		from := bitscan(pieces)
 		destinations := pawn_advances[toMove][from] &^ p.occupied(piece.BothColors)
@@ -182,17 +182,17 @@ func (p *Position) Threatened(square square.Square, byWho piece.Color) bool {
 	defender := []piece.Color{piece.Black, piece.White}[byWho]
 
 	// other king attacks:
-	if (king_moves[square] & p.bitBoard[byWho][piece.King]) != 0 {
+	if (king_moves[square] & p.BitBoard[byWho][piece.King]) != 0 {
 		return true
 	}
 
 	// pawn attacks:
-	if pawn_captures[defender][square]&p.bitBoard[byWho][piece.Pawn] != 0 {
+	if pawn_captures[defender][square]&p.BitBoard[byWho][piece.Pawn] != 0 {
 		return true
 	}
 
 	// knight attacks:
-	if knight_moves[square]&p.bitBoard[byWho][piece.Knight] != 0 {
+	if knight_moves[square]&p.BitBoard[byWho][piece.Knight] != 0 {
 		return true
 	}
 	// diagonal attacks:
@@ -200,7 +200,7 @@ func (p *Position) Threatened(square square.Square, byWho piece.Color) bool {
 	scan := [4]func(uint64) uint{bsf, bsf, bsr, bsr}
 	for i := 0; i < 4; i++ {
 		blockerIndex := scan[i](direction[i][square] & p.occupied(piece.BothColors))
-		if (1<<blockerIndex)&(p.bitBoard[byWho][piece.Bishop]|p.bitBoard[byWho][piece.Queen]) != 0 {
+		if (1<<blockerIndex)&(p.BitBoard[byWho][piece.Bishop]|p.BitBoard[byWho][piece.Queen]) != 0 {
 			return true
 		}
 	}
@@ -208,7 +208,7 @@ func (p *Position) Threatened(square square.Square, byWho piece.Color) bool {
 	direction = [4][65]uint64{north, west, south, east}
 	for i := 0; i < 4; i++ {
 		blockerIndex := scan[i](direction[i][square] & p.occupied(piece.BothColors))
-		if (1<<blockerIndex)&(p.bitBoard[byWho][piece.Rook]|p.bitBoard[byWho][piece.Queen]) != 0 {
+		if (1<<blockerIndex)&(p.BitBoard[byWho][piece.Rook]|p.BitBoard[byWho][piece.Queen]) != 0 {
 			return true
 		}
 	}

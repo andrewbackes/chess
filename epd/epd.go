@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/andrewbackes/chess/fen"
-	"github.com/andrewbackes/chess/game"
 	"github.com/andrewbackes/chess/position"
 	"io"
 	"strings"
@@ -87,11 +86,13 @@ func Decode(epd string) (*EPD, error) {
 }
 
 // ToGame returns a game based on the position in the EPD provided.
+/*
 func (e EPD) ToGame() *game.Game {
 	g := game.New()
 	g.Position = e.Position
 	return g
 }
+*/
 
 // Read loads a file with multiple EPD's. Each EPD needs to be on its own line.
 func Read(file io.Reader) ([]*EPD, error) {

@@ -1,6 +1,7 @@
 // Package chess contains examples for the other packages in this repo.
 package chess
 
+/*
 import (
 	"bufio"
 	"fmt"
@@ -75,3 +76,4 @@ func ExampleSaavedraPositionFEN() {
 	fmt.Println(encoded)
 	// Will Output: the inputted FEN
 }
+*/

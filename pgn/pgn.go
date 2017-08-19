@@ -73,7 +73,7 @@ func Decode(pgn *PGN) (*game.Game, error) {
 	g := game.New()
 	g.Tags = pgn.Tags
 	for _, san := range pgn.Moves {
-		move, err := g.Position.ParseMove(san)
+		move, err := g.Position().ParseMove(san)
 		if err != nil {
 			return nil, err
 		}
@@ -111,10 +111,11 @@ func Encode(G *game.Game) *PGN {
 		}
 		pgn.FirstMoveNum = firstRealMove/2 + 1
 	*/
-	firstRealMove := G.Position.MoveNumber - (len(G.Moves) / 2)
-	pgn.FirstMoveNum = firstRealMove
-	for i := 0; i < len(G.Moves); i++ {
-		pgn.Moves = append(pgn.Moves, G.Moves[i].String())
+	//firstRealMove := G.Position().MoveNumber - (len(G.Positions) / 2)
+	//pgn.FirstMoveNum = firstRealMove
+	pgn.FirstMoveNum = G.Positions[0].MoveNumber
+	for i := 1; i < len(G.Positions); i++ {
+		pgn.Moves = append(pgn.Moves, G.Positions[i].LastMove.String())
 	}
 	return pgn
 }

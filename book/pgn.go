@@ -29,7 +29,7 @@ func FromPGN(pgns []*pgn.PGN, depth int) (*Book, error) {
 func (b *Book) addPgn(pgn *pgn.PGN, depth int) {
 	g := game.New()
 	type pair struct {
-		key  uint64
+		key  polyglot.Hash
 		move move.Move
 	}
 	var staged []pair
@@ -40,10 +40,10 @@ func (b *Book) addPgn(pgn *pgn.PGN, depth int) {
 			}
 			return
 		}
-		if mv, err := g.Position.ParseMove(m); err == nil {
-			key := polyglot.Encode(g.Position)
+		if mv, err := g.Position().ParseMove(m); err == nil {
+			key := polyglot.Encode(g.Position())
 			staged = append(staged, pair{key, mv})
-			status := g.MakeMove(mv)
+			status, _ := g.MakeMove(mv)
 			if status != game.InProgress {
 				return
 			}
@@ -53,7 +53,7 @@ func (b *Book) addPgn(pgn *pgn.PGN, depth int) {
 	}
 }
 
-func (b *Book) addMove(key uint64, m move.Move) {
+func (b *Book) addMove(key polyglot.Hash, m move.Move) {
 	ml := b.Positions[key]
 	for i := range ml {
 		if ml[i].Move == m {

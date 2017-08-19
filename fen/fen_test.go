@@ -4,6 +4,7 @@ import (
 	"github.com/andrewbackes/chess/game"
 	"github.com/andrewbackes/chess/piece"
 	"github.com/andrewbackes/chess/position"
+	"github.com/andrewbackes/chess/position/board"
 	"github.com/andrewbackes/chess/position/move"
 	"github.com/andrewbackes/chess/position/square"
 	"strings"
@@ -50,16 +51,15 @@ func TestFENenPassant(t *testing.T) {
 func TestFENCastlingRights(t *testing.T) {
 	fen := "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2"
 	p, _ := Decode(fen)
-	if !p.CastlingRights[piece.White][position.ShortSide] || !p.CastlingRights[piece.Black][position.ShortSide] ||
-		!p.CastlingRights[piece.White][position.LongSide] || !p.CastlingRights[piece.Black][position.LongSide] {
+	if !p.CastlingRights[piece.White][board.ShortSide] || !p.CastlingRights[piece.Black][board.ShortSide] ||
+		!p.CastlingRights[piece.White][board.LongSide] || !p.CastlingRights[piece.Black][board.LongSide] {
 
 		t.Fail()
 	}
 }
 
 func TestFENMarshalRoot(t *testing.T) {
-	g := game.New()
-	fen, _ := Encode(g.Position)
+	fen, _ := Encode(position.New())
 	root := "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 	if fen != root {
 		t.Fail()
@@ -67,8 +67,7 @@ func TestFENMarshalRoot(t *testing.T) {
 }
 
 func TestFENWhitesMove(t *testing.T) {
-	g := game.New()
-	fen, _ := Encode(g.Position)
+	fen, _ := Encode(position.New())
 	player := strings.Split(fen, " ")[1]
 	if player != "w" {
 		t.Fail()
@@ -78,7 +77,7 @@ func TestFENWhitesMove(t *testing.T) {
 func TestFENBlacksMove(t *testing.T) {
 	g := game.New()
 	g.MakeMove(move.Parse("e2e4"))
-	fen, _ := Encode(g.Position)
+	fen, _ := Encode(g.Position())
 	player := strings.Split(fen, " ")[1]
 	if player != "b" {
 		t.Fail()

@@ -92,6 +92,7 @@ func New() *Position {
 		ThreeFoldCount: make(map[polyglot.Hash]int),
 		MovesLeft:      make(map[piece.Color]int),
 		Clocks:         make(map[piece.Color]time.Duration),
+		LastMove:       move.Null,
 	}
 	p.Reset()
 	return p

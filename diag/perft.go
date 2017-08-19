@@ -39,8 +39,8 @@ func Perft(p *position.Position, depth int) uint64 {
 	var nodes uint64
 	ml := p.LegalMoves()
 	for mv := range ml {
-		temp := position.Copy(p)
-		temp.MakeMove(mv)
+		c := position.Copy(p)
+		temp := c.MakeMove(mv)
 		if temp.Check(toMove) == false {
 			nodes += Perft(temp, depth-1)
 		}

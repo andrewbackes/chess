@@ -37,6 +37,10 @@ type Position struct {
 	LastMove  move.Move                     `json:"lastMove"`
 }
 
+func (p *Position) MailBox() string {
+	return BitBoards(p.bitBoard).MailBox()
+}
+
 // NewCastlingRights returns castling rights set to their default
 // settings.
 func NewCastlingRights() map[piece.Color]map[board.Side]bool {

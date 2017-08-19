@@ -38,7 +38,7 @@ func TestPerftSuite(t *testing.T) {
 			}
 		}()
 	}
-	if err := perftSuite(f, d, true); err != nil {
+	if err := perftSuite(f, d, false); err != nil {
 		t.Error(err)
 	}
 }
@@ -86,6 +86,7 @@ func perftSuite(filename string, maxdepth int, failFast bool) error {
 	}
 	for i, test := range tests {
 		fmt.Print("EPD ", i+1, ":  ")
+
 		//fmt.Println(test)
 		for depth, op := range test.Operations {
 			//fmt.Println(op)

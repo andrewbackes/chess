@@ -138,11 +138,11 @@ func (e *UCIEngine) SetBoard(g *game.Game) {
 		pos = g.Tags["FEN"]
 	}
 	moves := ""
-	if len(g.Moves) > 0 {
+	if len(g.Positions) > 0 {
 		moves = " moves "
-		for _, m := range g.Moves {
-			if m != move.Null {
-				moves += m.String() + " "
+		for _, pos := range g.Positions {
+			if pos.LastMove != move.Null {
+				moves += pos.LastMove.String() + " "
 			}
 		}
 	}
@@ -204,7 +204,7 @@ func (e *UCIEngine) BestMove(g *game.Game) (*SearchInfo, error) {
 	}
 	m := g.MovesLeft(g.ActiveColor())
 	if m > 0 {
-		command += " movestogo " + strconv.FormatInt(m, 10)
+		command += " movestogo " + strconv.FormatInt(int64(m), 10)
 	}
 	timeout := (g.Clock(g.ActiveColor()) * 125) / 100 // 25% buffer on time
 	si := SearchInfo{}

@@ -195,8 +195,8 @@ func TestFromPGN(t *testing.T) {
 		t.Error(err)
 	}
 	for i, m := range pgn.Moves {
-		if move.Parse(m) != game.Positions[i].LastMove {
-			t.Log(move.Parse(m), "!=", game.Positions[i].LastMove)
+		if move.Parse(m) != game.Positions[i+1].LastMove {
+			t.Log(move.Parse(m), "!=", game.Positions[i+1].LastMove)
 			t.Fail()
 		}
 	}

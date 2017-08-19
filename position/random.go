@@ -1,4 +1,4 @@
-package polyglot
+package position
 
 var (
 	randomPiece     = random64[0:768]

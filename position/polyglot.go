@@ -1,10 +1,8 @@
-// Package polyglot encodes/decodes chess positions into polyglot hashes.
-package polyglot
+package position
 
 import (
 	"github.com/andrewbackes/chess/piece"
 	"github.com/andrewbackes/chess/position/board"
-	"github.com/andrewbackes/chess/position/reader"
 	"github.com/andrewbackes/chess/position/square"
 )
 
@@ -13,7 +11,7 @@ type Hash uint64
 
 // Encode returns the polyglot hash of the current game position. For more
 // info you can check out http://hardy.uhasselt.be/Toga/book_format.html
-func Encode(p reader.PositionReader) Hash {
+func (p *Position) Polyglot() Hash {
 	var hash uint64
 	// pieces:
 	for s := square.Square(0); s <= square.LastSquare; s++ {

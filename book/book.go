@@ -3,7 +3,7 @@ package book
 
 import (
 	"encoding/binary"
-	"github.com/andrewbackes/chess/polyglot"
+	"github.com/andrewbackes/chess/position"
 	"github.com/andrewbackes/chess/position/move"
 	"github.com/andrewbackes/chess/position/square"
 	"io"
@@ -13,14 +13,14 @@ import (
 
 // Book is a polyglot opening book loaded into memory.
 type Book struct {
-	Positions map[polyglot.Hash][]Entry
+	Positions map[position.Hash][]Entry
 	seed      uint64
 }
 
 // New makes a new empty opening book
 func New() *Book {
 	return &Book{
-		Positions: make(map[polyglot.Hash][]Entry),
+		Positions: make(map[position.Hash][]Entry),
 	}
 }
 
@@ -33,7 +33,7 @@ type Entry struct {
 
 // PolyglotEntry is a line in a polyglot opening book.
 type PolyglotEntry struct {
-	Key   polyglot.Hash
+	Key   position.Hash
 	Move  uint16
 	Score uint16
 	Learn uint32
@@ -91,10 +91,10 @@ func (b *Book) Save(filename string) error {
 // binFile is the already opened polyglot bin file.
 func Read(binFile io.Reader) (*Book, error) {
 	book := &Book{
-		Positions: make(map[polyglot.Hash][]Entry),
+		Positions: make(map[position.Hash][]Entry),
 	}
 	entry := PolyglotEntry{}
-	key := polyglot.Hash(0)
+	key := position.Hash(0)
 	for {
 		err := binary.Read(binFile, binary.BigEndian, &entry)
 		if err != nil {

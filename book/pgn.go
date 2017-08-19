@@ -4,7 +4,7 @@ import (
 	"errors"
 	"github.com/andrewbackes/chess/game"
 	"github.com/andrewbackes/chess/pgn"
-	"github.com/andrewbackes/chess/polyglot"
+	"github.com/andrewbackes/chess/position"
 	"github.com/andrewbackes/chess/position/move"
 )
 
@@ -29,7 +29,7 @@ func FromPGN(pgns []*pgn.PGN, depth int) (*Book, error) {
 func (b *Book) addPgn(pgn *pgn.PGN, depth int) {
 	g := game.New()
 	type pair struct {
-		key  polyglot.Hash
+		key  position.Hash
 		move move.Move
 	}
 	var staged []pair
@@ -41,7 +41,7 @@ func (b *Book) addPgn(pgn *pgn.PGN, depth int) {
 			return
 		}
 		if mv, err := g.Position().ParseMove(m); err == nil {
-			key := polyglot.Encode(g.Position())
+			key := g.Position().Polyglot()
 			staged = append(staged, pair{key, mv})
 			status, _ := g.MakeMove(mv)
 			if status != game.InProgress {
@@ -53,7 +53,7 @@ func (b *Book) addPgn(pgn *pgn.PGN, depth int) {
 	}
 }
 
-func (b *Book) addMove(key polyglot.Hash, m move.Move) {
+func (b *Book) addMove(key position.Hash, m move.Move) {
 	ml := b.Positions[key]
 	for i := range ml {
 		if ml[i].Move == m {

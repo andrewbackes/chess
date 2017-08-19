@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/andrewbackes/chess/game"
+	"github.com/andrewbackes/chess/position/move"
 	"io"
 	"strings"
 )
@@ -100,22 +101,15 @@ func Encode(G *game.Game) *PGN {
 	//G.appendTags()
 	pgn.Tags = G.Tags
 	pgn.Tags["Result"] = G.Result()
-	/*
-		firstRealMove := 0
-
-		for i, move := range G.Moves {
-			if move != position.NullMove {
-				firstRealMove = i
-				break
-			}
+	foundFirstMove := false
+	for i := 0; i < len(G.Positions); i++ {
+		if !foundFirstMove && G.Positions[i].LastMove != move.Null {
+			pgn.FirstMoveNum = G.Positions[i].MoveNumber
+			foundFirstMove = true
 		}
-		pgn.FirstMoveNum = firstRealMove/2 + 1
-	*/
-	//firstRealMove := G.Position().MoveNumber - (len(G.Positions) / 2)
-	//pgn.FirstMoveNum = firstRealMove
-	pgn.FirstMoveNum = G.Positions[0].MoveNumber
-	for i := 1; i < len(G.Positions); i++ {
-		pgn.Moves = append(pgn.Moves, G.Positions[i].LastMove.String())
+		if G.Positions[i].LastMove != move.Null {
+			pgn.Moves = append(pgn.Moves, G.Positions[i].LastMove.String())
+		}
 	}
 	return pgn
 }

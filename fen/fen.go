@@ -80,7 +80,9 @@ func Decode(fen string) (*position.Position, error) {
 	}
 	p.CastlingRights = parseCastlingRights(words[2])
 	p.EnPassant = parseEnPassantSquare(words[3])
-	p.MoveNumber, _ = strconv.Atoi(words[5])
+	if len(words) >= 6 {
+		p.MoveNumber, _ = strconv.Atoi(words[5])
+	}
 	return p, nil
 }
 

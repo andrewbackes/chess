@@ -12,7 +12,7 @@ func piecesOnSquare(b *Position, s square.Square) int {
 	count := 0
 	for c := piece.White; c <= piece.Black; c++ {
 		for p := piece.Pawn; p <= piece.King; p++ {
-			if (b.BitBoard[c][p] & (1 << s)) != 0 {
+			if (b.bitBoard[c][p] & (1 << s)) != 0 {
 				count++
 			}
 		}
@@ -23,9 +23,9 @@ func piecesOnSquare(b *Position, s square.Square) int {
 func changedBitBoards(before, after *Position) map[piece.Piece]struct{} {
 	changed := make(map[piece.Piece]struct{})
 
-	for c := range before.BitBoard {
-		for p := range before.BitBoard[piece.Color(c)] {
-			if before.BitBoard[piece.Color(c)][p] != after.BitBoard[piece.Color(c)][p] {
+	for c := range before.bitBoard {
+		for p := range before.bitBoard[piece.Color(c)] {
+			if before.bitBoard[piece.Color(c)][p] != after.bitBoard[piece.Color(c)][p] {
 				changed[piece.New(piece.Color(c), piece.Type(p))] = struct{}{}
 			}
 		}
@@ -58,7 +58,7 @@ func TestPutOnOccSquare(t *testing.T) {
 	b.Clear()
 	b.QuickPut(piece.New(piece.White, piece.Pawn), square.E2)
 	b.Put(piece.New(piece.Black, piece.Queen), square.E2)
-	if b.BitBoard[piece.White][piece.Pawn] != 0 {
+	if b.bitBoard[piece.White][piece.Pawn] != 0 {
 		t.Fail()
 	}
 }
@@ -76,10 +76,10 @@ func TestFind(t *testing.T) {
 
 // printBitBoards is a helper for diagnosing issues.
 func (b *Position) printBitBoards() {
-	for c := range b.BitBoard {
-		for j := range b.BitBoard[c] {
+	for c := range b.bitBoard {
+		for j := range b.bitBoard[c] {
 			fmt.Println(piece.New(piece.Color(c), piece.Type(j)))
-			fmt.Println(BitBoard(b.BitBoard[c][j]))
+			fmt.Println(BitBoard(b.bitBoard[c][j]))
 		}
 	}
 }
@@ -148,13 +148,13 @@ func TestCapture(t *testing.T) {
 	result := b.MakeMove(move.Parse("e4e5"))
 	for c := piece.White; c <= piece.Black; c++ {
 		for p := piece.Pawn; p < piece.King; p++ {
-			if result.BitBoard[c][p] != 0 {
-				t.Log(BitBoard(result.BitBoard[c][p]))
+			if result.bitBoard[c][p] != 0 {
+				t.Log(BitBoard(result.bitBoard[c][p]))
 				t.Fail()
 			}
 		}
 	}
-	if result.BitBoard[piece.White][piece.King] == 0 || result.BitBoard[piece.Black][piece.King] == 0 {
+	if result.bitBoard[piece.White][piece.King] == 0 || result.bitBoard[piece.Black][piece.King] == 0 {
 		t.Log("==0")
 		t.Fail()
 	}
@@ -167,8 +167,8 @@ func TestShortCastle(t *testing.T) {
 	b.QuickPut(piece.New(piece.White, piece.King), square.E1)
 	b.QuickPut(piece.New(piece.White, piece.Rook), square.H1)
 	result := b.MakeMove(move.Parse("e1g1"))
-	if result.BitBoard[piece.White][piece.King] != (1<<square.G1) ||
-		result.BitBoard[piece.White][piece.Rook] != (1<<square.F1) {
+	if result.bitBoard[piece.White][piece.King] != (1<<square.G1) ||
+		result.bitBoard[piece.White][piece.Rook] != (1<<square.F1) {
 		t.Fail()
 	}
 }
@@ -180,11 +180,11 @@ func TestLongCastle(t *testing.T) {
 	b.QuickPut(piece.New(piece.White, piece.King), square.E1)
 	b.QuickPut(piece.New(piece.White, piece.Rook), square.A1)
 	result := b.MakeMove(move.Parse("e1c1"))
-	if result.BitBoard[piece.White][piece.King] != (1<<square.C1) ||
-		result.BitBoard[piece.White][piece.Rook] != (1<<square.D1) {
-		fmt.Println(BitBoard(result.BitBoard[piece.White][piece.King]))
+	if result.bitBoard[piece.White][piece.King] != (1<<square.C1) ||
+		result.bitBoard[piece.White][piece.Rook] != (1<<square.D1) {
+		fmt.Println(BitBoard(result.bitBoard[piece.White][piece.King]))
 		fmt.Println("--Rook:--")
-		fmt.Println(BitBoard(result.BitBoard[piece.White][piece.Rook]))
+		fmt.Println(BitBoard(result.bitBoard[piece.White][piece.Rook]))
 		t.Fail()
 	}
 }
@@ -200,7 +200,7 @@ func TestBitBoardPrint(t *testing.T) {
 11111111
 00000000
 `
-	got := BitBoard(b.BitBoard[piece.White][piece.Pawn]).String()
+	got := BitBoard(b.bitBoard[piece.White][piece.Pawn]).String()
 	if got != expected {
 		t.Error(got)
 	}

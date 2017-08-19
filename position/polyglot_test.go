@@ -1,5 +1,6 @@
-package polyglot
+package position
 
+/*
 import (
 	//"github.com/andrewbackes/chess/fen"
 	"github.com/andrewbackes/chess/piece"
@@ -39,7 +40,7 @@ func TestPieceToPG(t *testing.T) {
 		t.Fail()
 	}
 }
-
+*/
 /*
 func TestPolyglotHash(t *testing.T) {
 	type test struct {

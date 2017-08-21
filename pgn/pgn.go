@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/andrewbackes/chess/game"
+	"github.com/andrewbackes/chess/position/move"
 	"io"
 	"strings"
 )
@@ -73,7 +74,7 @@ func Decode(pgn *PGN) (*game.Game, error) {
 	g := game.New()
 	g.Tags = pgn.Tags
 	for _, san := range pgn.Moves {
-		move, err := g.Position.ParseMove(san)
+		move, err := g.Position().ParseMove(san)
 		if err != nil {
 			return nil, err
 		}
@@ -100,21 +101,15 @@ func Encode(G *game.Game) *PGN {
 	//G.appendTags()
 	pgn.Tags = G.Tags
 	pgn.Tags["Result"] = G.Result()
-	/*
-		firstRealMove := 0
-
-		for i, move := range G.Moves {
-			if move != position.NullMove {
-				firstRealMove = i
-				break
-			}
+	foundFirstMove := false
+	for i := 0; i < len(G.Positions); i++ {
+		if !foundFirstMove && G.Positions[i].LastMove != move.Null {
+			pgn.FirstMoveNum = G.Positions[i].MoveNumber
+			foundFirstMove = true
 		}
-		pgn.FirstMoveNum = firstRealMove/2 + 1
-	*/
-	firstRealMove := G.Position.MoveNumber - (len(G.Moves) / 2)
-	pgn.FirstMoveNum = firstRealMove
-	for i := 0; i < len(G.Moves); i++ {
-		pgn.Moves = append(pgn.Moves, G.Moves[i].String())
+		if G.Positions[i].LastMove != move.Null {
+			pgn.Moves = append(pgn.Moves, G.Positions[i].LastMove.String())
+		}
 	}
 	return pgn
 }

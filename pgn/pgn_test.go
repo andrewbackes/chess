@@ -17,7 +17,7 @@ func decodeToGame(f string) (*game.Game, error) {
 		return nil, err
 	}
 	g := game.New()
-	g.Position = p
+	g.Positions = append(g.Positions, p)
 	g.Tags["FEN"] = f
 	g.Tags["Setup"] = "1"
 	return g, nil
@@ -62,7 +62,7 @@ func TestPGNnullmoves(t *testing.T) {
 `
 	test := "rnbq1bnr/ppppkppp/8/4p2Q/4P3/8/PPPP1PPP/RNB1KBNR w KQ - 1 3"
 	g, _ := decodeToGame(test)
-	m, err := g.Position.ParseMove("Qxe5#")
+	m, err := g.Position().ParseMove("Qxe5#")
 	if err != nil {
 		t.Error("couldnt parse move")
 	}
@@ -85,7 +85,7 @@ func TestPGNoutput(t *testing.T) {
 	g := game.New()
 	moves := []string{"e4", "e5", "Qh5", "Ke7", "Qxe5#"}
 	for _, move := range moves {
-		m, err := g.Position.ParseMove(move)
+		m, err := g.Position().ParseMove(move)
 		if err != nil {
 			t.Error("couldnt parse move")
 		}
@@ -194,10 +194,9 @@ func TestFromPGN(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	moves := game.Moves
 	for i, m := range pgn.Moves {
-		if move.Parse(m) != moves[i] {
-			t.Log(moves)
+		if move.Parse(m) != game.Positions[i+1].LastMove {
+			t.Log(move.Parse(m), "!=", game.Positions[i+1].LastMove)
 			t.Fail()
 		}
 	}
@@ -248,9 +247,9 @@ func TestParsePGN(t *testing.T) {
 
 func TestStatusStringInDraw(t *testing.T) {
 	g := game.New()
-	g.Position.Clear()
-	g.Position.QuickPut(piece.New(piece.White, piece.King), square.E1)
-	g.Position.QuickPut(piece.New(piece.Black, piece.King), square.E8)
+	g.Position().Clear()
+	g.Position().QuickPut(piece.New(piece.White, piece.King), square.E1)
+	g.Position().QuickPut(piece.New(piece.Black, piece.King), square.E8)
 	if g.Result() != "1/2-1/2" {
 		t.Fail()
 	}

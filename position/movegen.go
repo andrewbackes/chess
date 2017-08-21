@@ -2,6 +2,7 @@ package position
 
 import (
 	"github.com/andrewbackes/chess/piece"
+	"github.com/andrewbackes/chess/position/board"
 	"github.com/andrewbackes/chess/position/move"
 	"github.com/andrewbackes/chess/position/square"
 )
@@ -11,8 +12,7 @@ func (p *Position) LegalMoves() map[move.Move]struct{} {
 	legalMoves := make(map[move.Move]struct{})
 	ml := p.Moves()
 	for mv := range ml {
-		temp := Copy(p)
-		temp.MakeMove(mv)
+		temp := p.MakeMove(mv)
 		if temp.Check(p.ActiveColor) == false {
 			legalMoves[mv] = struct{}{}
 		}
@@ -96,7 +96,7 @@ func (p *Position) genStraightMoves(toMove, notToMove piece.Color, add func(move
 	}
 }
 
-func (p *Position) genKingMoves(toMove, notToMove piece.Color, castlingRights [2][2]bool, add func(move.Move)) {
+func (p *Position) genKingMoves(toMove, notToMove piece.Color, castlingRights map[piece.Color]map[board.Side]bool, add func(move.Move)) {
 	pieces := p.bitBoard[toMove][piece.King]
 	{
 		from := bitscan(pieces)
@@ -107,7 +107,7 @@ func (p *Position) genKingMoves(toMove, notToMove piece.Color, castlingRights [2
 			destinations ^= (1 << to)
 		}
 		// Castles:
-		if castlingRights[toMove][ShortSide] == true {
+		if castlingRights[toMove][board.ShortSide] == true {
 			if square.Square(bsr(east[from]&p.occupied(piece.BothColors))) == []square.Square{square.H1, square.H8}[toMove] {
 				if (p.Threatened([]square.Square{square.F1, square.F8}[toMove], notToMove) == false) &&
 					(p.Threatened([]square.Square{square.G1, square.G8}[toMove], notToMove) == false) &&
@@ -116,7 +116,7 @@ func (p *Position) genKingMoves(toMove, notToMove piece.Color, castlingRights [2
 				}
 			}
 		}
-		if castlingRights[toMove][LongSide] == true {
+		if castlingRights[toMove][board.LongSide] == true {
 			if square.Square(bsf(west[from]&p.occupied(piece.BothColors))) == []square.Square{square.A1, square.A8}[toMove] {
 				if (p.Threatened([]square.Square{square.D1, square.D8}[toMove], notToMove) == false) &&
 					(p.Threatened([]square.Square{square.C1, square.C8}[toMove], notToMove) == false) &&

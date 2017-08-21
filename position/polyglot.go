@@ -1,15 +1,18 @@
-// Package polyglot encodes/decodes chess positions into polyglot hashes.
-package polyglot
+package position
 
 import (
 	"github.com/andrewbackes/chess/piece"
-	"github.com/andrewbackes/chess/position"
+	"github.com/andrewbackes/chess/position/board"
 	"github.com/andrewbackes/chess/position/square"
 )
 
+// Hash is a polyglot encoding of the given position.
+type Hash uint64
+
 // Encode returns the polyglot hash of the current game position. For more
 // info you can check out http://hardy.uhasselt.be/Toga/book_format.html
-func Encode(p *position.Position) (hash uint64) {
+func (p *Position) Polyglot() Hash {
+	var hash uint64
 	// pieces:
 	for s := square.Square(0); s <= square.LastSquare; s++ {
 		if pp := p.OnSquare(s); pp.Type != piece.None {
@@ -21,33 +24,33 @@ func Encode(p *position.Position) (hash uint64) {
 	}
 
 	// castles:
-	if p.CastlingRights[piece.White][position.ShortSide] {
+	if p.GetCastlingRights()[piece.White][board.ShortSide] {
 		hash ^= randomCastle[0]
 	}
-	if p.CastlingRights[piece.White][position.LongSide] {
+	if p.GetCastlingRights()[piece.White][board.LongSide] {
 		hash ^= randomCastle[1]
 	}
-	if p.CastlingRights[piece.Black][position.ShortSide] {
+	if p.GetCastlingRights()[piece.Black][board.ShortSide] {
 		hash ^= randomCastle[2]
 	}
-	if p.CastlingRights[piece.Black][position.LongSide] {
+	if p.GetCastlingRights()[piece.Black][board.LongSide] {
 		hash ^= randomCastle[3]
 	}
 
 	// enpassant:
-	if p.EnPassant != square.NoSquare {
-		file, _ := indexToFR(int(p.EnPassant))
+	if p.GetEnPassant() != square.NoSquare {
+		file, _ := indexToFR(int(p.GetEnPassant()))
 		hashit := false
-		rank := []uint{5, 4}[p.ActiveColor]
+		rank := []uint{5, 4}[p.GetActiveColor()]
 		if file > 0 {
 			pp := p.OnSquare(square.New(uint(file), rank))
-			if pp.Color == p.ActiveColor && pp.Type == piece.Pawn {
+			if pp.Color == p.GetActiveColor() && pp.Type == piece.Pawn {
 				hashit = true
 			}
 		}
 		if file < 7 {
 			pp := p.OnSquare(square.New(uint(file+2), rank)) //+2 b/c NewSquare uses 1-8 for file, not 0-7
-			if pp.Color == p.ActiveColor && pp.Type == piece.Pawn {
+			if pp.Color == p.GetActiveColor() && pp.Type == piece.Pawn {
 				hashit = true
 			}
 		}
@@ -57,10 +60,10 @@ func Encode(p *position.Position) (hash uint64) {
 	}
 
 	// turn:
-	if p.ActiveColor == piece.White {
+	if p.GetActiveColor() == piece.White {
 		hash ^= randomTurn[0]
 	}
-	return
+	return Hash(hash)
 }
 
 func indexToFR(index int) (file int, row int) {

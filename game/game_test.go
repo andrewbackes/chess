@@ -21,15 +21,15 @@ func ExampleGame() {
 	f3 := move.Move{Source: square.F2, Destination: square.F3}
 	g.MakeMove(f3)
 	// They can also be created by parsing algebraic notation:
-	e5, _ := g.Position.ParseMove("e5")
+	e5, _ := g.Position().ParseMove("e5")
 	g.MakeMove(e5)
 	// Or by using piece coordinate notation:
 	g4 := move.Parse("g2g4")
 	g.MakeMove(g4)
 	// Another example of SAN:
-	foolsmate, _ := g.Position.ParseMove("Qh4#")
+	foolsmate, _ := g.Position().ParseMove("Qh4#")
 	// Making a move also returns the game status:
-	gamestatus := g.MakeMove(foolsmate)
+	gamestatus, _ := g.MakeMove(foolsmate)
 	fmt.Println(gamestatus == WhiteCheckmated)
 	// Output: true
 }
@@ -43,7 +43,7 @@ func ExampleLegalMoves() {
 
 func TestGamePrint(t *testing.T) {
 	tc := NewTimeControl(10*time.Minute, 40, 0, true)
-	g := NewTimedGame([2]TimeControl{tc, tc})
+	g := NewTimedGame(map[piece.Color]TimeControl{piece.White: tc, piece.Black: tc})
 	got := fmt.Sprint(g)
 	expected := `   +---+---+---+---+---+---+---+---+
  8 | r | n | b | q | k | b | n | r |   Active Color:    White
@@ -76,14 +76,14 @@ func TestNewTimedGame(t *testing.T) {
 		Time:  40 * time.Minute,
 		Moves: 40,
 	}
-	control := [2]TimeControl{standard, standard}
+	control := map[piece.Color]TimeControl{piece.White: standard, piece.Black: standard}
 	NewTimedGame(control)
 }
 
 func TestNonexistentMove(t *testing.T) {
 	g := New()
 	mv := move.Parse("e4e5")
-	status := g.MakeMove(mv)
+	status, _ := g.MakeMove(mv)
 	if status != WhiteIllegalMove {
 		t.Error("Got: ", status, " Wanted: ", WhiteIllegalMove)
 	}
@@ -106,7 +106,7 @@ func TestIllegalCheck(t *testing.T) {
 
 func TestIllegalCastle(t *testing.T) {
 	g, err := gameFromFEN("4k3/8/8/8/6r1/8/8/R3K2R w KQ - 0 1")
-	s := g.MakeMove(move.Parse("e1g1"))
+	s, _ := g.MakeMove(move.Parse("e1g1"))
 	if err != nil || s != WhiteIllegalMove {
 		t.Fail()
 	}
@@ -114,11 +114,11 @@ func TestIllegalCastle(t *testing.T) {
 
 func playTestGame(t *testing.T, g *Game, moves []string, expected GameStatus) error {
 	for i, san := range moves {
-		move, err := g.Position.ParseMove(san)
+		move, err := g.Position().ParseMove(san)
 		if err != nil {
 			return err
 		}
-		s := g.MakeMove(move)
+		s, _ := g.MakeMove(move)
 		if (s != InProgress && i+1 < len(moves)) || (i+1 >= len(moves) && s != expected) {
 			return errors.New(fmt.Sprint("half-move ", i, " (", san, ") ended with status ", s))
 		}
@@ -131,47 +131,62 @@ func TestTimedOut(t *testing.T) {
 		Time:  40 * time.Minute,
 		Moves: 40,
 	}
-	g := NewTimedGame([2]TimeControl{tc, tc})
-	s := g.MakeTimedMove(move.Parse("e2e4"), 41*time.Minute)
+	g := NewTimedGame(map[piece.Color]TimeControl{piece.White: tc, piece.Black: tc})
+	t.Log(g)
+	m := move.Parse("e2e4")
+	m.Duration = 41 * time.Minute
+	s, e := g.MakeMove(m)
 	if s != WhiteTimedOut {
+		t.Log(g)
+		t.Log(g.LegalMoves())
+		t.Log(s, e)
 		t.Fail()
 	}
 }
 
 func timedTestGame() *Game {
 	tc := TimeControl{Time: 40 * time.Minute, Moves: 2, Increment: 5 * time.Minute, Repeating: true}
-	return NewTimedGame([2]TimeControl{tc, tc})
+	return NewTimedGame(map[piece.Color]TimeControl{piece.White: tc, piece.Black: tc})
 }
 
 func TestTimeIncrement(t *testing.T) {
 	g := timedTestGame()
-	s := g.MakeTimedMove(move.Parse("e2e4"), 1*time.Minute)
+	m := move.Parse("e2e4")
+	m.Duration = 1 * time.Minute
+	s, _ := g.MakeMove(m)
 	if s != InProgress {
 		t.Error("game should be in progress")
 	}
-	if g.control[piece.White].clock != 44*time.Minute {
-		t.Error("should have 44 min on clock but have", g.control[piece.White].clock)
+	if g.Position().Clocks[piece.White] != 44*time.Minute {
+		t.Error("should have 44 min on clock but have", g.Position().Clocks[piece.White])
 	}
 }
 
 func TestTimeReset(t *testing.T) {
 	g := timedTestGame()
-	g.MakeTimedMove(move.Parse("e2e4"), 5*time.Minute)
-	g.MakeTimedMove(move.Parse("e7e5"), 5*time.Minute)
-	g.MakeTimedMove(move.Parse("d2d4"), 5*time.Minute)
-	g.MakeTimedMove(move.Parse("d7d5"), 5*time.Minute)
-	if g.control[piece.White].movesLeft != g.control[piece.White].Moves {
-		t.Error(g.control[piece.White].movesLeft, "!=", g.control[piece.White].Moves)
+	timedMove := func(s string, t time.Duration) move.Move {
+		m := move.Parse(s)
+		m.Duration = t
+		return m
+	}
+	g.MakeMove(timedMove("e2e4", 5*time.Minute))
+	g.MakeMove(timedMove("e7e5", 5*time.Minute))
+	g.MakeMove(timedMove("d2d4", 5*time.Minute))
+	g.MakeMove(timedMove("d7d5", 5*time.Minute))
+	if g.Position().MovesLeft[piece.White] != g.control[piece.White].Moves {
+		t.Error(g.Position().MovesLeft[piece.White], "!=", g.control[piece.White].Moves)
 	}
 }
 
 func TestFiftyMoveRule(t *testing.T) {
 	fen := "8/8/2B2k2/8/3r1NKp/3N4/8/8 b - - 0 62"
 	g, _ := gameFromFEN(fen)
-	g.Position.ActiveColor = piece.Black
+	g.Position().ActiveColor = piece.Black
 	moves := []string{"Rd8", "Kxh4", "Rg8", "Be4", "Rg1", "Nh5+", "Ke6", "Ng3", "Kf6", "Kg4", "Ra1", "Bd5", "Ra5", "Bf3", "Ra1", "Kf4", "Ke6", "Nc5+", "Kd6", "Nge4+", "Ke7", "Ke5", "Rf1", "Bg4", "Rg1", "Be6", "Re1", "Bc8", "Rc1", "Kd4", "Rd1", "Nd3", "Kf7", "Ke3", "Ra1", "Kf4", "Ke7", "Nb4", "Rc1", "Nd5+", "Kf7", "Bd7", "Rf1", "Ke5", "Ra1", "Ng5+", "Kg6", "Nf3", "Kg7", "Bg4", "Kg6", "Nf4+", "Kg7", "Nd4", "Re1", "Kf5", "Rc1", "Be2", "Re1", "Bh5", "Ra1", "Nfe6+", "Kh6", "Be8", "Ra8", "Bc6", "Ra1", "Kf6", "Kh7", "Ng5+", "Kh8", "Nde6", "Ra6", "Be8", "Ra8", "Bh5", "Ra1", "Bg6", "Rf1", "Ke7", "Ra1", "Nf7+", "Kg8", "Nh6+", "Kh8", "Nf5", "Ra7", "Kf6", "Ra1", "Ne3", "Re1", "Nd5", "Rg1", "Bf5", "Rf1", "Ndf4", "Ra1", "Ng6+", "Kg8", "Ne7+", "Kh8", "Ng6+"}
 	err := playTestGame(t, g, moves, FiftyMoveRule)
 	if err != nil {
+		t.Log(g)
+		t.Log(g.LegalMoves())
 		t.Error(err)
 	}
 }
@@ -186,7 +201,7 @@ func TestEnPassantMove(t *testing.T) {
 		t.Error("missing legal en passant d5c6")
 	}
 	g.QuickMove(move.Parse("d5c6"))
-	if g.Position.OnSquare(square.C5).Type != piece.None {
+	if g.Position().OnSquare(square.C5).Type != piece.None {
 		t.Error("en passant pawn not captured")
 	}
 }
@@ -211,7 +226,7 @@ func TestStalemate(t *testing.T) {
 func gameFromFEN(fen string) (*Game, error) {
 	g := New()
 	p, err := fromFEN(fen)
-	g.Position = p
+	g.Positions[0] = p
 	return g, err
 }
 

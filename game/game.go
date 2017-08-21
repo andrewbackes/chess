@@ -4,8 +4,8 @@ package game
 import (
 	"fmt"
 	"github.com/andrewbackes/chess/piece"
-	"github.com/andrewbackes/chess/polyglot"
 	"github.com/andrewbackes/chess/position"
+	"github.com/andrewbackes/chess/position/board"
 	"github.com/andrewbackes/chess/position/move"
 	"github.com/andrewbackes/chess/position/square"
 	"time"
@@ -13,37 +13,41 @@ import (
 
 // Game represents a chess game.
 type Game struct {
-	Tags          map[string]string
-	control       [2]TimeControl
-	Position      *position.Position
-	Moves         []move.Move
-	positionCache map[uint64]int
+	Tags      map[string]string
+	control   map[piece.Color]TimeControl
+	Positions []*position.Position
 }
 
 // New returns a fresh game with all of the pieces in the
 // opening position.
 func New() *Game {
 	return &Game{
-		control:       [2]TimeControl{},
-		Tags:          make(map[string]string),
-		Position:      position.New(),
-		positionCache: make(map[uint64]int),
+		control:   nil,
+		Tags:      make(map[string]string),
+		Positions: []*position.Position{position.New()},
 	}
 }
 
 // NewTimedGame does the same thing as NewGame() but sets the
 // time control to what is specified.
-func NewTimedGame(control [2]TimeControl) *Game {
+func NewTimedGame(control map[piece.Color]TimeControl) *Game {
 	g := New()
 	g.control = control
-	g.control[piece.White].Reset()
-	g.control[piece.Black].Reset()
+	g.Position().Clocks[piece.White] = control[piece.White].Time
+	g.Position().MovesLeft[piece.White] = control[piece.White].Moves
+	g.Position().Clocks[piece.Black] = control[piece.Black].Time
+	g.Position().MovesLeft[piece.Black] = control[piece.Black].Moves
 	return g
+}
+
+// Position returns the current position of the game.
+func (G *Game) Position() *position.Position {
+	return G.Positions[len(G.Positions)-1]
 }
 
 // ActiveColor returns the color of the player whos turn it is.
 func (G *Game) ActiveColor() piece.Color {
-	return G.Position.ActiveColor
+	return G.Position().ActiveColor
 }
 
 // QuickMove makes the specified move without checking the legality
@@ -53,48 +57,35 @@ func (G *Game) QuickMove(m move.Move) {
 	G.makeMove(m, from, to, movingPiece, capturedPiece)
 }
 
-// MakeTimedMove does the same thing as MakeMove but also adds the duration
-// of the move to the player's clock. If the player goes over time, then
-// the TimedOut game status is returned. In that case, the move is not
-// added to the game history.
-func (G *Game) MakeTimedMove(m move.Move, timeTaken time.Duration) GameStatus {
-	color := G.ActiveColor()
-	G.control[color].clock -= timeTaken
-	if G.control[color].clock <= 0 {
-		return map[piece.Color]GameStatus{piece.White: WhiteTimedOut, piece.Black: BlackTimedOut}[color]
-	}
-	status := G.MakeMove(m)
-	G.control[color].clock += G.control[color].Increment
-	if G.control[color].movesLeft <= 0 && G.control[color].Repeating {
-		G.control[color].Reset()
-	}
-	return status
-}
-
 // MakeMove makes the specified move on the game position. Game state information
 // such as the en passant square, castling rights, 50 move rule count are also adjusted.
 // The game status after the given move is made is returned.
-func (G *Game) MakeMove(m move.Move) GameStatus {
+func (G *Game) MakeMove(m move.Move) (GameStatus, error) {
 	from, to, movingPiece, capturedPiece := G.decompose(m)
 	if G.illegalMove(movingPiece, m) {
-		defer func() { G.Moves = append(G.Moves, m) }()
-		return G.illegalMoveStatus()
+		return G.illegalMoveStatus(), fmt.Errorf("%s illegal move %s", G.Position().ActiveColor, m)
 	}
 	G.makeMove(m, from, to, movingPiece, capturedPiece)
-	return G.Status()
+	if G.Position().Clocks[movingPiece.Color] < 0 {
+		return map[piece.Color]GameStatus{piece.White: WhiteTimedOut, piece.Black: BlackTimedOut}[movingPiece.Color], nil
+	}
+	G.Position().Clocks[movingPiece.Color] += G.control[movingPiece.Color].Increment
+	if G.Position().MovesLeft[movingPiece.Color] <= 0 && G.control[movingPiece.Color].Repeating {
+		G.Position().MovesLeft[movingPiece.Color] = G.control[movingPiece.Color].Moves
+	}
+	return G.Status(), nil
 }
 
 func (G *Game) decompose(m move.Move) (from, to square.Square, movingPiece, capturedPiece piece.Piece) {
 	from, to = m.From(), m.To()
-	movingPiece = G.Position.OnSquare(from)
-	capturedPiece = G.Position.OnSquare(to)
+	movingPiece = G.Position().OnSquare(from)
+	capturedPiece = G.Position().OnSquare(to)
 	return
 }
 
 func (G *Game) makeMove(m move.Move, from, to square.Square, movingPiece, capturedPiece piece.Piece) {
-	G.Position.MakeMove(m)
-	G.Moves = append(G.Moves, m)
-	G.cachePosition()
+	newPos := G.Position().MakeMove(m)
+	G.Positions = append(G.Positions, newPos)
 }
 
 // Status returns the game's status.
@@ -110,10 +101,10 @@ func (G *Game) Status() GameStatus {
 	if G.threeFold() {
 		return Threefold
 	}
-	if G.Position.FiftyMoveCount >= 100 { // we keep track of it in half moves, start at 0
+	if G.Position().FiftyMoveCount >= 100 { // we keep track of it in half moves, start at 0
 		return FiftyMoveRule
 	}
-	if G.Position.InsufficientMaterial() {
+	if G.Position().InsufficientMaterial() {
 		return InsufficientMaterial
 	}
 	return InProgress
@@ -123,7 +114,8 @@ func (G *Game) illegalMove(p piece.Piece, m move.Move) bool {
 	if p.Color == piece.Neither || p.Type == piece.None {
 		return true
 	}
-	if _, legal := G.LegalMoves()[m]; !legal {
+	n := move.Move{Source: m.Source, Destination: m.Destination, Promote: m.Promote}
+	if _, exists := G.LegalMoves()[n]; !exists {
 		return true
 	}
 	return false
@@ -139,34 +131,27 @@ func (G *Game) illegalMoveStatus() GameStatus {
 // TODO(andrewbackes): threeFold detection should not have to go through all of the move history.
 // BUG(andrewbackes): starting FEN is not considered when calculating threefold.
 func (G *Game) threeFold() bool {
-	hash := polyglot.Encode(G.Position)
-	if G.positionCache[hash] >= 3 {
+	hash := G.Position().Polyglot()
+	if G.Position().ThreeFoldCount[hash] >= 3 {
 		return true
 	}
 	return false
 }
 
-func (G *Game) cachePosition() {
-	hash := polyglot.Encode(G.Position)
-	c := G.positionCache[hash]
-	c++
-	G.positionCache[hash] = c
-}
-
 // Check returns whether or not the specified color is in check.
 func (G *Game) Check(color piece.Color) bool {
-	return G.Position.Check(color)
+	return G.Position().Check(color)
 }
 
 // EnPassant returns a pointer to a square or nil if there is not
 // en passant square.
 func (G *Game) EnPassant() square.Square {
-	return G.Position.EnPassant
+	return G.Position().EnPassant
 }
 
 // LegalMoves returns only the legal moves that can be made.
 func (G *Game) LegalMoves() map[move.Move]struct{} {
-	return G.Position.LegalMoves()
+	return G.Position().LegalMoves()
 }
 
 // String puts the Board into a pretty print-able format.
@@ -174,19 +159,19 @@ func (G Game) String() string {
 	castles := [][]string{{"K", "Q"}, {"k", "q"}}
 	rights := ""
 	for c := piece.White; c <= piece.Black; c++ {
-		for s := position.ShortSide; s <= position.LongSide; s++ {
-			if G.Position.CastlingRights[c][s] {
+		for s := board.ShortSide; s <= board.LongSide; s++ {
+			if G.Position().CastlingRights[c][s] {
 				rights += castles[c][s]
 			}
 		}
 	}
 	enpass := "None"
-	if G.Position.EnPassant <= square.LastSquare {
-		enpass = fmt.Sprint(G.Position.EnPassant)
+	if G.Position().EnPassant <= square.LastSquare {
+		enpass = fmt.Sprint(G.Position().EnPassant)
 	}
 	str := "   +---+---+---+---+---+---+---+---+\n"
 	for i := 63; i >= 0; i-- {
-		p := G.Position.OnSquare(square.Square(i))
+		p := G.Position().OnSquare(square.Square(i))
 		if i%8 == 7 {
 			str += fmt.Sprint(" ", (i/8)+1, " ")
 		}
@@ -201,11 +186,11 @@ func (G Game) String() string {
 			case 4:
 				str += fmt.Sprint("   Castling Rights: ", rights)
 			case 3:
-				str += fmt.Sprint("   50 Move Rule:    ", G.Position.FiftyMoveCount)
+				str += fmt.Sprint("   50 Move Rule:    ", G.Position().FiftyMoveCount)
 			case 1:
-				str += fmt.Sprint("   White's Clock:   ", G.control[0].clock, " (", G.control[0].movesLeft, " moves)")
+				str += fmt.Sprint("   White's Clock:   ", G.Position().Clocks[piece.White], " (", G.Position().MovesLeft[piece.White], " moves)")
 			case 0:
-				str += fmt.Sprint("   Black's Clock:   ", G.control[1].clock, " (", G.control[1].movesLeft, " moves)")
+				str += fmt.Sprint("   Black's Clock:   ", G.Position().Clocks[piece.Black], " (", G.Position().MovesLeft[piece.Black], " moves)")
 			}
 			str += "\n   +---+---+---+---+---+---+---+---+\n"
 
@@ -218,12 +203,12 @@ func (G Game) String() string {
 // Clock returns the time left for the current player. It does not update
 // until after a move is made.
 func (G *Game) Clock(player piece.Color) time.Duration {
-	return G.control[player].clock
+	return G.Position().Clocks[player]
 }
 
 // MovesLeft returns the number of moves left until time control.
-func (G *Game) MovesLeft(player piece.Color) int64 {
-	return G.control[player].movesLeft
+func (G *Game) MovesLeft(player piece.Color) int {
+	return G.Position().MovesLeft[player]
 }
 
 // Result returns a human readable

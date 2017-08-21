@@ -17,7 +17,7 @@ type Move struct {
 
 var (
 	// Null represents a move not occurring.
-	Null = Move{square.NoSquare, square.NoSquare, piece.None, 0}
+	Null = Move{Source: square.NoSquare, Destination: square.NoSquare, Promote: piece.None, Duration: 0}
 )
 
 // Parse takes a move in PCN format and return a Move struct.

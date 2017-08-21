@@ -14,7 +14,7 @@ import (
 
 func TestPerftSuite(t *testing.T) {
 	f := "perftsuite.epd"
-	d := 4
+	d := 3
 	if strings.ToLower(os.Getenv("TEST_FULL_PERFT_SUITE")) == "true" {
 		d = 6
 	}

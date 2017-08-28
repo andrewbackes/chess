@@ -9,10 +9,10 @@ import (
 
 // Move represents the action that transitions one chess position to another.
 type Move struct {
-	Source      square.Square
-	Destination square.Square
-	Promote     piece.Type
-	Duration    time.Duration
+	Source      square.Square `json:"source"`
+	Destination square.Square `json:"destination"`
+	Promote     piece.Type    `json:"promote,omitempty"`
+	Duration    time.Duration `json:"duration,omitempty"`
 }
 
 var (

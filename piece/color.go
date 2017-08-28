@@ -29,14 +29,7 @@ func (c Color) String() string {
 }
 
 func (c Color) MarshalJSON() ([]byte, error) {
-	var s string
-	switch c {
-	case White:
-		s = "White"
-	case Black:
-		s = "Black"
-	}
-	return json.Marshal(s)
+	return json.Marshal((c).String())
 }
 
 func (c *Color) UnmarshalJSON(b []byte) error {

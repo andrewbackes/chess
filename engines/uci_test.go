@@ -95,7 +95,7 @@ func TestUCIBestMove(t *testing.T) {
 		t.Fail()
 	}
 	g := game.New()
-	sr, err := e.BestMove(g)
+	sr, err := e.BestMove(g, nil)
 	if sr == nil || sr.BestMove != "e2e4" || sr.Ponder != "d7d5" {
 		t.Log(sr)
 		t.Fail()

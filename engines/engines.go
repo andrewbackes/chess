@@ -21,7 +21,7 @@ type Engine interface {
 	NewGame() error
 
 	// Search finds the best move for the game.
-	BestMove(*game.Game) (*SearchInfo, error)
+	BestMove(g *game.Game, rawOutput chan []byte) (*SearchInfo, error)
 
 	// Think starts the engine deciding the best move for the given position.
 	// It is non-blocking and the output is put into the output channel.

@@ -191,7 +191,7 @@ func infoToMap(commands map[string]int, line []byte) map[string]string {
 }
 
 // BestMove tells the engine to return what it things is the best move for the current game.
-func (e *UCIEngine) BestMove(g *game.Game) (*SearchInfo, error) {
+func (e *UCIEngine) BestMove(g *game.Game, rawOutput chan []byte) (*SearchInfo, error) {
 	e.resetStop()
 	e.SetBoard(g)
 	command := "go"
@@ -210,6 +210,9 @@ func (e *UCIEngine) BestMove(g *game.Game) (*SearchInfo, error) {
 	si := SearchInfo{}
 	commands := uciCommands()
 	parse := func(info []byte) {
+		if rawOutput != nil {
+			rawOutput <- info
+		}
 		parseAnalysis(&si, commands, info)
 	}
 	e.sendAndWait([]byte(command), "bestmove ", timeout, parse)

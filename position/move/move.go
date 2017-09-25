@@ -22,6 +22,9 @@ var (
 
 // Parse takes a move in PCN format and return a Move struct.
 func Parse(algebraic string) Move {
+	if algebraic == "0000" {
+		return Null
+	}
 	if len(algebraic) >= 4 {
 		from := square.Parse(algebraic[0:2])
 		to := square.Parse(algebraic[2:4])

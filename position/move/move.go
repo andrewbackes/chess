@@ -23,7 +23,6 @@ var (
 
 // Parse takes a move in PCN format and return a Move struct.
 func Parse(algebraic string) Move {
-	fmt.Println("MOVE ", algebraic)
 	if algebraic == "0000" || algebraic == "" {
 		return Null
 	}

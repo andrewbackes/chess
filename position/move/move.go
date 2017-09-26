@@ -2,6 +2,7 @@
 package move
 
 import (
+	"fmt"
 	"github.com/andrewbackes/chess/piece"
 	"github.com/andrewbackes/chess/position/square"
 	"time"
@@ -22,7 +23,8 @@ var (
 
 // Parse takes a move in PCN format and return a Move struct.
 func Parse(algebraic string) Move {
-	if algebraic == "0000" {
+	fmt.Println("MOVE ", algebraic)
+	if algebraic == "0000" || algebraic == "" {
 		return Null
 	}
 	if len(algebraic) >= 4 {

@@ -2,7 +2,6 @@ package engines
 
 import (
 	"bufio"
-	"errors"
 	"github.com/andrewbackes/chess/fen"
 	"github.com/andrewbackes/chess/game"
 	"github.com/andrewbackes/chess/piece"
@@ -95,7 +94,7 @@ func (e *UCIEngine) sendAndWait(send []byte, expected string, timeout time.Durat
 		case <-e.stop:
 			return time.Since(start), nil
 		case <-time.After(timeout):
-			return time.Since(start), errors.New("timed out waiting for '" + expected + "' after '" + string(send) + "'")
+			return time.Since(start), ErrTimedOut
 		}
 	}
 }
@@ -215,8 +214,8 @@ func (e *UCIEngine) BestMove(g *game.Game, rawOutput chan []byte) (*SearchInfo, 
 		}
 		parseAnalysis(&si, commands, info)
 	}
-	e.sendAndWait([]byte(command), "bestmove ", timeout, parse)
-	return &si, nil
+	_, err := e.sendAndWait([]byte(command), "bestmove ", timeout, parse)
+	return &si, err
 }
 
 func parseAnalysis(si *SearchInfo, commands map[string]int, line []byte) {

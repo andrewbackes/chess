@@ -11,6 +11,10 @@ import (
 	"path/filepath"
 )
 
+var (
+	ErrTimedOut = errors.New("timed out")
+)
+
 // Engine is an interface for using different types of engines (UCI or WinBoard)
 type Engine interface {
 

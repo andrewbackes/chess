@@ -2,7 +2,6 @@
 package move
 
 import (
-	"fmt"
 	"github.com/andrewbackes/chess/piece"
 	"github.com/andrewbackes/chess/position/square"
 	"time"

@@ -8,6 +8,7 @@ and moves. Internally, bitboards are used for piece location so that move
 generation is quick.
 
 ## How to get it
+
 If you have your GOPATH set in the recommended way ([golang.org](https://golang.org/doc/code.html#GOPATH)):
 
 ```go get github.com/andrewbackes/chess/position```

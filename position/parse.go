@@ -54,8 +54,8 @@ func (p *Position) ParseMove(san string) (move.Move, error) {
 		return move.Parse(parsed), nil
 	}
 
-	//	    (piece)    (from)  (from)  (cap) (dest)      (promotion)        (chk  )
-	SAN := "([BKNPQR]?)([a-h]?)([0-9]?)([x]?)([a-h][1-8])([=]?[BNPQRbnpqr]?)([+#]?)"
+	//           (  piece  )( file )( rank )(cap )(   dest   )(    promotion    )( chk )
+	SAN := "^\\s*([BKNPQR]?)([a-h]?)([1-8]?)([x]?)([a-h][1-8])([=]?[BNPQRbnpqr]?)([+#]?)\\s*$"
 	r, _ := regexp.Compile(SAN)
 
 	matched := r.FindStringSubmatch(san)

@@ -13,6 +13,8 @@ import (
 // ParseMove transforms a move written in standard algebraic notation (SAN)
 // to a move written in Pure Coordinate Notation (PCN).
 //
+// ParseMove will not check the legality of the move and/or promotion.
+// If move is a valid promotion move (in SAN or PCN) and promotion is ommited, a promotion to Queen is returned.
 // TODO(andrewbackes): ParseMove - What about promotion captures? or ambiguous promotions?
 // BUG(andrewbackes): ParseMove - Illegal move: f7g8 (raw: fxg8=Q)
 // BUG(andrewbackes): ParseMove - Illegal move: move axb8=Q+
@@ -45,8 +47,8 @@ func (p *Position) ParseMove(san string) (move.Move, error) {
 		if (parsed[1] == '7' && parsed[3] == '8') || (parsed[1] == '2' && parsed[3] == '1') {
 			if len(parsed) <= 4 {
 				f := move.Parse(parsed).From()
-				p := p.OnSquare(f)
-				if p.Type == piece.Pawn {
+				pc := p.OnSquare(f)
+				if pc.Type == piece.Pawn && pc.Color == p.ActiveColor {
 					parsed += "q"
 				}
 			}
@@ -80,12 +82,12 @@ func (p *Position) ParseMove(san string) (move.Move, error) {
 		return move.Parse(san), errors.New("could not find source square of '" + san + "'")
 	}
 
-	// Some engines dont tell you to promote to queen, so assume so in that case:
-	//if piece == "P" && ((origin[1] == '7' && destination[1] == '8') || (origin[1] == '2' && destination[1] == '1')) {
-	//	if promote == "" {
-	//		promote = "Q"
-	//	}
-	//}
+	// Some engines don't tell you to promote to queen, so assume so in that case:
+	if piece == "P" &&
+		((origin[1] == '7' && destination[1] == '8') || (origin[1] == '2' && destination[1] == '1')) &&
+		promote == "" {
+		promote = "Q"
+	}
 
 	return move.Parse(origin + destination + strings.ToLower(promote)), nil
 }

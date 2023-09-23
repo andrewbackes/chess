@@ -2,11 +2,12 @@ package position
 
 import (
 	"errors"
+	"regexp"
+	"strings"
+
 	"github.com/andrewbackes/chess/piece"
 	"github.com/andrewbackes/chess/position/move"
 	"github.com/andrewbackes/chess/position/square"
-	"regexp"
-	"strings"
 )
 
 // ParseMove transforms a move written in standard algebraic notation (SAN)
@@ -34,7 +35,7 @@ func (p *Position) ParseMove(san string) (move.Move, error) {
 	san = strings.Replace(san, "-", "", -1)
 
 	// First check to see if it is already in the correct form.
-	PCN := "([a-h][1-8])([a-h][1-8])([QBNRqbnr]?)"
+	PCN := "^\\s*([a-h][1-8])([a-h][1-8])([QBNRqbnr]?)\\s*$"
 	matches, _ := regexp.MatchString(PCN, san)
 	if matches {
 		parsed := san[:len(san)-1]

@@ -129,19 +129,28 @@ func (p *Position) originOfPiece(pc string, color piece.Color, destination, from
 		}
 	}
 
-	// Look for one of the squares that matches the file/rank criteria:
-	for _, sq := range eligableSquares {
-		if ((sq[0:1] == fromFile) || (fromFile == "")) && ((sq[1:2] == fromRank) || (fromRank == "")) {
-			return sq, nil
-		}
-
-	}
 	//DEBUG:
-	//fmt.Println("params: ", piece, destination, fromFile, fromRank)
+	//fmt.Println("params: ", pc, destination, fromFile, fromRank)
 	//fmt.Println("color: ", color)
 	//fmt.Println("legalMoves:", legalMoves)
 	//fmt.Println("eligableMoves:", eligableMoves)
 	//fmt.Println("eligableSquares:", eligableSquares)
 
-	return "", errors.New("Notation: Can not find source square.")
+	// Look for exact one square that matches the file/rank criteria:
+	exactSquare := ""
+	for _, sq := range eligableSquares {
+		if ((sq[0:1] == fromFile) || (fromFile == "")) && ((sq[1:2] == fromRank) || (fromRank == "")) {
+			if exactSquare == "" {
+				exactSquare = sq
+			} else {
+				return "", errors.New("Notation: Can not find source square.")
+			}
+		}
+	}
+
+	if exactSquare == "" {
+		return "", errors.New("Notation: Can not find source square.")
+	}
+
+	return exactSquare, nil
 }

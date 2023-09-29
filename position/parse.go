@@ -10,15 +10,18 @@ import (
 	"github.com/andrewbackes/chess/position/square"
 )
 
+// Regexp explanation:                   (  source  )(   dest   )( promotion )
+var regexpPCN = regexp.MustCompile("^\\s*([a-h][1-8])([a-h][1-8])([QBNRqbnr]?)\\s*$")
+
+// Regexp explanation:                   (  piece  )( file )( rank )(cap )(   dest   )(    promotion    )( chk )
+var regexpSAN = regexp.MustCompile("^\\s*([BKNPQR]?)([a-h]?)([1-8]?)([x]?)([a-h][1-8])([=]?[BNPQRbnpqr]?)([+#]?)\\s*$")
+
 // ParseMove transforms a move written in standard algebraic notation (SAN)
 // to a move written in Pure Coordinate Notation (PCN).
 //
 // ParseMove will not check the legality of the move and/or promotion.
 // If move is a valid promotion move (in SAN or PCN) and promotion is ommited, a promotion to Queen is returned.
-// TODO(andrewbackes): ParseMove - What about promotion captures? or ambiguous promotions?
-// BUG(andrewbackes): ParseMove - Illegal move: f7g8 (raw: fxg8=Q)
-// BUG(andrewbackes): ParseMove - Illegal move: move axb8=Q+
-func (p *Position) ParseMove(san string) (move.Move, error) {
+func (p Position) ParseMove(san string) (move.Move, error) {
 
 	// Check for null move:
 	if san == "0000" {
@@ -37,8 +40,7 @@ func (p *Position) ParseMove(san string) (move.Move, error) {
 	san = strings.Replace(san, "-", "", -1)
 
 	// First check to see if it is already in the correct form.
-	PCN := "^\\s*([a-h][1-8])([a-h][1-8])([QBNRqbnr]?)\\s*$"
-	matches, _ := regexp.MatchString(PCN, san)
+	matches := regexpPCN.MatchString(san)
 	if matches {
 		parsed := san[:len(san)-1]
 		// Some engines dont capitalize the promotion piece:
@@ -56,11 +58,7 @@ func (p *Position) ParseMove(san string) (move.Move, error) {
 		return move.Parse(parsed), nil
 	}
 
-	//           (  piece  )( file )( rank )(cap )(   dest   )(    promotion    )( chk )
-	SAN := "^\\s*([BKNPQR]?)([a-h]?)([1-8]?)([x]?)([a-h][1-8])([=]?[BNPQRbnpqr]?)([+#]?)\\s*$"
-	r, _ := regexp.Compile(SAN)
-
-	matched := r.FindStringSubmatch(san)
+	matched := regexpSAN.FindStringSubmatch(san)
 	if len(matched) == 0 {
 		return move.Parse(san), errors.New("could not parse '" + san + "'")
 	}
@@ -92,7 +90,7 @@ func (p *Position) ParseMove(san string) (move.Move, error) {
 	return move.Parse(origin + destination + strings.ToLower(promote)), nil
 }
 
-func (p *Position) originOfPiece(pc string, color piece.Color, destination, fromFile, fromRank string) (string, error) {
+func (p Position) originOfPiece(pc string, color piece.Color, destination, fromFile, fromRank string) (string, error) {
 	pieceMap := map[string]piece.Type{
 		"P": piece.Pawn, "p": piece.Pawn,
 		"N": piece.Knight, "n": piece.Knight,

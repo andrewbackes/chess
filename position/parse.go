@@ -2,20 +2,26 @@ package position
 
 import (
 	"errors"
+	"regexp"
+	"strings"
+
 	"github.com/andrewbackes/chess/piece"
 	"github.com/andrewbackes/chess/position/move"
 	"github.com/andrewbackes/chess/position/square"
-	"regexp"
-	"strings"
 )
+
+// Regexp explanation:                   (  source  )(   dest   )( promotion )
+var regexpPCN = regexp.MustCompile("^\\s*([a-h][1-8])([a-h][1-8])([QBNRqbnr]?)\\s*$")
+
+// Regexp explanation:                   (  piece  )( file )( rank )(cap )(   dest   )(    promotion    )( chk )
+var regexpSAN = regexp.MustCompile("^\\s*([BKNPQR]?)([a-h]?)([1-8]?)([x]?)([a-h][1-8])([=]?[BNPQRbnpqr]?)([+#]?)\\s*$")
 
 // ParseMove transforms a move written in standard algebraic notation (SAN)
 // to a move written in Pure Coordinate Notation (PCN).
 //
-// TODO(andrewbackes): ParseMove - What about promotion captures? or ambiguous promotions?
-// BUG(andrewbackes): ParseMove - Illegal move: f7g8 (raw: fxg8=Q)
-// BUG(andrewbackes): ParseMove - Illegal move: move axb8=Q+
-func (p *Position) ParseMove(san string) (move.Move, error) {
+// ParseMove will not check the legality of the move and/or promotion.
+// If move is a valid promotion move (in SAN or PCN) and promotion is ommited, a promotion to Queen is returned.
+func (p Position) ParseMove(san string) (move.Move, error) {
 
 	// Check for null move:
 	if san == "0000" {
@@ -34,8 +40,7 @@ func (p *Position) ParseMove(san string) (move.Move, error) {
 	san = strings.Replace(san, "-", "", -1)
 
 	// First check to see if it is already in the correct form.
-	PCN := "([a-h][1-8])([a-h][1-8])([QBNRqbnr]?)"
-	matches, _ := regexp.MatchString(PCN, san)
+	matches := regexpPCN.MatchString(san)
 	if matches {
 		parsed := san[:len(san)-1]
 		// Some engines dont capitalize the promotion piece:
@@ -44,8 +49,8 @@ func (p *Position) ParseMove(san string) (move.Move, error) {
 		if (parsed[1] == '7' && parsed[3] == '8') || (parsed[1] == '2' && parsed[3] == '1') {
 			if len(parsed) <= 4 {
 				f := move.Parse(parsed).From()
-				p := p.OnSquare(f)
-				if p.Type == piece.Pawn {
+				pc := p.OnSquare(f)
+				if pc.Type == piece.Pawn && pc.Color == p.ActiveColor {
 					parsed += "q"
 				}
 			}
@@ -53,11 +58,7 @@ func (p *Position) ParseMove(san string) (move.Move, error) {
 		return move.Parse(parsed), nil
 	}
 
-	//	    (piece)    (from)  (from)  (cap) (dest)      (promotion)        (chk  )
-	SAN := "([BKNPQR]?)([a-h]?)([0-9]?)([x]?)([a-h][1-8])([=]?[BNPQRbnpqr]?)([+#]?)"
-	r, _ := regexp.Compile(SAN)
-
-	matched := r.FindStringSubmatch(san)
+	matched := regexpSAN.FindStringSubmatch(san)
 	if len(matched) == 0 {
 		return move.Parse(san), errors.New("could not parse '" + san + "'")
 	}
@@ -79,17 +80,17 @@ func (p *Position) ParseMove(san string) (move.Move, error) {
 		return move.Parse(san), errors.New("could not find source square of '" + san + "'")
 	}
 
-	// Some engines dont tell you to promote to queen, so assume so in that case:
-	//if piece == "P" && ((origin[1] == '7' && destination[1] == '8') || (origin[1] == '2' && destination[1] == '1')) {
-	//	if promote == "" {
-	//		promote = "Q"
-	//	}
-	//}
+	// Some engines don't tell you to promote to queen, so assume so in that case:
+	if piece == "P" &&
+		((origin[1] == '7' && destination[1] == '8') || (origin[1] == '2' && destination[1] == '1')) &&
+		promote == "" {
+		promote = "Q"
+	}
 
 	return move.Parse(origin + destination + strings.ToLower(promote)), nil
 }
 
-func (p *Position) originOfPiece(pc string, color piece.Color, destination, fromFile, fromRank string) (string, error) {
+func (p Position) originOfPiece(pc string, color piece.Color, destination, fromFile, fromRank string) (string, error) {
 	pieceMap := map[string]piece.Type{
 		"P": piece.Pawn, "p": piece.Pawn,
 		"N": piece.Knight, "n": piece.Knight,
@@ -126,19 +127,28 @@ func (p *Position) originOfPiece(pc string, color piece.Color, destination, from
 		}
 	}
 
-	// Look for one of the squares that matches the file/rank criteria:
-	for _, sq := range eligableSquares {
-		if ((sq[0:1] == fromFile) || (fromFile == "")) && ((sq[1:2] == fromRank) || (fromRank == "")) {
-			return sq, nil
-		}
-
-	}
 	//DEBUG:
-	//fmt.Println("params: ", piece, destination, fromFile, fromRank)
+	//fmt.Println("params: ", pc, destination, fromFile, fromRank)
 	//fmt.Println("color: ", color)
 	//fmt.Println("legalMoves:", legalMoves)
 	//fmt.Println("eligableMoves:", eligableMoves)
 	//fmt.Println("eligableSquares:", eligableSquares)
 
-	return "", errors.New("Notation: Can not find source square.")
+	// Look for exact one square that matches the file/rank criteria:
+	exactSquare := ""
+	for _, sq := range eligableSquares {
+		if ((sq[0:1] == fromFile) || (fromFile == "")) && ((sq[1:2] == fromRank) || (fromRank == "")) {
+			if exactSquare == "" {
+				exactSquare = sq
+			} else {
+				return "", errors.New("Notation: Can not find source square.")
+			}
+		}
+	}
+
+	if exactSquare == "" {
+		return "", errors.New("Notation: Can not find source square.")
+	}
+
+	return exactSquare, nil
 }

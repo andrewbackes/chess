@@ -3,11 +3,13 @@
 package position
 
 import (
+	"strings"
+	"time"
+
 	"github.com/andrewbackes/chess/piece"
 	"github.com/andrewbackes/chess/position/board"
 	"github.com/andrewbackes/chess/position/move"
 	"github.com/andrewbackes/chess/position/square"
-	"time"
 )
 
 // Position represents the state of a game during a player's turn.
@@ -410,4 +412,111 @@ func (p *Position) Check(color piece.Color) bool {
 	opponent := []piece.Color{piece.Black, piece.White}[color]
 	kingsq := square.Square(bitscan(p.bitBoard[color][piece.King]))
 	return p.Threatened(kingsq, opponent)
+}
+
+// Returns a string that is a SAN representation of the input move from the current position.
+// If the input move is not a legal move, empty string is returned.
+func (p Position) SAN(m move.Move) string {
+	legalMoves := p.LegalMoves()
+	if _, exists := legalMoves[m]; !exists {
+		return ""
+	}
+
+	movingPiece := p.OnSquare(m.From())
+
+	// Castling.
+	if movingPiece.Type == piece.King {
+		fromFile, toFile := int(m.From())%8, int(m.To())%8
+		if fromFile == int(square.E1)%8 {
+			if toFile == int(square.G1)%8 {
+				return "O-O"
+			}
+			if toFile == int(square.C1)%8 {
+				return "O-O-O"
+			}
+		}
+	}
+
+	mF, mR := m.Source.Algebraic()[0], m.Source.Algebraic()[1]
+	otherMoves, sameRank, sameFile := false, false, false
+	// Loop through all legal moves and check if there are some other moves with the same piece type to destination square from the same file or rank.
+	for lm, _ := range legalMoves {
+		// Check if the current legal move is from the same source square as input move.
+		if lm.Source == m.Source {
+			// It is the same source square, do not consider it as the other move we are searching for.
+			continue
+		}
+		// Current legal move is from some other source square as the one in input.
+
+		// Check if the move is with the same piece type.
+		if p.OnSquare(lm.Source).Type != movingPiece.Type {
+			// Piece type differs, this is not the move we are searching for.
+			continue
+		}
+		// Current legal move is from other source square with the same piece type as the input move.
+
+		// Check if the move is to the same destination as the input move.
+		if lm.Destination != m.Destination {
+			// Destination differs, do not continue.
+			continue
+		}
+		// Current legal move is from other source square to the same destination, with the same piece type as the input move.
+		otherMoves = true
+
+		// Mark if the other move is from the same file or rank as the input move.
+		lmF, lmR := lm.Source.Algebraic()[0], lm.Source.Algebraic()[1]
+		if mR == lmR {
+			sameRank = true
+		}
+		if mF == lmF {
+			sameFile = true
+		}
+
+		// If there are other moves from the same file and rank, we don't need to look for another moves.
+		if sameFile && sameRank {
+			break
+		}
+	}
+
+	// Parts of SAN for output.
+	var pieceUpper, fromFile, fromRank, capture, promotion, check string
+
+	if movingPiece.Type != piece.Pawn {
+		pieceUpper = strings.ToUpper(movingPiece.Type.String())
+	}
+
+	if otherMoves {
+		if !sameFile {
+			fromFile = string(mF)
+		} else if !sameRank {
+			fromRank = string(mR)
+		} else {
+			fromFile = string(mF)
+			fromRank = string(mR)
+		}
+	}
+
+	capturedPiece := p.OnSquare(m.To())
+	if p.EnPassant == m.To() {
+		capturedPiece = piece.New((p.ActiveColor+1)%2, piece.Pawn)
+	}
+	if capturedPiece.Type != piece.None {
+		capture = "x"
+		if movingPiece.Type == piece.Pawn && fromFile == "" {
+			fromFile = string(m.Source.Algebraic()[0])
+		}
+	}
+	if m.Promote != piece.None {
+		promotion = "=" + strings.ToUpper(m.Promote.String())
+	}
+	nextPosition := p.MakeMove(m)
+	if nextPosition.Check(nextPosition.ActiveColor) {
+		if len(nextPosition.LegalMoves()) == 0 {
+			check = "#"
+		} else {
+			check = "+"
+		}
+	}
+
+	return pieceUpper + fromFile + fromRank + capture + m.To().String() + promotion + check
 }

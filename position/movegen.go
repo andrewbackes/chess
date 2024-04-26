@@ -25,10 +25,13 @@ func (p *Position) LegalMoves() map[move.Move]struct{} {
 // an attacked square are not included.
 func (p *Position) Moves() map[move.Move]struct{} {
 	moves := make(map[move.Move]struct{})
+	if p.ActiveColor >= piece.NoColor {
+		return moves
+	}
 	add := func(m move.Move) {
 		moves[m] = struct{}{}
 	}
-	notToMove := piece.Color((p.ActiveColor + 1) % 2)
+	notToMove := piece.Color((p.ActiveColor + 1) % piece.COLOR_COUNT)
 	p.genPawnMoves(p.ActiveColor, notToMove, p.EnPassant, add)
 	p.genKnightMoves(p.ActiveColor, notToMove, add)
 	p.genDiagnalMoves(p.ActiveColor, notToMove, add)

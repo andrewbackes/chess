@@ -51,12 +51,79 @@ func changedBitBoards(before, after *Position) map[piece.Piece]struct{} {
 
 	for c := range before.bitBoard {
 		for p := range before.bitBoard[piece.Color(c)] {
+			if p == int(piece.None) { // Skip piece.None.
+				continue
+			}
 			if before.bitBoard[piece.Color(c)][p] != after.bitBoard[piece.Color(c)][p] {
 				changed[piece.New(piece.Color(c), piece.Type(p))] = struct{}{}
 			}
 		}
 	}
 	return changed
+}
+
+func TestBitBoards(t *testing.T) {
+	testCases := []struct {
+		name     string
+		bitBoard [piece.COLOR_COUNT][piece.TYPE_COUNT]uint64
+		want     BitBoards
+	}{
+		{"Empty",
+			[piece.COLOR_COUNT][piece.TYPE_COUNT]uint64{},
+			BitBoards{
+				piece.White: map[piece.Type]uint64{
+					piece.Pawn:   0,
+					piece.Knight: 0,
+					piece.Bishop: 0,
+					piece.Rook:   0,
+					piece.Queen:  0,
+					piece.King:   0,
+				},
+				piece.Black: map[piece.Type]uint64{
+					piece.Pawn:   0,
+					piece.Knight: 0,
+					piece.Bishop: 0,
+					piece.Rook:   0,
+					piece.Queen:  0,
+					piece.King:   0,
+				},
+			},
+		},
+		{"Initial",
+			[piece.COLOR_COUNT][piece.TYPE_COUNT]uint64{
+				{0, 65280, 66, 36, 129, 16, 8},
+				{0, 71776119061217280, 4755801206503243776, 2594073385365405696, 9295429630892703744, 1152921504606846976, 576460752303423488},
+			},
+			BitBoards{
+				piece.White: map[piece.Type]uint64{
+					piece.Pawn:   65280,
+					piece.Knight: 66,
+					piece.Bishop: 36,
+					piece.Rook:   129,
+					piece.Queen:  16,
+					piece.King:   8,
+				},
+				piece.Black: map[piece.Type]uint64{
+					piece.Pawn:   71776119061217280,
+					piece.Knight: 4755801206503243776,
+					piece.Bishop: 2594073385365405696,
+					piece.Rook:   9295429630892703744,
+					piece.Queen:  1152921504606846976,
+					piece.King:   576460752303423488,
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			p := &Position{bitBoard: tc.bitBoard}
+			bbs := p.bitBoards()
+			if !reflect.DeepEqual(bbs, tc.want) {
+				t.Errorf("&Position{bitBoard: %v}.bitBoards() = %v, want %v", tc.bitBoard, bbs, tc.want)
+			}
+		})
+	}
 }
 
 func TestMovePawn(t *testing.T) {
@@ -2261,15 +2328,15 @@ func TestFind(t *testing.T) {
 			testPosition(nil), // Initial chess board.
 			[]testFindTestCase{
 				{"WhiteTypeNone", piece.New(piece.White, piece.None), map[square.Square]struct{}{}},
-				{"WhiteType(piece.King+1)", piece.New(piece.White, piece.Type(piece.King+1)), map[square.Square]struct{}{}},
+				{"WhiteType(piece.TYPE_COUNT)", piece.New(piece.White, piece.Type(piece.TYPE_COUNT)), map[square.Square]struct{}{}},
 				{"BlackTypeNone", piece.New(piece.Black, piece.None), map[square.Square]struct{}{}},
-				{"BlackType(piece.King+1)", piece.New(piece.Black, piece.Type(piece.King+1)), map[square.Square]struct{}{}},
+				{"BlackType(piece.TYPE_COUNT)", piece.New(piece.Black, piece.Type(piece.TYPE_COUNT)), map[square.Square]struct{}{}},
 				{"NoColorTypeNone", piece.New(piece.NoColor, piece.None), map[square.Square]struct{}{}},
 				{"NoColorTypeKing", piece.New(piece.NoColor, piece.King), map[square.Square]struct{}{}},
-				{"NoColorType(piece.King+1)", piece.New(piece.NoColor, piece.Type(piece.King+1)), map[square.Square]struct{}{}},
+				{"NoColorType(piece.TYPE_COUNT)", piece.New(piece.NoColor, piece.Type(piece.TYPE_COUNT)), map[square.Square]struct{}{}},
 				{"Color(5)TypeNone", piece.New(piece.Color(5), piece.None), map[square.Square]struct{}{}},
 				{"Color(5)TypeQueen", piece.New(piece.Color(5), piece.Queen), map[square.Square]struct{}{}},
-				{"Color(5)Type(piece.King+1)", piece.New(piece.Color(5), piece.Type(piece.King+1)), map[square.Square]struct{}{}},
+				{"Color(5)Type(piece.TYPE_COUNT)", piece.New(piece.Color(5), piece.Type(piece.TYPE_COUNT)), map[square.Square]struct{}{}},
 			},
 		},
 	}
@@ -2300,6 +2367,9 @@ func TestFind(t *testing.T) {
 func (b *Position) printBitBoards() {
 	for c := range b.bitBoard {
 		for j := range b.bitBoard[c] {
+			if j == int(piece.None) { // Skip piece.None.
+				continue
+			}
 			fmt.Println(piece.New(piece.Color(c), piece.Type(j)))
 			fmt.Println(BitBoard(b.bitBoard[c][j]))
 		}
@@ -3189,7 +3259,7 @@ func BenchmarkPositionPut(b *testing.B) {
 	tpe, col := piece.Type(0), piece.Color(0)
 	for sq := square.Square(0); sq <= square.LastSquare; sq += 1 {
 		newSquares[sq] = piece.New(col, tpe)
-		tpe, col = (tpe+1)%(piece.King+1), (col+1)%(piece.Black+1)
+		tpe, col = (tpe+1)%(piece.TYPE_COUNT), (col+1)%(piece.Black+1)
 	}
 
 	pos := New()
@@ -3207,7 +3277,7 @@ func BenchmarkPositionQuickPut(b *testing.B) {
 	tpe, col := piece.Type(0), piece.Color(0)
 	for sq := square.Square(0); sq <= square.LastSquare; sq += 1 {
 		newSquares[sq] = piece.New(col, tpe)
-		tpe, col = (tpe+1)%(piece.King+1), (col+1)%(piece.Black+1)
+		tpe, col = (tpe+1)%(piece.TYPE_COUNT), (col+1)%(piece.Black+1)
 	}
 
 	pos := New()

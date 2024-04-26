@@ -8,6 +8,8 @@ import (
 // Type is a player's piece. Ex: King, Queen, etc.
 type Type uint8
 
+const TYPE_COUNT = 7 // Including piece.None. Improves code readability.
+
 // Possible pieces.
 const (
 	None Type = iota

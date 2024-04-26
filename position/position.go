@@ -16,17 +16,7 @@ import (
 // Position represents the state of a game during a player's turn.
 type Position struct {
 	// bitBoard has one bitBoard per player per color.
-	// TODO(andrewbackes): When bitboard was changed to a map vs [2][6]uint64 array,
-	// the time to run unit tests increased from around 1 minute to around 7 minutes.
-	// It should probably be changed back. The change was made because piece.Type None
-	// was moved to the from the the None, Pawn, ..., King iota for the const piece.Type.
-	// When Pawn was first it was very easy to use arrays, but with None first, it messed
-	// everything up. To fix it, just make a bitBoards struct that is backed by the array
-	// with the appropriate getters and setters. Also remember, if that doesn't fix it,
-	// then it has something to do with move.Move being changed from a string to a
-	// struct with many more members. Check the v1.0 tag for the well performing unit
-	// tests.
-	bitBoard       map[piece.Color]map[piece.Type]uint64
+	bitBoard       [piece.COLOR_COUNT][piece.TYPE_COUNT]uint64
 	MoveNumber     int    `json:"moveNumber" bson:"moveNumber"`
 	FiftyMoveCount uint64 `json:"fiftyMoveCount,omitempty" bson:"fiftyMoveCount,omitempty"`
 	// ThreeFoldCount keeps track of how many times a certain position has been seen in the game so far.
@@ -40,8 +30,18 @@ type Position struct {
 	LastMove  move.Move                     `json:"lastMove"`
 }
 
+func (p Position) bitBoards() BitBoards {
+	bb := newBitboards()
+	for _, c := range piece.Colors {
+		for t := piece.Pawn; t <= piece.King; t++ {
+			bb[c][t] = p.bitBoard[c][t]
+		}
+	}
+	return bb
+}
+
 func (p *Position) MailBox() string {
-	return BitBoards(p.bitBoard).MailBox()
+	return p.bitBoards().MailBox()
 }
 
 // NewCastlingRights returns castling rights set to their default
@@ -58,7 +58,7 @@ func NewCastlingRights() map[piece.Color]map[board.Side]bool {
 func New() *Position {
 	p := &Position{
 		MoveNumber:     1,
-		bitBoard:       newBitboards(),
+		bitBoard:       [piece.COLOR_COUNT][piece.TYPE_COUNT]uint64{},
 		ActiveColor:    piece.White,
 		EnPassant:      square.NoSquare,
 		CastlingRights: NewCastlingRights(),
@@ -75,7 +75,7 @@ func New() *Position {
 // Copy makes an exact copy of the position.
 func Copy(p *Position) *Position {
 	n := &Position{
-		bitBoard:       newBitboards(),
+		bitBoard:       p.bitBoard, // Makes copy of the bitBoard array.
 		MoveNumber:     p.MoveNumber,
 		ActiveColor:    p.ActiveColor,
 		EnPassant:      p.EnPassant,
@@ -90,9 +90,6 @@ func Copy(p *Position) *Position {
 		n.ThreeFoldCount[k] = v
 	}
 	for _, color := range piece.Colors {
-		for k, v := range p.bitBoard[color] {
-			n.bitBoard[color][k] = v
-		}
 		n.CastlingRights[color] = make(map[board.Side]bool)
 		for _, side := range board.Sides {
 			n.CastlingRights[color][side] = p.CastlingRights[color][side]
@@ -113,12 +110,10 @@ func (p *Position) Equals(q *Position) bool {
 	if p.EnPassant != q.EnPassant {
 		return false
 	}
+	if p.bitBoard != q.bitBoard {
+		return false
+	}
 	for _, color := range piece.Colors {
-		for k := range p.bitBoard[color] {
-			if p.bitBoard[color][k] != q.bitBoard[color][k] {
-				return false
-			}
-		}
 		for _, side := range board.Sides {
 			if p.CastlingRights[color][side] != q.CastlingRights[color][side] {
 				return false
@@ -214,13 +209,13 @@ func (p Position) String() string {
 
 // Clear empties the Board.
 func (p *Position) Clear() {
-	p.bitBoard = newBitboards()
+	p.bitBoard = [piece.COLOR_COUNT][piece.TYPE_COUNT]uint64{}
 }
 
 // Reset puts the pieces in the new game position.
 func (p *Position) Reset() {
 	// puts the pieces in their starting/newgame positions
-	for color := piece.Color(0); color < 2; color = color + 1 {
+	for color := range piece.Colors {
 		//Pawns first:
 		p.bitBoard[color][piece.Pawn] = 255 << (8 + (color * 8 * 5))
 		//Then the rest of the pieces:
@@ -234,7 +229,14 @@ func (p *Position) Reset() {
 
 // OnSquare returns the piece that is on the specified square.
 func (p *Position) OnSquare(s square.Square) piece.Piece {
-	return BitBoards(p.bitBoard).OnSquare(s)
+	for c := piece.White; c <= piece.Black; c++ {
+		for pc := piece.Pawn; pc <= piece.King; pc++ {
+			if (p.bitBoard[c][pc] & (1 << s)) != 0 {
+				return piece.New(c, pc)
+			}
+		}
+	}
+	return piece.New(piece.Neither, piece.None)
 }
 
 // Occupied returns a bitBoard with all of the specified colors pieces.
@@ -268,7 +270,7 @@ func (p *Position) MakeMove(m move.Move) *Position {
 	q.adjustBoard(m, from, to, movingPiece, capturedPiece)
 	q.Clocks[q.ActiveColor] -= m.Duration
 	q.MovesLeft[q.ActiveColor]--
-	q.ActiveColor = (q.ActiveColor + 1) % 2
+	q.ActiveColor = (q.ActiveColor + 1) % piece.COLOR_COUNT
 	if q.ActiveColor == piece.White {
 		q.MoveNumber++
 	}
@@ -387,6 +389,9 @@ func (p *Position) QuickPut(pc piece.Piece, s square.Square) {
 // Find returns the squares that hold the specified piece.
 func (p *Position) Find(pc piece.Piece) map[square.Square]struct{} {
 	s := make(map[square.Square]struct{})
+	if pc.Type == piece.None || pc.Type >= piece.TYPE_COUNT || pc.Color >= piece.COLOR_COUNT {
+		return s
+	}
 	bits := p.bitBoard[pc.Color][pc.Type]
 	for bits != 0 {
 		sq := bitscan(bits)
@@ -440,8 +445,8 @@ func (p *Position) InsufficientMaterial() bool {
 			mask := p.bitBoard[otherColor][piece.King] | p.bitBoard[otherColor][piece.Bishop]
 			occuppied := p.occupied(otherColor)
 			if (occuppied&mask == occuppied) && (popcount(p.bitBoard[otherColor][piece.Bishop]) == 1) {
-				color1 := bitscan(p.bitBoard[color][piece.Bishop]) % 2
-				color2 := bitscan(p.bitBoard[otherColor][piece.Bishop]) % 2
+				color1 := bitscan(p.bitBoard[color][piece.Bishop]) % piece.COLOR_COUNT
+				color2 := bitscan(p.bitBoard[otherColor][piece.Bishop]) % piece.COLOR_COUNT
 				if color1 == color2 {
 					return true
 				}

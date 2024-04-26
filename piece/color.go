@@ -18,11 +18,13 @@ const (
 	NoColor    Color = 2
 )
 
+const COLOR_COUNT = 2
+
 // Colors can be used to loop through the colors via range.
-var Colors = [2]Color{White, Black}
+var Colors = [COLOR_COUNT]Color{White, Black}
 
 // OtherColor can be used to get opponent's color. E.g. `oponentColor := piece.OtherColor[position.ActiveColor]`.
-var OtherColor = [2]Color{Black, White}
+var OtherColor = [COLOR_COUNT]Color{Black, White}
 
 func (c Color) String() string {
 	return map[Color]string{

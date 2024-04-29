@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/andrewbackes/chess/piece"
+	"github.com/andrewbackes/chess/position/board"
 	"github.com/andrewbackes/chess/position/move"
 	"github.com/andrewbackes/chess/position/square"
 )
@@ -76,9 +77,11 @@ type testPosition map[square.Square]piece.Piece
 func (p testPosition) Position() *Position {
 	// Add pieces to new Position structure.
 	res := New()
-	res.Clear()
-	for sq, pc := range p {
-		res.QuickPut(pc, sq)
+	if p != nil {
+		res.Clear()
+		for sq, pc := range p {
+			res.QuickPut(pc, sq)
+		}
 	}
 	return res
 }
@@ -1505,6 +1508,15 @@ func pos(sq square.Square, pc piece.Piece) positionChanger {
 	}
 }
 
+// Returns a positionChanger function, which sets castling for player.
+func castling(color piece.Color, side board.Side, canCastle bool) positionChanger {
+	return func(inPos Position) (outPos Position, outErr error) {
+		outPos = *Copy(&inPos)
+		outPos.CastlingRights[color][side] = canCastle
+		return outPos, nil
+	}
+}
+
 // Returns a positionChanger function, which applies all the given positionChangers.
 func multi(positionChangers ...positionChanger) positionChanger {
 	return func(inPos Position) (outPos Position, outErr error) {
@@ -1580,6 +1592,10 @@ func BenchmarkParseMove(b *testing.B) {
 
 	// Loop through benchmark groups.
 	for _, bg := range benchGroups {
+		if testing.Short() && !strings.Contains(bg.Name, "valid-non-error") {
+			// Skip all benchmarks not containing "valid-non-error" in name  if short flag.
+			continue
+		}
 		// Get benchmark cases from test cases dataset using filter function.
 		benches, err := benchmarkParseMoveBenches(bg.filterFunc)
 		if err != nil {

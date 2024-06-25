@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/andrewbackes/chess/piece"
 	"github.com/andrewbackes/chess/position/board"
@@ -1513,6 +1514,24 @@ func castling(color piece.Color, side board.Side, canCastle bool) positionChange
 	return func(inPos Position) (outPos Position, outErr error) {
 		outPos = *Copy(&inPos)
 		outPos.CastlingRights[color][side] = canCastle
+		return outPos, nil
+	}
+}
+
+// Returns a positionChanger function, which makes a move from position using MakeMove(), returning the resulting next position.
+func makeMove(m string) positionChanger {
+	return func(inPos Position) (outPos Position, outErr error) {
+		p := inPos.MakeMove(move.Parse(m))
+		outPos = *p
+		return outPos, nil
+	}
+}
+
+// Returns a positionChanger function, which sets clock for player.
+func clock(color piece.Color, duration time.Duration) positionChanger {
+	return func(inPos Position) (outPos Position, outErr error) {
+		outPos = *Copy(&inPos)
+		outPos.Clocks[color] = duration
 		return outPos, nil
 	}
 }

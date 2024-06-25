@@ -2334,32 +2334,254 @@ func TestKandBvKandOpB(t *testing.T) {
 	}
 }
 
-/*
-func TestBoardPrint(t *testing.T) {
-	expected := `+---+---+---+---+---+---+---+---+
-| r | n | b | q | k | b | n | r |
-+---+---+---+---+---+---+---+---+
-| p | p | p | p | p | p | p | p |
-+---+---+---+---+---+---+---+---+
-|   |   |   |   |   |   |   |   |
-+---+---+---+---+---+---+---+---+
-|   |   |   |   |   |   |   |   |
-+---+---+---+---+---+---+---+---+
-|   |   |   |   |   |   |   |   |
-+---+---+---+---+---+---+---+---+
-|   |   |   |   |   |   |   |   |
-+---+---+---+---+---+---+---+---+
-| P | P | P | P | P | P | P | P |
-+---+---+---+---+---+---+---+---+
-| R | N | B | Q | K | B | N | R |
-+---+---+---+---+---+---+---+---+
-`
-	got := New().String()
-	if got != expected {
-		t.Error(got)
+func TestString(t *testing.T) {
+
+	testCases := []struct {
+		Name     string
+		Position testPosition
+		Changes  positionChanger
+		Want     string
+	}{
+		{"InitialPosition", nil, nil, `   a b c d e f g h
+ ┌─────────────────┐
+8│ r n b q k b n r │8
+7│ p p p p p p p p │7
+6│ . . . . . . . . │6
+5│ . . . . . . . . │5
+4│ . . . . . . . . │4
+3│ . . . . . . . . │3
+2│ P P P P P P P P │2
+1│ R N B Q K B N R │1
+ └─────────────────┘
+   a b c d e f g h
+
+MoveNumber: 1
+ActiveColor: White
+CastlingRights:
+  White: O-O-O O-O
+  Black: O-O-O O-O
+EnPassant:
+LastMove:
+FiftyMoveCount: 0
+ThreeFoldCount: 0
+MovesLeft:
+  White: 0
+  Black: 0
+Clocks:
+  White: 0s
+  Black: 0s`,
+		},
+		{"InitialPosition-ShortPawnMove-e2e3", nil, makeMove("e2e3"), `   a b c d e f g h
+ ┌─────────────────┐
+8│ r n b q k b n r │8
+7│ p p p p p p p p │7
+6│ . . . . . . . . │6
+5│ . . . . . . . . │5
+4│ . . . . . . . . │4
+3│ . . . . P . . . │3
+2│ P P P P . P P P │2
+1│ R N B Q K B N R │1
+ └─────────────────┘
+   a b c d e f g h
+
+MoveNumber: 1
+ActiveColor: Black
+CastlingRights:
+  White: O-O-O O-O
+  Black: O-O-O O-O
+EnPassant:
+LastMove: e2e3
+FiftyMoveCount: 0
+ThreeFoldCount: 1
+MovesLeft:
+  White: -1
+  Black: 0
+Clocks:
+  White: 0s
+  Black: 0s`,
+		},
+		{"InitialPosition-LongPawnMove-e2e4", nil, makeMove("e2e4"), `   a b c d e f g h
+ ┌─────────────────┐
+8│ r n b q k b n r │8
+7│ p p p p p p p p │7
+6│ . . . . . . . . │6
+5│ . . . . . . . . │5
+4│ . . . . P . . . │4
+3│ . . . . . . . . │3
+2│ P P P P . P P P │2
+1│ R N B Q K B N R │1
+ └─────────────────┘
+   a b c d e f g h
+
+MoveNumber: 1
+ActiveColor: Black
+CastlingRights:
+  White: O-O-O O-O
+  Black: O-O-O O-O
+EnPassant: e3
+LastMove: e2e4
+FiftyMoveCount: 0
+ThreeFoldCount: 1
+MovesLeft:
+  White: -1
+  Black: 0
+Clocks:
+  White: 0s
+  Black: 0s`,
+		},
+		{"InitialPosition-2xLongPawnMove-e2e4-e7e5", nil,
+			multi(
+				makeMove("e2e4"),
+				makeMove("e7e5"),
+			),
+			`   a b c d e f g h
+ ┌─────────────────┐
+8│ r n b q k b n r │8
+7│ p p p p . p p p │7
+6│ . . . . . . . . │6
+5│ . . . . p . . . │5
+4│ . . . . P . . . │4
+3│ . . . . . . . . │3
+2│ P P P P . P P P │2
+1│ R N B Q K B N R │1
+ └─────────────────┘
+   a b c d e f g h
+
+MoveNumber: 2
+ActiveColor: White
+CastlingRights:
+  White: O-O-O O-O
+  Black: O-O-O O-O
+EnPassant: e6
+LastMove: e7e5
+FiftyMoveCount: 0
+ThreeFoldCount: 1
+MovesLeft:
+  White: -1
+  Black: -1
+Clocks:
+  White: 0s
+  Black: 0s`,
+		},
+		{"InitialPosition-CastlingRights", nil,
+			multi(
+				castling(piece.White, board.ShortSide, false),
+				castling(piece.White, board.LongSide, false),
+				castling(piece.Black, board.LongSide, false),
+			),
+			`   a b c d e f g h
+ ┌─────────────────┐
+8│ r n b q k b n r │8
+7│ p p p p p p p p │7
+6│ . . . . . . . . │6
+5│ . . . . . . . . │5
+4│ . . . . . . . . │4
+3│ . . . . . . . . │3
+2│ P P P P P P P P │2
+1│ R N B Q K B N R │1
+ └─────────────────┘
+   a b c d e f g h
+
+MoveNumber: 1
+ActiveColor: White
+CastlingRights:
+  White:
+  Black: O-O
+EnPassant:
+LastMove:
+FiftyMoveCount: 0
+ThreeFoldCount: 0
+MovesLeft:
+  White: 0
+  Black: 0
+Clocks:
+  White: 0s
+  Black: 0s`,
+		},
+		{"InitialPosition-Clocks", nil,
+			multi(
+				clock(piece.White, 10*time.Minute),
+				clock(piece.Black, 5*time.Second),
+			),
+			`   a b c d e f g h
+ ┌─────────────────┐
+8│ r n b q k b n r │8
+7│ p p p p p p p p │7
+6│ . . . . . . . . │6
+5│ . . . . . . . . │5
+4│ . . . . . . . . │4
+3│ . . . . . . . . │3
+2│ P P P P P P P P │2
+1│ R N B Q K B N R │1
+ └─────────────────┘
+   a b c d e f g h
+
+MoveNumber: 1
+ActiveColor: White
+CastlingRights:
+  White: O-O-O O-O
+  Black: O-O-O O-O
+EnPassant:
+LastMove:
+FiftyMoveCount: 0
+ThreeFoldCount: 0
+MovesLeft:
+  White: 0
+  Black: 0
+Clocks:
+  White: 10m0s
+  Black: 5s`,
+		},
+		{"InitialPosition-FiftyMoveCount-10", nil, func(p Position) (Position, error) {
+			out := *Copy(&p)
+			out.FiftyMoveCount = 10
+			return out, nil
+		},
+			`   a b c d e f g h
+ ┌─────────────────┐
+8│ r n b q k b n r │8
+7│ p p p p p p p p │7
+6│ . . . . . . . . │6
+5│ . . . . . . . . │5
+4│ . . . . . . . . │4
+3│ . . . . . . . . │3
+2│ P P P P P P P P │2
+1│ R N B Q K B N R │1
+ └─────────────────┘
+   a b c d e f g h
+
+MoveNumber: 1
+ActiveColor: White
+CastlingRights:
+  White: O-O-O O-O
+  Black: O-O-O O-O
+EnPassant:
+LastMove:
+FiftyMoveCount: 10
+ThreeFoldCount: 0
+MovesLeft:
+  White: 0
+  Black: 0
+Clocks:
+  White: 0s
+  Black: 0s`,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			// Get position.
+			p, err := testCasePosition(tc.Position, tc.Changes)
+			if err != nil {
+				t.Fatalf("Position preparation error: %s", err)
+			}
+
+			if s := p.String(); s != tc.Want {
+				t.Errorf("Position.String() =\n%s\n.\nWant\n%s\n.", s, tc.Want)
+			}
+		})
 	}
 }
-*/
 
 func TestCapture(t *testing.T) {
 	b := New()

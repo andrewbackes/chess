@@ -21,6 +21,9 @@ const (
 // Colors can be used to loop through the colors via range.
 var Colors = [2]Color{White, Black}
 
+// OtherColor can be used to get opponent's color. E.g. `oponentColor := piece.OtherColor[position.ActiveColor]`.
+var OtherColor = [2]Color{Black, White}
+
 func (c Color) String() string {
 	return map[Color]string{
 		White: "White",

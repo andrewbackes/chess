@@ -3,6 +3,7 @@
 package position
 
 import (
+	"strconv"
 	"strings"
 	"time"
 
@@ -147,36 +148,70 @@ func (p *Position) GetMoveNumber() int {
 	return p.MoveNumber
 }
 
-/*
-// String puts the Board into a pretty print-able format.
-func (p Position) String() (str string) {
-	str += "+---+---+---+---+---+---+---+---+\n"
-	for i := 1; i <= 64; i++ {
-		sq := square.Square(64 - i)
-		str += "|"
-		noPiece := true
-		for c := range p.bitBoard {
-			for j := range p.bitBoard[c] {
-				if ((1 << sq) & p.bitBoard[c][j]) != 0 {
-					str += fmt.Sprint(" ", p.OnSquare(sq), " ")
-					noPiece = false
-				}
+// String puts the Board into a compact, pretty print-able format.
+func (p Position) String() string {
+	str := "   a b c d e f g h\n"
+	str += " ┌─────────────────┐"
+	for r := uint(8); r >= 1; r-- {
+		str += "\n" + strconv.Itoa(int(r)) + "│ "
+		for f := uint(1); f <= 8; f++ {
+			sq := square.New(f, r)
+			pc := p.OnSquare(sq)
+			if pc.Type == piece.None {
+				str += ". "
+			} else {
+				str += pc.String() + " "
 			}
 		}
-		if noPiece {
-			str += "   "
-		}
-		if sq%8 == 0 {
-			str += "|\n"
-			str += "+---+---+---+---+---+---+---+---+"
-			if sq < square.LastSquare {
-				str += "\n"
-			}
-		}
+		str += "│" + strconv.Itoa(int(r))
 	}
-	return
+	str += "\n"
+	str += " └─────────────────┘\n"
+	str += "   a b c d e f g h\n"
+	str += "\n"
+	str += "MoveNumber: " + strconv.Itoa(p.MoveNumber) + "\n"
+	str += "ActiveColor: " + p.ActiveColor.String() + "\n"
+
+	str += "CastlingRights:\n"
+	for _, c := range piece.Colors {
+		crqs, crks := "", ""
+		if p.CastlingRights[c][board.LongSide] {
+			crqs = " O-O-O"
+		}
+		if p.CastlingRights[c][board.ShortSide] {
+			crks = " O-O"
+		}
+		str += "  " + c.String() + ":" + crqs + crks + "\n"
+	}
+
+	eps := ""
+	if p.EnPassant != square.NoSquare {
+		eps = " " + p.EnPassant.String()
+	}
+	str += "EnPassant:" + eps + "\n"
+
+	lms := ""
+	if p.LastMove != move.Null {
+		lms = " " + p.LastMove.String()
+	}
+	str += "LastMove:" + lms + "\n"
+
+	str += "FiftyMoveCount: " + strconv.Itoa(int(p.FiftyMoveCount)) + "\n"
+	str += "ThreeFoldCount: " + strconv.Itoa(p.ThreeFoldCount[p.Polyglot()]) + "\n"
+
+	str += "MovesLeft:\n"
+	for _, c := range piece.Colors {
+		str += "  " + c.String() + ": " + strconv.Itoa(p.MovesLeft[c]) + "\n"
+	}
+
+	str += "Clocks:"
+	for _, c := range piece.Colors {
+		str += "\n  " + c.String() + ": " + p.Clocks[c].String()
+	}
+
+	return str
 }
-*/
+
 // Clear empties the Board.
 func (p *Position) Clear() {
 	p.bitBoard = newBitboards()
@@ -203,6 +238,7 @@ func (p *Position) OnSquare(s square.Square) piece.Piece {
 }
 
 // Occupied returns a bitBoard with all of the specified colors pieces.
+// Panics when `c` is greater than piece.BothColors.
 func (p *Position) occupied(c piece.Color) uint64 {
 	var mask uint64
 	for pc := piece.Pawn; pc <= piece.King; pc++ {
@@ -282,7 +318,7 @@ func (p *Position) adjustCastlingRights(movingPiece piece.Piece, from, to square
 			p.CastlingRights[movingPiece.Color][side] = false
 		}
 		if to == [2][2]square.Square{{square.H8, square.A8}, {square.H1, square.A1}}[movingPiece.Color][side] {
-			p.CastlingRights[[]piece.Color{piece.Black, piece.White}[movingPiece.Color]][side] = false
+			p.CastlingRights[piece.OtherColor[movingPiece.Color]][side] = false
 		}
 	}
 }
@@ -323,12 +359,18 @@ func (p *Position) adjustBoard(m move.Move, from, to square.Square, movingPiece,
 	}
 }
 
-// Put places a piece on the square and removes any other piece
-// that may be on that square.
+// Put places a piece on the square and removes any other piece that may be on that square.
+// If the placed piece has a non-standard color or type, no piece is placed (just the removing part is done).
 func (p *Position) Put(pp piece.Piece, s square.Square) {
+	if s > square.LastSquare {
+		return
+	}
 	pc := p.OnSquare(s)
 	if pc.Type != piece.None {
 		p.bitBoard[pc.Color][pc.Type] ^= (1 << s)
+	}
+	if pp.Type == piece.None || pp.Type > piece.King || pp.Color > piece.Black {
+		return
 	}
 	p.bitBoard[pp.Color][pp.Type] |= (1 << s)
 }
@@ -336,6 +378,9 @@ func (p *Position) Put(pp piece.Piece, s square.Square) {
 // QuickPut places a piece on the square without removing
 // any piece that may already be on that square.
 func (p *Position) QuickPut(pc piece.Piece, s square.Square) {
+	if pc.Type > piece.King || pc.Color > piece.Black || s > square.LastSquare {
+		return
+	}
 	p.bitBoard[pc.Color][pc.Type] |= (1 << s)
 }
 
@@ -365,8 +410,8 @@ func (p *Position) InsufficientMaterial() bool {
 		return false
 	}
 
-	for color := piece.White; color <= piece.Black; color++ {
-		otherColor := []piece.Color{piece.Black, piece.White}[color]
+	for _, color := range piece.Colors {
+		otherColor := piece.OtherColor[color]
 		if loneKing[color] {
 			// King vs King:
 			if loneKing[otherColor] {
@@ -409,9 +454,11 @@ func (p *Position) InsufficientMaterial() bool {
 
 // Check returns whether or not the specified color is in check.
 func (p *Position) Check(color piece.Color) bool {
-	opponent := []piece.Color{piece.Black, piece.White}[color]
+	if color > piece.Black {
+		return false
+	}
 	kingsq := square.Square(bitscan(p.bitBoard[color][piece.King]))
-	return p.Threatened(kingsq, opponent)
+	return p.Threatened(kingsq, piece.OtherColor[color])
 }
 
 // Returns a string that is a SAN representation of the input move from the current position.

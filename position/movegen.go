@@ -37,6 +37,7 @@ func (p *Position) Moves() map[move.Move]struct{} {
 	return moves
 }
 
+// Panics if toMove or notToMove is not White or Black.
 func (p *Position) genKnightMoves(toMove, notToMove piece.Color, add func(move.Move)) {
 	//piece.Knights:
 	pieces := p.bitBoard[toMove][piece.Knight]
@@ -52,6 +53,7 @@ func (p *Position) genKnightMoves(toMove, notToMove piece.Color, add func(move.M
 	}
 }
 
+// Panics if toMove or notToMove is not White or Black.
 func (p *Position) genDiagnalMoves(toMove, notToMove piece.Color, add func(move.Move)) {
 	// piece.Bishops/piece.Queens:
 	pieces := p.bitBoard[toMove][piece.Bishop] | p.bitBoard[toMove][piece.Queen]
@@ -74,6 +76,7 @@ func (p *Position) genDiagnalMoves(toMove, notToMove piece.Color, add func(move.
 	}
 }
 
+// Panics if toMove or notToMove is not White or Black.
 func (p *Position) genStraightMoves(toMove, notToMove piece.Color, add func(move.Move)) {
 	// Rooks/piece.Queens:
 	pieces := p.bitBoard[toMove][piece.Rook] | p.bitBoard[toMove][piece.Queen]
@@ -96,6 +99,7 @@ func (p *Position) genStraightMoves(toMove, notToMove piece.Color, add func(move
 	}
 }
 
+// Panics if toMove or notToMove is not White or Black.
 func (p *Position) genKingMoves(toMove, notToMove piece.Color, castlingRights map[piece.Color]map[board.Side]bool, add func(move.Move)) {
 	pieces := p.bitBoard[toMove][piece.King]
 	{
@@ -128,6 +132,7 @@ func (p *Position) genKingMoves(toMove, notToMove piece.Color, castlingRights ma
 	}
 }
 
+// Panics if toMove or notToMove is not White or Black.
 func (p *Position) genPawnMoves(toMove, notToMove piece.Color, enPassant square.Square, add func(move.Move)) {
 	pieces := p.bitBoard[toMove][piece.Pawn] &^ pawns_spawn[notToMove] //&^ = AND_NOT
 	for pieces != 0 {
@@ -178,28 +183,30 @@ func (p *Position) genPawnMoves(toMove, notToMove piece.Color, enPassant square.
 
 // Threatened returns whether or not the specified square is under attack
 // by the specified color.
-func (p *Position) Threatened(square square.Square, byWho piece.Color) bool {
-	defender := []piece.Color{piece.Black, piece.White}[byWho]
+func (p *Position) Threatened(sq square.Square, byWho piece.Color) bool {
+	if byWho >= piece.NoColor || sq > square.LastSquare {
+		return false
+	}
 
 	// other king attacks:
-	if (king_moves[square] & p.bitBoard[byWho][piece.King]) != 0 {
+	if (king_moves[sq] & p.bitBoard[byWho][piece.King]) != 0 {
 		return true
 	}
 
 	// pawn attacks:
-	if pawn_captures[defender][square]&p.bitBoard[byWho][piece.Pawn] != 0 {
+	if pawn_captures[piece.OtherColor[byWho]][sq]&p.bitBoard[byWho][piece.Pawn] != 0 {
 		return true
 	}
 
 	// knight attacks:
-	if knight_moves[square]&p.bitBoard[byWho][piece.Knight] != 0 {
+	if knight_moves[sq]&p.bitBoard[byWho][piece.Knight] != 0 {
 		return true
 	}
 	// diagonal attacks:
 	direction := [4][65]uint64{nw, ne, sw, se}
 	scan := [4]func(uint64) uint{bsf, bsf, bsr, bsr}
 	for i := 0; i < 4; i++ {
-		blockerIndex := scan[i](direction[i][square] & p.occupied(piece.BothColors))
+		blockerIndex := scan[i](direction[i][sq] & p.occupied(piece.BothColors))
 		if (1<<blockerIndex)&(p.bitBoard[byWho][piece.Bishop]|p.bitBoard[byWho][piece.Queen]) != 0 {
 			return true
 		}
@@ -207,7 +214,7 @@ func (p *Position) Threatened(square square.Square, byWho piece.Color) bool {
 	// straight attacks:
 	direction = [4][65]uint64{north, west, south, east}
 	for i := 0; i < 4; i++ {
-		blockerIndex := scan[i](direction[i][square] & p.occupied(piece.BothColors))
+		blockerIndex := scan[i](direction[i][sq] & p.occupied(piece.BothColors))
 		if (1<<blockerIndex)&(p.bitBoard[byWho][piece.Rook]|p.bitBoard[byWho][piece.Queen]) != 0 {
 			return true
 		}

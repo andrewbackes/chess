@@ -4,10 +4,11 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"github.com/andrewbackes/chess/game"
-	"github.com/andrewbackes/chess/position/move"
 	"io"
 	"strings"
+
+	"github.com/andrewbackes/chess/game"
+	"github.com/andrewbackes/chess/position/move"
 )
 
 // PGN represents a game in Portable Game Notation.
@@ -109,6 +110,29 @@ func Encode(G *game.Game) *PGN {
 		}
 		if G.Positions[i].LastMove != move.Null {
 			pgn.Moves = append(pgn.Moves, G.Positions[i].LastMove.String())
+		}
+	}
+	return pgn
+}
+
+//EncodeSAN returns the PGN of the game, but with moves in SAN.
+// If you want to see it as a string then you can use:
+// 		G.PGN().String()
+// or:
+//		G.PGN().UnmarshalText()
+func EncodeSAN(G *game.Game) *PGN {
+	pgn := New()
+	//G.appendTags()
+	pgn.Tags = G.Tags
+	pgn.Tags["Result"] = G.Result()
+	foundFirstMove := false
+	for i := 0; i < len(G.Positions); i++ {
+		if !foundFirstMove && G.Positions[i].LastMove != move.Null {
+			pgn.FirstMoveNum = G.Positions[i].MoveNumber
+			foundFirstMove = true
+		}
+		if G.Positions[i].LastMove != move.Null {
+			pgn.Moves = append(pgn.Moves, G.Positions[i-1].SAN(G.Positions[i].LastMove))
 		}
 	}
 	return pgn

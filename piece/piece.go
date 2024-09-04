@@ -8,6 +8,8 @@ import (
 // Type is a player's piece. Ex: King, Queen, etc.
 type Type uint8
 
+const TYPE_COUNT = 7 // Including piece.None. Improves code readability.
+
 // Possible pieces.
 const (
 	None Type = iota
@@ -19,16 +21,13 @@ const (
 	King
 )
 
+var typeStrings = [TYPE_COUNT]string{" ", "p", "n", "b", "r", "q", "k"}
+
 func (T Type) String() string {
-	return map[Type]string{
-		None:   " ",
-		Pawn:   "p",
-		Knight: "n",
-		Bishop: "b",
-		Rook:   "r",
-		Queen:  "q",
-		King:   "k",
-	}[T]
+	if T >= TYPE_COUNT {
+		return ""
+	}
+	return typeStrings[T]
 }
 
 // Piece represents a chess piece.
@@ -46,15 +45,20 @@ func (P Piece) String() string {
 	return t
 }
 
+var figurines = [COLOR_COUNT][TYPE_COUNT]rune{
+	[TYPE_COUNT]rune{' ', 0x2659, 0x2658, 0x2657, 0x2656, 0x2655, 0x2654},
+	[TYPE_COUNT]rune{' ', 0x265F, 0x265E, 0x265D, 0x265C, 0x265B, 0x265A},
+}
+
 // Figurine returns a chess piece icon
 func (P Piece) Figurine() string {
 	if P.Color == NoColor || P.Type == None {
 		return " "
 	}
-	return string(map[Color]map[Type]rune{
-		White: {Pawn: 0x2659, Knight: 0x2658, Bishop: 0x2657, Rook: 0x2656, Queen: 0x2655, King: 0x2654},
-		Black: {Pawn: 0x265F, Knight: 0x265E, Bishop: 0x265D, Rook: 0x265C, Queen: 0x265B, King: 0x265A},
-	}[P.Color][P.Type])
+	if P.Color >= COLOR_COUNT || P.Type >= TYPE_COUNT {
+		return "\x00"
+	}
+	return string(figurines[P.Color][P.Type])
 }
 
 // New returns a new chess piece type.

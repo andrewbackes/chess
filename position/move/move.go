@@ -2,9 +2,10 @@
 package move
 
 import (
+	"time"
+
 	"github.com/andrewbackes/chess/piece"
 	"github.com/andrewbackes/chess/position/square"
-	"time"
 )
 
 // Move represents the action that transitions one chess position to another.
@@ -30,12 +31,16 @@ func Parse(algebraic string) Move {
 		to := square.Parse(algebraic[2:4])
 		promote := piece.None
 		if len(algebraic) > 4 {
-			p := make(map[string]piece.Type)
-			p = map[string]piece.Type{
-				"Q": piece.Queen, "N": piece.Knight, "B": piece.Bishop, "R": piece.Rook,
-				"q": piece.Queen, "n": piece.Knight, "b": piece.Bishop, "r": piece.Rook,
+			switch string(algebraic[len(algebraic)-1]) {
+			case "Q", "q":
+				promote = piece.Queen
+			case "R", "r":
+				promote = piece.Rook
+			case "B", "b":
+				promote = piece.Bishop
+			case "N", "n":
+				promote = piece.Knight
 			}
-			promote = p[string(algebraic[len(algebraic)-1])]
 		}
 		return Move{
 			Source:      from,

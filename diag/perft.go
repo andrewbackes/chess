@@ -57,7 +57,7 @@ func perftBreakdown(G *chess.Game, depth int) (nodes, checks, castles, mates, ca
 	}
 
 	toMove := G.ActiveColor()
-	notToMove := []piece.Color{game.Black, game.White}[toMove]
+	notToMove := piece.OtherColor[toMove]
 
 	isChecked := G.Check(toMove)
 	ml := G.LegalMoves()

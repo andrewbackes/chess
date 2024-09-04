@@ -11,7 +11,7 @@ func (p *Position) MarshalJSON() ([]byte, error) {
 		Board string
 		*Alias
 	}{
-		Board: BitBoards(p.bitBoard).MailBox(),
+		Board: p.bitBoards().MailBox(),
 		Alias: (*Alias)(p),
 	})
 }

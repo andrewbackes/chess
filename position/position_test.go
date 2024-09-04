@@ -2,12 +2,37 @@ package position
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
+	"time"
 
 	"github.com/andrewbackes/chess/piece"
+	"github.com/andrewbackes/chess/position/board"
 	"github.com/andrewbackes/chess/position/move"
 	"github.com/andrewbackes/chess/position/square"
 )
+
+func TestMailBox(t *testing.T) {
+	testCases := []struct {
+		name     string
+		position testPosition
+		want     string
+	}{
+		{"Empty", testPosition{}, "                                                                "},
+		{"Initial", nil, "RNBKQBNRPPPPPPPP                                pppppppprnbkqbnr"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			p := tc.position.Position()
+			mbx := p.MailBox()
+			if mbx != tc.want {
+				t.Logf("Position:\n%v", p)
+				t.Errorf("*Position.MailBox() =\n\t\"%s\"\n, want\n\t\"%s\"", mbx, tc.want)
+			}
+		})
+	}
+}
 
 func piecesOnSquare(b *Position, s square.Square) int {
 	count := 0
@@ -26,12 +51,79 @@ func changedBitBoards(before, after *Position) map[piece.Piece]struct{} {
 
 	for c := range before.bitBoard {
 		for p := range before.bitBoard[piece.Color(c)] {
+			if p == int(piece.None) { // Skip piece.None.
+				continue
+			}
 			if before.bitBoard[piece.Color(c)][p] != after.bitBoard[piece.Color(c)][p] {
 				changed[piece.New(piece.Color(c), piece.Type(p))] = struct{}{}
 			}
 		}
 	}
 	return changed
+}
+
+func TestBitBoards(t *testing.T) {
+	testCases := []struct {
+		name     string
+		bitBoard [piece.COLOR_COUNT][piece.TYPE_COUNT]uint64
+		want     BitBoards
+	}{
+		{"Empty",
+			[piece.COLOR_COUNT][piece.TYPE_COUNT]uint64{},
+			BitBoards{
+				piece.White: map[piece.Type]uint64{
+					piece.Pawn:   0,
+					piece.Knight: 0,
+					piece.Bishop: 0,
+					piece.Rook:   0,
+					piece.Queen:  0,
+					piece.King:   0,
+				},
+				piece.Black: map[piece.Type]uint64{
+					piece.Pawn:   0,
+					piece.Knight: 0,
+					piece.Bishop: 0,
+					piece.Rook:   0,
+					piece.Queen:  0,
+					piece.King:   0,
+				},
+			},
+		},
+		{"Initial",
+			[piece.COLOR_COUNT][piece.TYPE_COUNT]uint64{
+				{0, 65280, 66, 36, 129, 16, 8},
+				{0, 71776119061217280, 4755801206503243776, 2594073385365405696, 9295429630892703744, 1152921504606846976, 576460752303423488},
+			},
+			BitBoards{
+				piece.White: map[piece.Type]uint64{
+					piece.Pawn:   65280,
+					piece.Knight: 66,
+					piece.Bishop: 36,
+					piece.Rook:   129,
+					piece.Queen:  16,
+					piece.King:   8,
+				},
+				piece.Black: map[piece.Type]uint64{
+					piece.Pawn:   71776119061217280,
+					piece.Knight: 4755801206503243776,
+					piece.Bishop: 2594073385365405696,
+					piece.Rook:   9295429630892703744,
+					piece.Queen:  1152921504606846976,
+					piece.King:   576460752303423488,
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			p := &Position{bitBoard: tc.bitBoard}
+			bbs := p.bitBoards()
+			if !reflect.DeepEqual(bbs, tc.want) {
+				t.Errorf("&Position{bitBoard: %v}.bitBoards() = %v, want %v", tc.bitBoard, bbs, tc.want)
+			}
+		})
+	}
 }
 
 func TestMovePawn(t *testing.T) {
@@ -54,6 +146,2117 @@ func TestMoveKnight(t *testing.T) {
 	}
 }
 
+// Stores information about various position changes.
+type positionChanges struct {
+	squares   squareChanges
+	castling  castlingChanges
+	enPassant *square.Square
+}
+
+// Stores information about changes on a chess board for testing purposes. It considers, that here can be multiple piece types on one square.
+// Values are:
+// 	false - Piece was removed from square.
+// 	true  - Piece was added to square.
+type squareChanges map[square.Square]pieceChanges
+type pieceChanges map[piece.Piece]bool
+
+// Stores information about castling rights changes.
+// Values are:
+// 	false - Castling right for color and side was changed from true to false
+// 	true  - Castling right for color and side was changed from false to true (should never happen).
+type castlingChanges map[piece.Color]map[board.Side]bool
+
+func squarePtr(sq square.Square) *square.Square {
+	return &sq
+}
+
+// Returns board changes between two positions.
+func changedSquares(before, after *Position) squareChanges {
+	changed := make(squareChanges)
+	for sq := square.Square(0); sq <= square.LastSquare; sq += 1 {
+		for _, col := range piece.Colors {
+			for tpe := piece.Pawn; tpe <= piece.King; tpe += 1 {
+				sqb := uint64(1 << sq)
+				bsqpc := (before.bitBoard[col][tpe] & sqb) > 0
+				asqpc := (after.bitBoard[col][tpe] & sqb) > 0
+				if bsqpc != asqpc {
+					if _, ok := changed[sq]; !ok {
+						changed[sq] = pieceChanges{}
+					}
+					changed[sq][piece.New(col, tpe)] = asqpc && !bsqpc
+				}
+			}
+		}
+	}
+
+	return changed
+}
+
+// Returns castling changes between two positions.
+func changedCastlingRights(before, after *Position) castlingChanges {
+	changed := make(castlingChanges)
+	for _, col := range piece.Colors {
+		for _, side := range board.Sides {
+			if before.CastlingRights[col][side] != after.CastlingRights[col][side] {
+				if _, ok := changed[col]; !ok {
+					changed[col] = map[board.Side]bool{}
+				}
+				changed[col][side] = after.CastlingRights[col][side]
+			}
+		}
+	}
+
+	if len(changed) == 0 {
+		return nil
+	}
+	return changed
+}
+
+func TestPositionMakeMove(t *testing.T) {
+	testCases := []struct {
+		name        string
+		p           testPosition
+		pc          positionChanger
+		m           move.Move
+		wantChanged positionChanges
+	}{
+		// Move.
+		{"InitialBoard-ActiveWhite-WhitePawn-e2e3",
+			InitialTestPosition, nil,
+			move.Move{square.E2, square.E3, piece.None, 0},
+			positionChanges{
+				squares: squareChanges{
+					square.E2: pieceChanges{piece.New(piece.White, piece.Pawn): false},
+					square.E3: pieceChanges{piece.New(piece.White, piece.Pawn): true},
+				},
+			},
+		},
+		{"InitialBoard-ActiveBlack-BlackPawn-e7e6",
+			InitialTestPosition, active(piece.Black),
+			move.Move{square.E7, square.E6, piece.None, 0},
+			positionChanges{
+				squares: squareChanges{
+					square.E7: pieceChanges{piece.New(piece.Black, piece.Pawn): false},
+					square.E6: pieceChanges{piece.New(piece.Black, piece.Pawn): true},
+				},
+			},
+		},
+		{"InitialBoard-ActiveWhite-WhitePawn-e2e3-Time5",
+			InitialTestPosition, nil,
+			move.Move{square.E2, square.E3, piece.None, 5},
+			positionChanges{
+				squares: squareChanges{
+					square.E2: pieceChanges{piece.New(piece.White, piece.Pawn): false},
+					square.E3: pieceChanges{piece.New(piece.White, piece.Pawn): true},
+				},
+			},
+		},
+		{"InitialBoard-ActiveBlack-BlackPawn-e7e6-Time5",
+			InitialTestPosition, active(piece.Black),
+			move.Move{square.E7, square.E6, piece.None, 5},
+			positionChanges{
+				squares: squareChanges{
+					square.E7: pieceChanges{piece.New(piece.Black, piece.Pawn): false},
+					square.E6: pieceChanges{piece.New(piece.Black, piece.Pawn): true},
+				},
+			},
+		},
+		{"InitialBoard-ActiveWhite-WhitePawn-e2e4-StoreEnPassant",
+			InitialTestPosition, nil,
+			move.Move{square.E2, square.E4, piece.None, 0},
+			positionChanges{
+				squares: squareChanges{
+					square.E2: pieceChanges{piece.New(piece.White, piece.Pawn): false},
+					square.E4: pieceChanges{piece.New(piece.White, piece.Pawn): true},
+				},
+				enPassant: squarePtr(square.E3),
+			},
+		},
+		{"InitialBoard-ActiveBlack-BlackPawn-e7e5-StoreEnPassant",
+			InitialTestPosition, active(piece.Black),
+			move.Move{square.E7, square.E5, piece.None, 0},
+			positionChanges{
+				squares: squareChanges{
+					square.E7: pieceChanges{piece.New(piece.Black, piece.Pawn): false},
+					square.E5: pieceChanges{piece.New(piece.Black, piece.Pawn): true},
+				},
+				enPassant: squarePtr(square.E6),
+			},
+		},
+		{"InitialBoard-ActiveWhite-WhiteKnight-b1c3",
+			InitialTestPosition, nil,
+			move.Move{square.B1, square.C3, piece.None, 0},
+			positionChanges{
+				squares: squareChanges{
+					square.B1: pieceChanges{piece.New(piece.White, piece.Knight): false},
+					square.C3: pieceChanges{piece.New(piece.White, piece.Knight): true},
+				},
+			},
+		},
+		{"InitialBoard-ActiveBlack-BlackKnight-b8c6",
+			InitialTestPosition, active(piece.Black),
+			move.Move{square.B8, square.C6, piece.None, 0},
+			positionChanges{
+				squares: squareChanges{
+					square.B8: pieceChanges{piece.New(piece.Black, piece.Knight): false},
+					square.C6: pieceChanges{piece.New(piece.Black, piece.Knight): true},
+				},
+			},
+		},
+		{"TwoPawnsAtTwoOpositeKings-ActiveWhite-WhiteKing-e1f2",
+			TwoPawnsAtTwoOpositeKingsTestPosition, nil,
+			move.Move{square.E1, square.F2, piece.None, 0},
+			positionChanges{
+				squares: squareChanges{
+					square.E1: pieceChanges{piece.New(piece.White, piece.King): false},
+					square.F2: pieceChanges{piece.New(piece.White, piece.King): true},
+				},
+				castling: castlingChanges{piece.White: map[board.Side]bool{board.ShortSide: false, board.LongSide: false}},
+			},
+		},
+		{"TwoPawnsAtTwoOpositeKings-ActiveBlack-BlackKing-e8f7",
+			TwoPawnsAtTwoOpositeKingsTestPosition, active(piece.Black),
+			move.Move{square.E8, square.F7, piece.None, 0},
+			positionChanges{
+				squares: squareChanges{
+					square.E8: pieceChanges{piece.New(piece.Black, piece.King): false},
+					square.F7: pieceChanges{piece.New(piece.Black, piece.King): true},
+				},
+				castling: castlingChanges{piece.Black: map[board.Side]bool{board.ShortSide: false, board.LongSide: false}},
+			},
+		},
+		// Capture.
+		{"TwoPawnsAtTwoOpositeKings-ActiveWhite-WhiteKing-e1e2-CaptureBlackPawn",
+			TwoPawnsAtTwoOpositeKingsTestPosition, nil,
+			move.Move{square.E1, square.E2, piece.None, 0},
+			positionChanges{
+				squares: squareChanges{
+					square.E1: pieceChanges{piece.New(piece.White, piece.King): false},
+					square.E2: pieceChanges{
+						piece.New(piece.Black, piece.Pawn): false,
+						piece.New(piece.White, piece.King): true,
+					},
+				},
+				castling: castlingChanges{piece.White: map[board.Side]bool{board.ShortSide: false, board.LongSide: false}},
+			},
+		},
+		{"TwoPawnsAtTwoOpositeKings-ActiveBlack-BlackKing-e8e7-CaptureWhitePawn",
+			TwoPawnsAtTwoOpositeKingsTestPosition, active(piece.Black),
+			move.Move{square.E8, square.E7, piece.None, 0},
+			positionChanges{
+				squares: squareChanges{
+					square.E8: pieceChanges{piece.New(piece.Black, piece.King): false},
+					square.E7: pieceChanges{
+						piece.New(piece.White, piece.Pawn): false,
+						piece.New(piece.Black, piece.King): true,
+					},
+				},
+				castling: castlingChanges{piece.Black: map[board.Side]bool{board.ShortSide: false, board.LongSide: false}},
+			},
+		},
+		// Castle.
+		{"TwoKingsFourRooks-ActiveWhite-WhiteKing-e1g1-ShortCastle",
+			TwoKingsFourRooksTestPosition, nil,
+			move.Move{square.E1, square.G1, piece.None, 0},
+			positionChanges{
+				squares: squareChanges{
+					square.E1: pieceChanges{piece.New(piece.White, piece.King): false},
+					square.G1: pieceChanges{piece.New(piece.White, piece.King): true},
+					square.H1: pieceChanges{piece.New(piece.White, piece.Rook): false},
+					square.F1: pieceChanges{piece.New(piece.White, piece.Rook): true},
+				},
+				castling: castlingChanges{piece.White: map[board.Side]bool{board.ShortSide: false, board.LongSide: false}},
+			},
+		},
+		{"TwoKingsFourRooks-ActiveBlack-BlackKing-e8g8-ShortCastle",
+			TwoKingsFourRooksTestPosition, active(piece.Black),
+			move.Move{square.E8, square.G8, piece.None, 0},
+			positionChanges{
+				squares: squareChanges{
+					square.E8: pieceChanges{piece.New(piece.Black, piece.King): false},
+					square.G8: pieceChanges{piece.New(piece.Black, piece.King): true},
+					square.H8: pieceChanges{piece.New(piece.Black, piece.Rook): false},
+					square.F8: pieceChanges{piece.New(piece.Black, piece.Rook): true},
+				},
+				castling: castlingChanges{piece.Black: map[board.Side]bool{board.ShortSide: false, board.LongSide: false}},
+			},
+		},
+		{"TwoKingsFourRooks-ActiveWhite-WhiteKing-e1c1-LongCastle",
+			TwoKingsFourRooksTestPosition, nil,
+			move.Move{square.E1, square.C1, piece.None, 0},
+			positionChanges{
+				squares: squareChanges{
+					square.E1: pieceChanges{piece.New(piece.White, piece.King): false},
+					square.C1: pieceChanges{piece.New(piece.White, piece.King): true},
+					square.A1: pieceChanges{piece.New(piece.White, piece.Rook): false},
+					square.D1: pieceChanges{piece.New(piece.White, piece.Rook): true},
+				},
+				castling: castlingChanges{piece.White: map[board.Side]bool{board.ShortSide: false, board.LongSide: false}},
+			},
+		},
+		{"TwoKingsFourRooks-ActiveBlack-BlackKing-e8c8-LongCastle",
+			TwoKingsFourRooksTestPosition, active(piece.Black),
+			move.Move{square.E8, square.C8, piece.None, 0},
+			positionChanges{
+				squares: squareChanges{
+					square.E8: pieceChanges{piece.New(piece.Black, piece.King): false},
+					square.C8: pieceChanges{piece.New(piece.Black, piece.King): true},
+					square.A8: pieceChanges{piece.New(piece.Black, piece.Rook): false},
+					square.D8: pieceChanges{piece.New(piece.Black, piece.Rook): true},
+				},
+				castling: castlingChanges{piece.Black: map[board.Side]bool{board.ShortSide: false, board.LongSide: false}},
+			},
+		},
+		// Castling rights.
+		{"TwoKingsFourRooks-ActiveWhite-WhiteRook-a1a2",
+			TwoKingsFourRooksTestPosition, nil,
+			move.Move{square.A1, square.A2, piece.None, 0},
+			positionChanges{
+				squares: squareChanges{
+					square.A1: pieceChanges{piece.New(piece.White, piece.Rook): false},
+					square.A2: pieceChanges{piece.New(piece.White, piece.Rook): true},
+				},
+				castling: castlingChanges{piece.White: map[board.Side]bool{board.LongSide: false}},
+			},
+		},
+		{"TwoKingsFourRooks-ActiveBlack-BlackRook-a8a7",
+			TwoKingsFourRooksTestPosition, active(piece.Black),
+			move.Move{square.A8, square.A7, piece.None, 0},
+			positionChanges{
+				squares: squareChanges{
+					square.A8: pieceChanges{piece.New(piece.Black, piece.Rook): false},
+					square.A7: pieceChanges{piece.New(piece.Black, piece.Rook): true},
+				},
+				castling: castlingChanges{piece.Black: map[board.Side]bool{board.LongSide: false}},
+			},
+		},
+		{"TwoKingsFourRooks-ActiveWhite-WhiteRook-h1h3",
+			TwoKingsFourRooksTestPosition, nil,
+			move.Move{square.H1, square.H3, piece.None, 0},
+			positionChanges{
+				squares: squareChanges{
+					square.H1: pieceChanges{piece.New(piece.White, piece.Rook): false},
+					square.H3: pieceChanges{piece.New(piece.White, piece.Rook): true},
+				},
+				castling: castlingChanges{piece.White: map[board.Side]bool{board.ShortSide: false}},
+			},
+		},
+		{"TwoKingsFourRooks-ActiveBlack-BlackRook-h8h6",
+			TwoKingsFourRooksTestPosition, active(piece.Black),
+			move.Move{square.H8, square.H6, piece.None, 0},
+			positionChanges{
+				squares: squareChanges{
+					square.H8: pieceChanges{piece.New(piece.Black, piece.Rook): false},
+					square.H6: pieceChanges{piece.New(piece.Black, piece.Rook): true},
+				},
+				castling: castlingChanges{piece.Black: map[board.Side]bool{board.ShortSide: false}},
+			},
+		},
+		// En-passant.
+		{"EnPassantCapture-ActiveWhite-EnPassantOnB6-WhitePawn-b5c6-CaptureBlackPawnEnPassant",
+			EnPassantCaptureTestPosition, enPassant(square.C6),
+			move.Move{square.B5, square.C6, piece.None, 0},
+			positionChanges{
+				squares: squareChanges{
+					square.B5: pieceChanges{piece.New(piece.White, piece.Pawn): false},
+					square.C6: pieceChanges{piece.New(piece.White, piece.Pawn): true},
+					square.C5: pieceChanges{piece.New(piece.Black, piece.Pawn): false},
+				},
+			},
+		},
+		{"EnPassantCapture-ActiveBlack-EnPassantOnB6-BlackPawn-g4f3-CaptureWhitePawnEnPassant",
+			EnPassantCaptureTestPosition, multi(active(piece.Black), enPassant(square.F3)),
+			move.Move{square.G4, square.F3, piece.None, 0},
+			positionChanges{
+				squares: squareChanges{
+					square.G4: pieceChanges{piece.New(piece.Black, piece.Pawn): false},
+					square.F3: pieceChanges{piece.New(piece.Black, piece.Pawn): true},
+					square.F4: pieceChanges{piece.New(piece.White, piece.Pawn): false},
+				},
+			},
+		},
+		// Promotion.
+		{"Promotion-ActiveWhite-WhitePawn-b7b8-PromoteToQueen",
+			PromotionTestPosition, nil,
+			move.Move{square.B7, square.B8, piece.Queen, 0},
+			positionChanges{
+				squares: squareChanges{
+					square.B7: pieceChanges{piece.New(piece.White, piece.Pawn): false},
+					square.B8: pieceChanges{piece.New(piece.White, piece.Queen): true},
+				},
+			},
+		},
+		{"Promotion-ActiveBlack-BlackPawn-b2b1-PromoteToQueen",
+			PromotionTestPosition, active(piece.Black),
+			move.Move{square.B2, square.B1, piece.Queen, 0},
+			positionChanges{
+				squares: squareChanges{
+					square.B2: pieceChanges{piece.New(piece.Black, piece.Pawn): false},
+					square.B1: pieceChanges{piece.New(piece.Black, piece.Queen): true},
+				},
+			},
+		},
+		{"Promotion-ActiveWhite-WhitePawn-b7a8-CaptureAndPromoteToRook",
+			PromotionTestPosition, nil,
+			move.Move{square.B7, square.A8, piece.Rook, 0},
+			positionChanges{
+				squares: squareChanges{
+					square.B7: pieceChanges{piece.New(piece.White, piece.Pawn): false},
+					square.A8: pieceChanges{
+						piece.New(piece.White, piece.Rook): true,
+						piece.New(piece.Black, piece.Rook): false,
+					},
+				},
+				castling: castlingChanges{piece.Black: map[board.Side]bool{board.LongSide: false}},
+			},
+		},
+		{"Promotion-ActiveBlack-BlackPawn-b2a1-CaptureAndPromoteToRook",
+			PromotionTestPosition, active(piece.Black),
+			move.Move{square.B2, square.A1, piece.Rook, 0},
+			positionChanges{
+				squares: squareChanges{
+					square.B2: pieceChanges{piece.New(piece.Black, piece.Pawn): false},
+					square.A1: pieceChanges{
+						piece.New(piece.Black, piece.Rook): true,
+						piece.New(piece.White, piece.Rook): false,
+					},
+				},
+				castling: castlingChanges{piece.White: map[board.Side]bool{board.LongSide: false}},
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Prepare position.
+			beforeMove, err := testCasePosition(tc.p, tc.pc)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Catch panics.
+			defer func() {
+				if err := recover(); err != nil {
+					t.Logf("Position:\n%v", beforeMove)
+					t.Errorf("*Position.MakeMove(%v) should not panic, but panicked with: %v", tc.m, err)
+				}
+			}()
+
+			{ // Check if test move is a legal move.
+				legalMoves := beforeMove.LegalMoves()
+				moveNoDuration := tc.m
+				moveNoDuration.Duration = time.Duration(0)
+				if _, ok := legalMoves[moveNoDuration]; !ok {
+					t.Logf("Position:\n%v", beforeMove)
+					t.Fatalf("Move %v is not in Position.LegalMoves() result: %v", moveNoDuration, legalMoves)
+				}
+			}
+
+			// Make move.
+			afterMove := beforeMove.MakeMove(tc.m)
+
+			{ // Check bitBoards changes.
+				changed := changedSquares(beforeMove, afterMove)
+				if !reflect.DeepEqual(changed, tc.wantChanged.squares) {
+					t.Logf("Position:\n%v", beforeMove)
+					t.Errorf("After *Position.MakeMove(%v), board changes are %v, want %v", tc.m, changed, tc.wantChanged.squares)
+				}
+			}
+
+			{ // Check castling rights changes, if any.
+				changed := changedCastlingRights(beforeMove, afterMove)
+				if !reflect.DeepEqual(changed, tc.wantChanged.castling) {
+					t.Logf("Position:\n%v", beforeMove)
+					t.Errorf("After *Position.MakeMove(%v), castling changes are %v, want %v", tc.m, changed, tc.wantChanged.castling)
+				}
+			}
+
+			{ // Check EnPassant after move.
+				want := square.NoSquare
+				if tc.wantChanged.enPassant != nil {
+					want = *tc.wantChanged.enPassant
+				}
+				if afterMove.EnPassant != want {
+					t.Logf("Position:\n%v", beforeMove)
+					t.Errorf("After *Position.MakeMove(%v), EnPassant is %v, want %v", tc.m, afterMove.EnPassant, want)
+				}
+			}
+
+			// Check ActiveColor after move.
+			if afterMove.ActiveColor != (beforeMove.ActiveColor+1)%2 {
+				t.Logf("Position:\n%v", beforeMove)
+				t.Fatalf("After *Position.MakeMove(%v), board ActiveColor is %v, want %v", tc.m, afterMove.ActiveColor, (beforeMove.ActiveColor+1)%2)
+			}
+
+			// Do additional checks only if ActiveColor before move is a valid color.
+			if beforeMove.ActiveColor == piece.White || beforeMove.ActiveColor == piece.Black {
+				// Check Clocks for both colors after move.
+				wantClock := beforeMove.Clocks[beforeMove.ActiveColor] - tc.m.Duration
+				if afterMove.Clocks[beforeMove.ActiveColor] != wantClock {
+					t.Logf("Position:\n%v", beforeMove)
+					t.Errorf("After *Position.MakeMove(%v), Clock[%v] is %v, want %v", tc.m, beforeMove.ActiveColor, afterMove.Clocks[beforeMove.ActiveColor], wantClock)
+				}
+				if afterMove.Clocks[afterMove.ActiveColor] != beforeMove.Clocks[afterMove.ActiveColor] {
+					t.Logf("Position:\n%v", beforeMove)
+					t.Errorf("After *Position.MakeMove(%v), Clock[%v] is %v, want %v", tc.m, afterMove.ActiveColor, afterMove.Clocks[afterMove.ActiveColor], beforeMove.Clocks[afterMove.ActiveColor])
+				}
+
+				// Check MovesLeft for both colors after move.
+				wantML := beforeMove.MovesLeft[beforeMove.ActiveColor] - 1
+				if afterMove.MovesLeft[beforeMove.ActiveColor] != wantML {
+					t.Logf("Position:\n%v", beforeMove)
+					t.Errorf("After *Position.MakeMove(%v), MovesLeft[%v] is %v, want %v", tc.m, beforeMove.ActiveColor, afterMove.MovesLeft[beforeMove.ActiveColor], wantML)
+				}
+				if afterMove.MovesLeft[afterMove.ActiveColor] != beforeMove.MovesLeft[afterMove.ActiveColor] {
+					t.Logf("Position:\n%v", beforeMove)
+					t.Errorf("After *Position.MakeMove(%v), MovesLeft[%v] is %v, want %v", tc.m, afterMove.ActiveColor, afterMove.MovesLeft[afterMove.ActiveColor], beforeMove.MovesLeft[afterMove.ActiveColor])
+				}
+
+				// Check MoveNumber after move.
+				if beforeMove.ActiveColor == piece.Black {
+					wantMN := beforeMove.MoveNumber + 1
+					if afterMove.MoveNumber != wantMN {
+						t.Logf("Position:\n%v", beforeMove)
+						t.Errorf("After *Position.MakeMove(%v), MoveNumber is %v, want %v", tc.m, afterMove.MoveNumber, wantMN)
+					}
+				} else if afterMove.MoveNumber != beforeMove.MoveNumber {
+					t.Logf("Position:\n%v", beforeMove)
+					t.Errorf("After *Position.MakeMove(%v), MoveNumber is %v, want %v", tc.m, afterMove.MoveNumber, beforeMove.MoveNumber)
+				}
+			}
+
+			// Check LastMove after move.
+			if afterMove.LastMove != tc.m {
+				t.Logf("Position:\n%v", beforeMove)
+				t.Errorf("After *Position.MakeMove(%v), LastMove is %v, want %v", tc.m, afterMove.LastMove, tc.m)
+			}
+
+			// Check ThreeFoldCount update after move.
+			hash := afterMove.Polyglot()
+			beforeHC := 0
+			if hc, exists := beforeMove.ThreeFoldCount[hash]; exists {
+				beforeHC = hc
+			}
+			afterHC := afterMove.ThreeFoldCount[hash]
+			if afterHC != beforeHC+1 {
+				t.Logf("Position:\n%v", beforeMove)
+				t.Errorf("After *Position.MakeMove(%v), ThreeFoldCount[hash] is %v, want %v", tc.m, afterHC, beforeHC+1)
+			}
+		})
+	}
+}
+
+func TestPositionPut(t *testing.T) {
+	testCases := []struct {
+		name        string
+		sq          square.Square
+		pc          piece.Piece
+		wantChanged squareChanges
+	}{
+		// Pawns.
+		{"White-Pawn-A3", square.A3, piece.New(piece.White, piece.Pawn),
+			squareChanges{square.A3: pieceChanges{piece.New(piece.White, piece.Pawn): true}},
+		},
+		{"Black-Pawn-A6", square.A6, piece.New(piece.Black, piece.Pawn),
+			squareChanges{square.A6: pieceChanges{piece.New(piece.Black, piece.Pawn): true}},
+		},
+		{"White-Pawn-A2", square.A2, piece.New(piece.White, piece.Pawn),
+			squareChanges{},
+		},
+		{"Black-Pawn-A7", square.A7, piece.New(piece.Black, piece.Pawn),
+			squareChanges{},
+		},
+		{"White-Pawn-A1", square.A1, piece.New(piece.White, piece.Pawn),
+			squareChanges{square.A1: pieceChanges{
+				piece.New(piece.White, piece.Rook): false,
+				piece.New(piece.White, piece.Pawn): true,
+			}},
+		},
+		{"Black-Pawn-A8", square.A8, piece.New(piece.Black, piece.Pawn),
+			squareChanges{square.A8: pieceChanges{
+				piece.New(piece.Black, piece.Rook): false,
+				piece.New(piece.Black, piece.Pawn): true,
+			}},
+		},
+		{"White-Pawn-B1", square.B1, piece.New(piece.White, piece.Pawn),
+			squareChanges{square.B1: pieceChanges{
+				piece.New(piece.White, piece.Knight): false,
+				piece.New(piece.White, piece.Pawn):   true,
+			}},
+		},
+		{"Black-Pawn-B8", square.B8, piece.New(piece.Black, piece.Pawn),
+			squareChanges{square.B8: pieceChanges{
+				piece.New(piece.Black, piece.Knight): false,
+				piece.New(piece.Black, piece.Pawn):   true,
+			}},
+		},
+		{"White-Pawn-C1", square.C1, piece.New(piece.White, piece.Pawn),
+			squareChanges{square.C1: pieceChanges{
+				piece.New(piece.White, piece.Bishop): false,
+				piece.New(piece.White, piece.Pawn):   true,
+			}},
+		},
+		{"Black-Pawn-C8", square.C8, piece.New(piece.Black, piece.Pawn),
+			squareChanges{square.C8: pieceChanges{
+				piece.New(piece.Black, piece.Bishop): false,
+				piece.New(piece.Black, piece.Pawn):   true,
+			}},
+		},
+		{"White-Pawn-D1", square.D1, piece.New(piece.White, piece.Pawn),
+			squareChanges{square.D1: pieceChanges{
+				piece.New(piece.White, piece.Queen): false,
+				piece.New(piece.White, piece.Pawn):  true,
+			}},
+		},
+		{"Black-Pawn-D8", square.D8, piece.New(piece.Black, piece.Pawn),
+			squareChanges{square.D8: pieceChanges{
+				piece.New(piece.Black, piece.Queen): false,
+				piece.New(piece.Black, piece.Pawn):  true,
+			}},
+		},
+		{"White-Pawn-E1", square.E1, piece.New(piece.White, piece.Pawn),
+			squareChanges{square.E1: pieceChanges{
+				piece.New(piece.White, piece.King): false,
+				piece.New(piece.White, piece.Pawn): true,
+			}},
+		},
+		{"Black-Pawn-E8", square.E8, piece.New(piece.Black, piece.Pawn),
+			squareChanges{square.E8: pieceChanges{
+				piece.New(piece.Black, piece.King): false,
+				piece.New(piece.Black, piece.Pawn): true,
+			}},
+		},
+		{"White-Pawn-H6", square.H6, piece.New(piece.White, piece.Pawn),
+			squareChanges{square.H6: pieceChanges{piece.New(piece.White, piece.Pawn): true}},
+		},
+		{"Black-Pawn-H3", square.H3, piece.New(piece.Black, piece.Pawn),
+			squareChanges{square.H3: pieceChanges{piece.New(piece.Black, piece.Pawn): true}},
+		},
+		{"White-Pawn-H7", square.H7, piece.New(piece.White, piece.Pawn),
+			squareChanges{square.H7: pieceChanges{
+				piece.New(piece.Black, piece.Pawn): false,
+				piece.New(piece.White, piece.Pawn): true,
+			}},
+		},
+		{"Black-Pawn-H2", square.H2, piece.New(piece.Black, piece.Pawn),
+			squareChanges{square.H2: pieceChanges{
+				piece.New(piece.White, piece.Pawn): false,
+				piece.New(piece.Black, piece.Pawn): true,
+			}},
+		},
+		{"White-Pawn-H8", square.H8, piece.New(piece.White, piece.Pawn),
+			squareChanges{square.H8: pieceChanges{
+				piece.New(piece.Black, piece.Rook): false,
+				piece.New(piece.White, piece.Pawn): true,
+			}},
+		},
+		{"Black-Pawn-H1", square.H1, piece.New(piece.Black, piece.Pawn),
+			squareChanges{square.H1: pieceChanges{
+				piece.New(piece.White, piece.Rook): false,
+				piece.New(piece.Black, piece.Pawn): true,
+			}},
+		},
+		{"White-Pawn-G8", square.G8, piece.New(piece.White, piece.Pawn),
+			squareChanges{square.G8: pieceChanges{
+				piece.New(piece.Black, piece.Knight): false,
+				piece.New(piece.White, piece.Pawn):   true,
+			}},
+		},
+		{"Black-Pawn-G1", square.G1, piece.New(piece.Black, piece.Pawn),
+			squareChanges{square.G1: pieceChanges{
+				piece.New(piece.White, piece.Knight): false,
+				piece.New(piece.Black, piece.Pawn):   true,
+			}},
+		},
+		{"White-Pawn-F8", square.F8, piece.New(piece.White, piece.Pawn),
+			squareChanges{square.F8: pieceChanges{
+				piece.New(piece.Black, piece.Bishop): false,
+				piece.New(piece.White, piece.Pawn):   true,
+			}},
+		},
+		{"Black-Pawn-F1", square.F1, piece.New(piece.Black, piece.Pawn),
+			squareChanges{square.F1: pieceChanges{
+				piece.New(piece.White, piece.Bishop): false,
+				piece.New(piece.Black, piece.Pawn):   true,
+			}},
+		},
+		{"White-Pawn-E8", square.E8, piece.New(piece.White, piece.Pawn),
+			squareChanges{square.E8: pieceChanges{
+				piece.New(piece.Black, piece.King): false,
+				piece.New(piece.White, piece.Pawn): true,
+			}},
+		},
+		{"Black-Pawn-E1", square.E1, piece.New(piece.Black, piece.Pawn),
+			squareChanges{square.E1: pieceChanges{
+				piece.New(piece.White, piece.King): false,
+				piece.New(piece.Black, piece.Pawn): true,
+			}},
+		},
+		{"White-Pawn-D8", square.D8, piece.New(piece.White, piece.Pawn),
+			squareChanges{square.D8: pieceChanges{
+				piece.New(piece.Black, piece.Queen): false,
+				piece.New(piece.White, piece.Pawn):  true,
+			}},
+		},
+		{"Black-Pawn-D1", square.D1, piece.New(piece.Black, piece.Pawn),
+			squareChanges{square.D1: pieceChanges{
+				piece.New(piece.White, piece.Queen): false,
+				piece.New(piece.Black, piece.Pawn):  true,
+			}},
+		},
+
+		// Rooks.
+		{"White-Rook-A3", square.A3, piece.New(piece.White, piece.Rook),
+			squareChanges{square.A3: pieceChanges{piece.New(piece.White, piece.Rook): true}},
+		},
+		{"Black-Rook-A6", square.A6, piece.New(piece.Black, piece.Rook),
+			squareChanges{square.A6: pieceChanges{piece.New(piece.Black, piece.Rook): true}},
+		},
+		{"White-Rook-A2", square.A2, piece.New(piece.White, piece.Rook),
+			squareChanges{square.A2: pieceChanges{
+				piece.New(piece.White, piece.Pawn): false,
+				piece.New(piece.White, piece.Rook): true,
+			}},
+		},
+		{"Black-Rook-A7", square.A7, piece.New(piece.Black, piece.Rook),
+			squareChanges{square.A7: pieceChanges{
+				piece.New(piece.Black, piece.Pawn): false,
+				piece.New(piece.Black, piece.Rook): true,
+			}},
+		},
+		{"White-Rook-A1", square.A1, piece.New(piece.White, piece.Rook),
+			squareChanges{},
+		},
+		{"Black-Rook-A8", square.A8, piece.New(piece.Black, piece.Rook),
+			squareChanges{},
+		},
+		{"White-Rook-B1", square.B1, piece.New(piece.White, piece.Rook),
+			squareChanges{square.B1: pieceChanges{
+				piece.New(piece.White, piece.Knight): false,
+				piece.New(piece.White, piece.Rook):   true,
+			}},
+		},
+		{"Black-Rook-B8", square.B8, piece.New(piece.Black, piece.Rook),
+			squareChanges{square.B8: pieceChanges{
+				piece.New(piece.Black, piece.Knight): false,
+				piece.New(piece.Black, piece.Rook):   true,
+			}},
+		},
+		{"White-Rook-C1", square.C1, piece.New(piece.White, piece.Rook),
+			squareChanges{square.C1: pieceChanges{
+				piece.New(piece.White, piece.Bishop): false,
+				piece.New(piece.White, piece.Rook):   true,
+			}},
+		},
+		{"Black-Rook-C8", square.C8, piece.New(piece.Black, piece.Rook),
+			squareChanges{square.C8: pieceChanges{
+				piece.New(piece.Black, piece.Bishop): false,
+				piece.New(piece.Black, piece.Rook):   true,
+			}},
+		},
+		{"White-Rook-D1", square.D1, piece.New(piece.White, piece.Rook),
+			squareChanges{square.D1: pieceChanges{
+				piece.New(piece.White, piece.Queen): false,
+				piece.New(piece.White, piece.Rook):  true,
+			}},
+		},
+		{"Black-Rook-D8", square.D8, piece.New(piece.Black, piece.Rook),
+			squareChanges{square.D8: pieceChanges{
+				piece.New(piece.Black, piece.Queen): false,
+				piece.New(piece.Black, piece.Rook):  true,
+			}},
+		},
+		{"White-Rook-E1", square.E1, piece.New(piece.White, piece.Rook),
+			squareChanges{square.E1: pieceChanges{
+				piece.New(piece.White, piece.King): false,
+				piece.New(piece.White, piece.Rook): true,
+			}},
+		},
+		{"Black-Rook-E8", square.E8, piece.New(piece.Black, piece.Rook),
+			squareChanges{square.E8: pieceChanges{
+				piece.New(piece.Black, piece.King): false,
+				piece.New(piece.Black, piece.Rook): true,
+			}},
+		},
+		{"White-Rook-H6", square.H6, piece.New(piece.White, piece.Rook),
+			squareChanges{square.H6: pieceChanges{piece.New(piece.White, piece.Rook): true}},
+		},
+		{"Black-Rook-H3", square.H3, piece.New(piece.Black, piece.Rook),
+			squareChanges{square.H3: pieceChanges{piece.New(piece.Black, piece.Rook): true}},
+		},
+		{"White-Rook-H7", square.H7, piece.New(piece.White, piece.Rook),
+			squareChanges{square.H7: pieceChanges{
+				piece.New(piece.Black, piece.Pawn): false,
+				piece.New(piece.White, piece.Rook): true,
+			}},
+		},
+		{"Black-Rook-H2", square.H2, piece.New(piece.Black, piece.Rook),
+			squareChanges{square.H2: pieceChanges{
+				piece.New(piece.White, piece.Pawn): false,
+				piece.New(piece.Black, piece.Rook): true,
+			}},
+		},
+		{"White-Rook-H8", square.H8, piece.New(piece.White, piece.Rook),
+			squareChanges{square.H8: pieceChanges{
+				piece.New(piece.Black, piece.Rook): false,
+				piece.New(piece.White, piece.Rook): true,
+			}},
+		},
+		{"Black-Rook-H1", square.H1, piece.New(piece.Black, piece.Rook),
+			squareChanges{square.H1: pieceChanges{
+				piece.New(piece.White, piece.Rook): false,
+				piece.New(piece.Black, piece.Rook): true,
+			}},
+		},
+		{"White-Rook-G8", square.G8, piece.New(piece.White, piece.Rook),
+			squareChanges{square.G8: pieceChanges{
+				piece.New(piece.Black, piece.Knight): false,
+				piece.New(piece.White, piece.Rook):   true,
+			}},
+		},
+		{"Black-Rook-G1", square.G1, piece.New(piece.Black, piece.Rook),
+			squareChanges{square.G1: pieceChanges{
+				piece.New(piece.White, piece.Knight): false,
+				piece.New(piece.Black, piece.Rook):   true,
+			}},
+		},
+		{"White-Rook-F8", square.F8, piece.New(piece.White, piece.Rook),
+			squareChanges{square.F8: pieceChanges{
+				piece.New(piece.Black, piece.Bishop): false,
+				piece.New(piece.White, piece.Rook):   true,
+			}},
+		},
+		{"Black-Rook-F1", square.F1, piece.New(piece.Black, piece.Rook),
+			squareChanges{square.F1: pieceChanges{
+				piece.New(piece.White, piece.Bishop): false,
+				piece.New(piece.Black, piece.Rook):   true,
+			}},
+		},
+		{"White-Rook-E8", square.E8, piece.New(piece.White, piece.Rook),
+			squareChanges{square.E8: pieceChanges{
+				piece.New(piece.Black, piece.King): false,
+				piece.New(piece.White, piece.Rook): true,
+			}},
+		},
+		{"Black-Rook-E1", square.E1, piece.New(piece.Black, piece.Rook),
+			squareChanges{square.E1: pieceChanges{
+				piece.New(piece.White, piece.King): false,
+				piece.New(piece.Black, piece.Rook): true,
+			}},
+		},
+		{"White-Rook-D8", square.D8, piece.New(piece.White, piece.Rook),
+			squareChanges{square.D8: pieceChanges{
+				piece.New(piece.Black, piece.Queen): false,
+				piece.New(piece.White, piece.Rook):  true,
+			}},
+		},
+		{"Black-Rook-D1", square.D1, piece.New(piece.Black, piece.Rook),
+			squareChanges{square.D1: pieceChanges{
+				piece.New(piece.White, piece.Queen): false,
+				piece.New(piece.Black, piece.Rook):  true,
+			}},
+		},
+
+		// Knights.
+		{"White-Knight-B3", square.B3, piece.New(piece.White, piece.Knight),
+			squareChanges{square.B3: pieceChanges{piece.New(piece.White, piece.Knight): true}},
+		},
+		{"Black-Knight-B6", square.B6, piece.New(piece.Black, piece.Knight),
+			squareChanges{square.B6: pieceChanges{piece.New(piece.Black, piece.Knight): true}},
+		},
+		{"White-Knight-B2", square.B2, piece.New(piece.White, piece.Knight),
+			squareChanges{square.B2: pieceChanges{
+				piece.New(piece.White, piece.Pawn):   false,
+				piece.New(piece.White, piece.Knight): true,
+			}},
+		},
+		{"Black-Knight-B7", square.B7, piece.New(piece.Black, piece.Knight),
+			squareChanges{square.B7: pieceChanges{
+				piece.New(piece.Black, piece.Pawn):   false,
+				piece.New(piece.Black, piece.Knight): true,
+			}},
+		},
+		{"White-Knight-A1", square.A1, piece.New(piece.White, piece.Knight),
+			squareChanges{square.A1: pieceChanges{
+				piece.New(piece.White, piece.Rook):   false,
+				piece.New(piece.White, piece.Knight): true,
+			}},
+		},
+		{"Black-Knight-A8", square.A8, piece.New(piece.Black, piece.Knight),
+			squareChanges{square.A8: pieceChanges{
+				piece.New(piece.Black, piece.Rook):   false,
+				piece.New(piece.Black, piece.Knight): true,
+			}},
+		},
+		{"White-Knight-B1", square.B1, piece.New(piece.White, piece.Knight),
+			squareChanges{},
+		},
+		{"Black-Knight-B8", square.B8, piece.New(piece.Black, piece.Knight),
+			squareChanges{},
+		},
+		{"White-Knight-C1", square.C1, piece.New(piece.White, piece.Knight),
+			squareChanges{square.C1: pieceChanges{
+				piece.New(piece.White, piece.Bishop): false,
+				piece.New(piece.White, piece.Knight): true,
+			}},
+		},
+		{"Black-Knight-C8", square.C8, piece.New(piece.Black, piece.Knight),
+			squareChanges{square.C8: pieceChanges{
+				piece.New(piece.Black, piece.Bishop): false,
+				piece.New(piece.Black, piece.Knight): true,
+			}},
+		},
+		{"White-Knight-D1", square.D1, piece.New(piece.White, piece.Knight),
+			squareChanges{square.D1: pieceChanges{
+				piece.New(piece.White, piece.Queen):  false,
+				piece.New(piece.White, piece.Knight): true,
+			}},
+		},
+		{"Black-Knight-D8", square.D8, piece.New(piece.Black, piece.Knight),
+			squareChanges{square.D8: pieceChanges{
+				piece.New(piece.Black, piece.Queen):  false,
+				piece.New(piece.Black, piece.Knight): true,
+			}},
+		},
+		{"White-Knight-E1", square.E1, piece.New(piece.White, piece.Knight),
+			squareChanges{square.E1: pieceChanges{
+				piece.New(piece.White, piece.King):   false,
+				piece.New(piece.White, piece.Knight): true,
+			}},
+		},
+		{"Black-Knight-E8", square.E8, piece.New(piece.Black, piece.Knight),
+			squareChanges{square.E8: pieceChanges{
+				piece.New(piece.Black, piece.King):   false,
+				piece.New(piece.Black, piece.Knight): true,
+			}},
+		},
+		{"White-Knight-G6", square.G6, piece.New(piece.White, piece.Knight),
+			squareChanges{square.G6: pieceChanges{piece.New(piece.White, piece.Knight): true}},
+		},
+		{"Black-Knight-G3", square.G3, piece.New(piece.Black, piece.Knight),
+			squareChanges{square.G3: pieceChanges{piece.New(piece.Black, piece.Knight): true}},
+		},
+		{"White-Knight-G7", square.G7, piece.New(piece.White, piece.Knight),
+			squareChanges{square.G7: pieceChanges{
+				piece.New(piece.Black, piece.Pawn):   false,
+				piece.New(piece.White, piece.Knight): true,
+			}},
+		},
+		{"Black-Knight-G2", square.G2, piece.New(piece.Black, piece.Knight),
+			squareChanges{square.G2: pieceChanges{
+				piece.New(piece.White, piece.Pawn):   false,
+				piece.New(piece.Black, piece.Knight): true,
+			}},
+		},
+		{"White-Knight-H8", square.H8, piece.New(piece.White, piece.Knight),
+			squareChanges{square.H8: pieceChanges{
+				piece.New(piece.Black, piece.Rook):   false,
+				piece.New(piece.White, piece.Knight): true,
+			}},
+		},
+		{"Black-Knight-H1", square.H1, piece.New(piece.Black, piece.Knight),
+			squareChanges{square.H1: pieceChanges{
+				piece.New(piece.White, piece.Rook):   false,
+				piece.New(piece.Black, piece.Knight): true,
+			}},
+		},
+		{"White-Knight-G8", square.G8, piece.New(piece.White, piece.Knight),
+			squareChanges{square.G8: pieceChanges{
+				piece.New(piece.Black, piece.Knight): false,
+				piece.New(piece.White, piece.Knight): true,
+			}},
+		},
+		{"Black-Knight-G1", square.G1, piece.New(piece.Black, piece.Knight),
+			squareChanges{square.G1: pieceChanges{
+				piece.New(piece.White, piece.Knight): false,
+				piece.New(piece.Black, piece.Knight): true,
+			}},
+		},
+		{"White-Knight-F8", square.F8, piece.New(piece.White, piece.Knight),
+			squareChanges{square.F8: pieceChanges{
+				piece.New(piece.Black, piece.Bishop): false,
+				piece.New(piece.White, piece.Knight): true,
+			}},
+		},
+		{"Black-Knight-F1", square.F1, piece.New(piece.Black, piece.Knight),
+			squareChanges{square.F1: pieceChanges{
+				piece.New(piece.White, piece.Bishop): false,
+				piece.New(piece.Black, piece.Knight): true,
+			}},
+		},
+		{"White-Knight-E8", square.E8, piece.New(piece.White, piece.Knight),
+			squareChanges{square.E8: pieceChanges{
+				piece.New(piece.Black, piece.King):   false,
+				piece.New(piece.White, piece.Knight): true,
+			}},
+		},
+		{"Black-Knight-E1", square.E1, piece.New(piece.Black, piece.Knight),
+			squareChanges{square.E1: pieceChanges{
+				piece.New(piece.White, piece.King):   false,
+				piece.New(piece.Black, piece.Knight): true,
+			}},
+		},
+		{"White-Knight-D8", square.D8, piece.New(piece.White, piece.Knight),
+			squareChanges{square.D8: pieceChanges{
+				piece.New(piece.Black, piece.Queen):  false,
+				piece.New(piece.White, piece.Knight): true,
+			}},
+		},
+		{"Black-Knight-D1", square.D1, piece.New(piece.Black, piece.Knight),
+			squareChanges{square.D1: pieceChanges{
+				piece.New(piece.White, piece.Queen):  false,
+				piece.New(piece.Black, piece.Knight): true,
+			}},
+		},
+
+		// Bishops.
+		{"White-Bishop-C3", square.C3, piece.New(piece.White, piece.Bishop),
+			squareChanges{square.C3: pieceChanges{piece.New(piece.White, piece.Bishop): true}},
+		},
+		{"Black-Bishop-C6", square.C6, piece.New(piece.Black, piece.Bishop),
+			squareChanges{square.C6: pieceChanges{piece.New(piece.Black, piece.Bishop): true}},
+		},
+		{"White-Bishop-C2", square.C2, piece.New(piece.White, piece.Bishop),
+			squareChanges{square.C2: pieceChanges{
+				piece.New(piece.White, piece.Pawn):   false,
+				piece.New(piece.White, piece.Bishop): true,
+			}},
+		},
+		{"Black-Bishop-C7", square.C7, piece.New(piece.Black, piece.Bishop),
+			squareChanges{square.C7: pieceChanges{
+				piece.New(piece.Black, piece.Pawn):   false,
+				piece.New(piece.Black, piece.Bishop): true,
+			}},
+		},
+		{"White-Bishop-A1", square.A1, piece.New(piece.White, piece.Bishop),
+			squareChanges{square.A1: pieceChanges{
+				piece.New(piece.White, piece.Rook):   false,
+				piece.New(piece.White, piece.Bishop): true,
+			}},
+		},
+		{"Black-Bishop-A8", square.A8, piece.New(piece.Black, piece.Bishop),
+			squareChanges{square.A8: pieceChanges{
+				piece.New(piece.Black, piece.Rook):   false,
+				piece.New(piece.Black, piece.Bishop): true,
+			}},
+		},
+		{"White-Bishop-B1", square.B1, piece.New(piece.White, piece.Bishop),
+			squareChanges{square.B1: pieceChanges{
+				piece.New(piece.White, piece.Knight): false,
+				piece.New(piece.White, piece.Bishop): true,
+			}},
+		},
+		{"Black-Bishop-B8", square.B8, piece.New(piece.Black, piece.Bishop),
+			squareChanges{square.B8: pieceChanges{
+				piece.New(piece.Black, piece.Knight): false,
+				piece.New(piece.Black, piece.Bishop): true,
+			}},
+		},
+		{"White-Bishop-C1", square.C1, piece.New(piece.White, piece.Bishop),
+			squareChanges{},
+		},
+		{"Black-Bishop-C8", square.C8, piece.New(piece.Black, piece.Bishop),
+			squareChanges{},
+		},
+		{"White-Bishop-D1", square.D1, piece.New(piece.White, piece.Bishop),
+			squareChanges{square.D1: pieceChanges{
+				piece.New(piece.White, piece.Queen):  false,
+				piece.New(piece.White, piece.Bishop): true,
+			}},
+		},
+		{"Black-Bishop-D8", square.D8, piece.New(piece.Black, piece.Bishop),
+			squareChanges{square.D8: pieceChanges{
+				piece.New(piece.Black, piece.Queen):  false,
+				piece.New(piece.Black, piece.Bishop): true,
+			}},
+		},
+		{"White-Bishop-E1", square.E1, piece.New(piece.White, piece.Bishop),
+			squareChanges{square.E1: pieceChanges{
+				piece.New(piece.White, piece.King):   false,
+				piece.New(piece.White, piece.Bishop): true,
+			}},
+		},
+		{"Black-Bishop-E8", square.E8, piece.New(piece.Black, piece.Bishop),
+			squareChanges{square.E8: pieceChanges{
+				piece.New(piece.Black, piece.King):   false,
+				piece.New(piece.Black, piece.Bishop): true,
+			}},
+		},
+		{"White-Bishop-F6", square.F6, piece.New(piece.White, piece.Bishop),
+			squareChanges{square.F6: pieceChanges{piece.New(piece.White, piece.Bishop): true}},
+		},
+		{"Black-Bishop-F3", square.F3, piece.New(piece.Black, piece.Bishop),
+			squareChanges{square.F3: pieceChanges{piece.New(piece.Black, piece.Bishop): true}},
+		},
+		{"White-Bishop-F7", square.F7, piece.New(piece.White, piece.Bishop),
+			squareChanges{square.F7: pieceChanges{
+				piece.New(piece.Black, piece.Pawn):   false,
+				piece.New(piece.White, piece.Bishop): true,
+			}},
+		},
+		{"Black-Bishop-F2", square.F2, piece.New(piece.Black, piece.Bishop),
+			squareChanges{square.F2: pieceChanges{
+				piece.New(piece.White, piece.Pawn):   false,
+				piece.New(piece.Black, piece.Bishop): true,
+			}},
+		},
+		{"White-Bishop-H8", square.H8, piece.New(piece.White, piece.Bishop),
+			squareChanges{square.H8: pieceChanges{
+				piece.New(piece.Black, piece.Rook):   false,
+				piece.New(piece.White, piece.Bishop): true,
+			}},
+		},
+		{"Black-Bishop-H1", square.H1, piece.New(piece.Black, piece.Bishop),
+			squareChanges{square.H1: pieceChanges{
+				piece.New(piece.White, piece.Rook):   false,
+				piece.New(piece.Black, piece.Bishop): true,
+			}},
+		},
+		{"White-Bishop-G8", square.G8, piece.New(piece.White, piece.Bishop),
+			squareChanges{square.G8: pieceChanges{
+				piece.New(piece.Black, piece.Knight): false,
+				piece.New(piece.White, piece.Bishop): true,
+			}},
+		},
+		{"Black-Bishop-G1", square.G1, piece.New(piece.Black, piece.Bishop),
+			squareChanges{square.G1: pieceChanges{
+				piece.New(piece.White, piece.Knight): false,
+				piece.New(piece.Black, piece.Bishop): true,
+			}},
+		},
+		{"White-Bishop-F8", square.F8, piece.New(piece.White, piece.Bishop),
+			squareChanges{square.F8: pieceChanges{
+				piece.New(piece.Black, piece.Bishop): false,
+				piece.New(piece.White, piece.Bishop): true,
+			}},
+		},
+		{"Black-Bishop-F1", square.F1, piece.New(piece.Black, piece.Bishop),
+			squareChanges{square.F1: pieceChanges{
+				piece.New(piece.White, piece.Bishop): false,
+				piece.New(piece.Black, piece.Bishop): true,
+			}},
+		},
+		{"White-Bishop-E8", square.E8, piece.New(piece.White, piece.Bishop),
+			squareChanges{square.E8: pieceChanges{
+				piece.New(piece.Black, piece.King):   false,
+				piece.New(piece.White, piece.Bishop): true,
+			}},
+		},
+		{"Black-Bishop-E1", square.E1, piece.New(piece.Black, piece.Bishop),
+			squareChanges{square.E1: pieceChanges{
+				piece.New(piece.White, piece.King):   false,
+				piece.New(piece.Black, piece.Bishop): true,
+			}},
+		},
+		{"White-Bishop-D8", square.D8, piece.New(piece.White, piece.Bishop),
+			squareChanges{square.D8: pieceChanges{
+				piece.New(piece.Black, piece.Queen):  false,
+				piece.New(piece.White, piece.Bishop): true,
+			}},
+		},
+		{"Black-Bishop-D1", square.D1, piece.New(piece.Black, piece.Bishop),
+			squareChanges{square.D1: pieceChanges{
+				piece.New(piece.White, piece.Queen):  false,
+				piece.New(piece.Black, piece.Bishop): true,
+			}},
+		},
+
+		// Queens.
+		{"White-Queen-D3", square.D3, piece.New(piece.White, piece.Queen),
+			squareChanges{square.D3: pieceChanges{piece.New(piece.White, piece.Queen): true}},
+		},
+		{"Black-Queen-D6", square.D6, piece.New(piece.Black, piece.Queen),
+			squareChanges{square.D6: pieceChanges{piece.New(piece.Black, piece.Queen): true}},
+		},
+		{"White-Queen-D2", square.D2, piece.New(piece.White, piece.Queen),
+			squareChanges{square.D2: pieceChanges{
+				piece.New(piece.White, piece.Pawn):  false,
+				piece.New(piece.White, piece.Queen): true,
+			}},
+		},
+		{"Black-Queen-D7", square.D7, piece.New(piece.Black, piece.Queen),
+			squareChanges{square.D7: pieceChanges{
+				piece.New(piece.Black, piece.Pawn):  false,
+				piece.New(piece.Black, piece.Queen): true,
+			}},
+		},
+		{"White-Queen-A1", square.A1, piece.New(piece.White, piece.Queen),
+			squareChanges{square.A1: pieceChanges{
+				piece.New(piece.White, piece.Rook):  false,
+				piece.New(piece.White, piece.Queen): true,
+			}},
+		},
+		{"Black-Queen-A8", square.A8, piece.New(piece.Black, piece.Queen),
+			squareChanges{square.A8: pieceChanges{
+				piece.New(piece.Black, piece.Rook):  false,
+				piece.New(piece.Black, piece.Queen): true,
+			}},
+		},
+		{"White-Queen-B1", square.B1, piece.New(piece.White, piece.Queen),
+			squareChanges{square.B1: pieceChanges{
+				piece.New(piece.White, piece.Knight): false,
+				piece.New(piece.White, piece.Queen):  true,
+			}},
+		},
+		{"Black-Queen-B8", square.B8, piece.New(piece.Black, piece.Queen),
+			squareChanges{square.B8: pieceChanges{
+				piece.New(piece.Black, piece.Knight): false,
+				piece.New(piece.Black, piece.Queen):  true,
+			}},
+		},
+		{"White-Queen-C1", square.C1, piece.New(piece.White, piece.Queen),
+			squareChanges{square.C1: pieceChanges{
+				piece.New(piece.White, piece.Bishop): false,
+				piece.New(piece.White, piece.Queen):  true,
+			}},
+		},
+		{"Black-Queen-C8", square.C8, piece.New(piece.Black, piece.Queen),
+			squareChanges{square.C8: pieceChanges{
+				piece.New(piece.Black, piece.Bishop): false,
+				piece.New(piece.Black, piece.Queen):  true,
+			}},
+		},
+		{"White-Queen-D1", square.D1, piece.New(piece.White, piece.Queen),
+			squareChanges{},
+		},
+		{"Black-Queen-D8", square.D8, piece.New(piece.Black, piece.Queen),
+			squareChanges{},
+		},
+		{"White-Queen-E1", square.E1, piece.New(piece.White, piece.Queen),
+			squareChanges{square.E1: pieceChanges{
+				piece.New(piece.White, piece.King):  false,
+				piece.New(piece.White, piece.Queen): true,
+			}},
+		},
+		{"Black-Queen-E8", square.E8, piece.New(piece.Black, piece.Queen),
+			squareChanges{square.E8: pieceChanges{
+				piece.New(piece.Black, piece.King):  false,
+				piece.New(piece.Black, piece.Queen): true,
+			}},
+		},
+		{"White-Queen-D6", square.D6, piece.New(piece.White, piece.Queen),
+			squareChanges{square.D6: pieceChanges{piece.New(piece.White, piece.Queen): true}},
+		},
+		{"Black-Queen-D3", square.D3, piece.New(piece.Black, piece.Queen),
+			squareChanges{square.D3: pieceChanges{piece.New(piece.Black, piece.Queen): true}},
+		},
+		{"White-Queen-D7", square.D7, piece.New(piece.White, piece.Queen),
+			squareChanges{square.D7: pieceChanges{
+				piece.New(piece.Black, piece.Pawn):  false,
+				piece.New(piece.White, piece.Queen): true,
+			}},
+		},
+		{"Black-Queen-D2", square.D2, piece.New(piece.Black, piece.Queen),
+			squareChanges{square.D2: pieceChanges{
+				piece.New(piece.White, piece.Pawn):  false,
+				piece.New(piece.Black, piece.Queen): true,
+			}},
+		},
+		{"White-Queen-H8", square.H8, piece.New(piece.White, piece.Queen),
+			squareChanges{square.H8: pieceChanges{
+				piece.New(piece.Black, piece.Rook):  false,
+				piece.New(piece.White, piece.Queen): true,
+			}},
+		},
+		{"Black-Queen-H1", square.H1, piece.New(piece.Black, piece.Queen),
+			squareChanges{square.H1: pieceChanges{
+				piece.New(piece.White, piece.Rook):  false,
+				piece.New(piece.Black, piece.Queen): true,
+			}},
+		},
+		{"White-Queen-G8", square.G8, piece.New(piece.White, piece.Queen),
+			squareChanges{square.G8: pieceChanges{
+				piece.New(piece.Black, piece.Knight): false,
+				piece.New(piece.White, piece.Queen):  true,
+			}},
+		},
+		{"Black-Queen-G1", square.G1, piece.New(piece.Black, piece.Queen),
+			squareChanges{square.G1: pieceChanges{
+				piece.New(piece.White, piece.Knight): false,
+				piece.New(piece.Black, piece.Queen):  true,
+			}},
+		},
+		{"White-Queen-F8", square.F8, piece.New(piece.White, piece.Queen),
+			squareChanges{square.F8: pieceChanges{
+				piece.New(piece.Black, piece.Bishop): false,
+				piece.New(piece.White, piece.Queen):  true,
+			}},
+		},
+		{"Black-Queen-F1", square.F1, piece.New(piece.Black, piece.Queen),
+			squareChanges{square.F1: pieceChanges{
+				piece.New(piece.White, piece.Bishop): false,
+				piece.New(piece.Black, piece.Queen):  true,
+			}},
+		},
+		{"White-Queen-E8", square.E8, piece.New(piece.White, piece.Queen),
+			squareChanges{square.E8: pieceChanges{
+				piece.New(piece.Black, piece.King):  false,
+				piece.New(piece.White, piece.Queen): true,
+			}},
+		},
+		{"Black-Queen-E1", square.E1, piece.New(piece.Black, piece.Queen),
+			squareChanges{square.E1: pieceChanges{
+				piece.New(piece.White, piece.King):  false,
+				piece.New(piece.Black, piece.Queen): true,
+			}},
+		},
+		{"White-Queen-D8", square.D8, piece.New(piece.White, piece.Queen),
+			squareChanges{square.D8: pieceChanges{
+				piece.New(piece.Black, piece.Queen): false,
+				piece.New(piece.White, piece.Queen): true,
+			}},
+		},
+		{"Black-Queen-D1", square.D1, piece.New(piece.Black, piece.Queen),
+			squareChanges{square.D1: pieceChanges{
+				piece.New(piece.White, piece.Queen): false,
+				piece.New(piece.Black, piece.Queen): true,
+			}},
+		},
+
+		// Kings.
+		{"White-King-E3", square.E3, piece.New(piece.White, piece.King),
+			squareChanges{square.E3: pieceChanges{piece.New(piece.White, piece.King): true}},
+		},
+		{"Black-King-E6", square.E6, piece.New(piece.Black, piece.King),
+			squareChanges{square.E6: pieceChanges{piece.New(piece.Black, piece.King): true}},
+		},
+		{"White-King-E2", square.E2, piece.New(piece.White, piece.King),
+			squareChanges{square.E2: pieceChanges{
+				piece.New(piece.White, piece.Pawn): false,
+				piece.New(piece.White, piece.King): true,
+			}},
+		},
+		{"Black-King-E7", square.E7, piece.New(piece.Black, piece.King),
+			squareChanges{square.E7: pieceChanges{
+				piece.New(piece.Black, piece.Pawn): false,
+				piece.New(piece.Black, piece.King): true,
+			}},
+		},
+		{"White-King-A1", square.A1, piece.New(piece.White, piece.King),
+			squareChanges{square.A1: pieceChanges{
+				piece.New(piece.White, piece.Rook): false,
+				piece.New(piece.White, piece.King): true,
+			}},
+		},
+		{"Black-King-A8", square.A8, piece.New(piece.Black, piece.King),
+			squareChanges{square.A8: pieceChanges{
+				piece.New(piece.Black, piece.Rook): false,
+				piece.New(piece.Black, piece.King): true,
+			}},
+		},
+		{"White-King-B1", square.B1, piece.New(piece.White, piece.King),
+			squareChanges{square.B1: pieceChanges{
+				piece.New(piece.White, piece.Knight): false,
+				piece.New(piece.White, piece.King):   true,
+			}},
+		},
+		{"Black-King-B8", square.B8, piece.New(piece.Black, piece.King),
+			squareChanges{square.B8: pieceChanges{
+				piece.New(piece.Black, piece.Knight): false,
+				piece.New(piece.Black, piece.King):   true,
+			}},
+		},
+		{"White-King-C1", square.C1, piece.New(piece.White, piece.King),
+			squareChanges{square.C1: pieceChanges{
+				piece.New(piece.White, piece.Bishop): false,
+				piece.New(piece.White, piece.King):   true,
+			}},
+		},
+		{"Black-King-C8", square.C8, piece.New(piece.Black, piece.King),
+			squareChanges{square.C8: pieceChanges{
+				piece.New(piece.Black, piece.Bishop): false,
+				piece.New(piece.Black, piece.King):   true,
+			}},
+		},
+		{"White-King-D1", square.D1, piece.New(piece.White, piece.King),
+			squareChanges{square.D1: pieceChanges{
+				piece.New(piece.White, piece.Queen): false,
+				piece.New(piece.White, piece.King):  true,
+			}},
+		},
+		{"Black-King-D8", square.D8, piece.New(piece.Black, piece.King),
+			squareChanges{square.D8: pieceChanges{
+				piece.New(piece.Black, piece.Queen): false,
+				piece.New(piece.Black, piece.King):  true,
+			}},
+		},
+		{"White-King-E1", square.E1, piece.New(piece.White, piece.King),
+			squareChanges{},
+		},
+		{"Black-King-E8", square.E8, piece.New(piece.Black, piece.King),
+			squareChanges{},
+		},
+		{"White-King-E6", square.E6, piece.New(piece.White, piece.King),
+			squareChanges{square.E6: pieceChanges{piece.New(piece.White, piece.King): true}},
+		},
+		{"Black-King-E3", square.E3, piece.New(piece.Black, piece.King),
+			squareChanges{square.E3: pieceChanges{piece.New(piece.Black, piece.King): true}},
+		},
+		{"White-King-E7", square.E7, piece.New(piece.White, piece.King),
+			squareChanges{square.E7: pieceChanges{
+				piece.New(piece.Black, piece.Pawn): false,
+				piece.New(piece.White, piece.King): true,
+			}},
+		},
+		{"Black-King-E2", square.E2, piece.New(piece.Black, piece.King),
+			squareChanges{square.E2: pieceChanges{
+				piece.New(piece.White, piece.Pawn): false,
+				piece.New(piece.Black, piece.King): true,
+			}},
+		},
+		{"White-King-H8", square.H8, piece.New(piece.White, piece.King),
+			squareChanges{square.H8: pieceChanges{
+				piece.New(piece.Black, piece.Rook): false,
+				piece.New(piece.White, piece.King): true,
+			}},
+		},
+		{"Black-King-H1", square.H1, piece.New(piece.Black, piece.King),
+			squareChanges{square.H1: pieceChanges{
+				piece.New(piece.White, piece.Rook): false,
+				piece.New(piece.Black, piece.King): true,
+			}},
+		},
+		{"White-King-G8", square.G8, piece.New(piece.White, piece.King),
+			squareChanges{square.G8: pieceChanges{
+				piece.New(piece.Black, piece.Knight): false,
+				piece.New(piece.White, piece.King):   true,
+			}},
+		},
+		{"Black-King-G1", square.G1, piece.New(piece.Black, piece.King),
+			squareChanges{square.G1: pieceChanges{
+				piece.New(piece.White, piece.Knight): false,
+				piece.New(piece.Black, piece.King):   true,
+			}},
+		},
+		{"White-King-F8", square.F8, piece.New(piece.White, piece.King),
+			squareChanges{square.F8: pieceChanges{
+				piece.New(piece.Black, piece.Bishop): false,
+				piece.New(piece.White, piece.King):   true,
+			}},
+		},
+		{"Black-King-F1", square.F1, piece.New(piece.Black, piece.King),
+			squareChanges{square.F1: pieceChanges{
+				piece.New(piece.White, piece.Bishop): false,
+				piece.New(piece.Black, piece.King):   true,
+			}},
+		},
+		{"White-King-E8", square.E8, piece.New(piece.White, piece.King),
+			squareChanges{square.E8: pieceChanges{
+				piece.New(piece.Black, piece.King): false,
+				piece.New(piece.White, piece.King): true,
+			}},
+		},
+		{"Black-King-E1", square.E1, piece.New(piece.Black, piece.King),
+			squareChanges{square.E1: pieceChanges{
+				piece.New(piece.White, piece.King): false,
+				piece.New(piece.Black, piece.King): true,
+			}},
+		},
+		{"White-King-D8", square.D8, piece.New(piece.White, piece.King),
+			squareChanges{square.D8: pieceChanges{
+				piece.New(piece.Black, piece.Queen): false,
+				piece.New(piece.White, piece.King):  true,
+			}},
+		},
+		{"Black-King-D1", square.D1, piece.New(piece.Black, piece.King),
+			squareChanges{square.D1: pieceChanges{
+				piece.New(piece.White, piece.Queen): false,
+				piece.New(piece.Black, piece.King):  true,
+			}},
+		},
+
+		// Non-standard squares and pieces.
+		{"White-Pawn-NoSquare", square.NoSquare, piece.New(piece.White, piece.Pawn),
+			squareChanges{},
+		},
+		{"Black-Pawn-NoSquare", square.NoSquare, piece.New(piece.Black, piece.Pawn),
+			squareChanges{},
+		},
+		{"White-Pawn-Square(100)", square.Square(100), piece.New(piece.White, piece.Pawn),
+			squareChanges{},
+		},
+		{"Black-Pawn-Square(100)", square.Square(100), piece.New(piece.Black, piece.Pawn),
+			squareChanges{},
+		},
+		{"White-None-A1", square.A1, piece.New(piece.White, piece.None),
+			squareChanges{square.A1: pieceChanges{piece.New(piece.White, piece.Rook): false}},
+		},
+		{"Black-None-A8", square.A8, piece.New(piece.Black, piece.None),
+			squareChanges{square.A8: pieceChanges{piece.New(piece.Black, piece.Rook): false}},
+		},
+		{"White-Type(10)-A1", square.A1, piece.New(piece.White, piece.Type(10)),
+			squareChanges{square.A1: pieceChanges{piece.New(piece.White, piece.Rook): false}},
+		},
+		{"Black-Type(10)-A8", square.A8, piece.New(piece.Black, piece.Type(10)),
+			squareChanges{square.A8: pieceChanges{piece.New(piece.Black, piece.Rook): false}},
+		},
+		{"NoColor-Pawn-A1", square.A1, piece.New(piece.NoColor, piece.Pawn),
+			squareChanges{square.A1: pieceChanges{piece.New(piece.White, piece.Rook): false}},
+		},
+		{"NoColor-Pawn-A8", square.A8, piece.New(piece.NoColor, piece.Pawn),
+			squareChanges{square.A8: pieceChanges{piece.New(piece.Black, piece.Rook): false}},
+		},
+		{"Color(5)-Pawn-A1", square.A1, piece.New(piece.Color(5), piece.Pawn),
+			squareChanges{square.A1: pieceChanges{piece.New(piece.White, piece.Rook): false}},
+		},
+		{"Color(5)-Pawn-A8", square.A8, piece.New(piece.Color(5), piece.Pawn),
+			squareChanges{square.A8: pieceChanges{piece.New(piece.Black, piece.Rook): false}},
+		},
+		{"NoColor-None-A1", square.A1, piece.New(piece.NoColor, piece.None),
+			squareChanges{square.A1: pieceChanges{piece.New(piece.White, piece.Rook): false}},
+		},
+		{"NoColor-None-A8", square.A8, piece.New(piece.NoColor, piece.None),
+			squareChanges{square.A8: pieceChanges{piece.New(piece.Black, piece.Rook): false}},
+		},
+		{"NoColor-Type(10)-A1", square.A1, piece.New(piece.NoColor, piece.Type(10)),
+			squareChanges{square.A1: pieceChanges{piece.New(piece.White, piece.Rook): false}},
+		},
+		{"NoColor-Type(10)-A8", square.A8, piece.New(piece.NoColor, piece.Type(10)),
+			squareChanges{square.A8: pieceChanges{piece.New(piece.Black, piece.Rook): false}},
+		},
+		{"Color(5)-None-A1", square.A1, piece.New(piece.Color(5), piece.None),
+			squareChanges{square.A1: pieceChanges{piece.New(piece.White, piece.Rook): false}},
+		},
+		{"Color(5)-None-A8", square.A8, piece.New(piece.Color(5), piece.None),
+			squareChanges{square.A8: pieceChanges{piece.New(piece.Black, piece.Rook): false}},
+		},
+		{"Color(5)-Type(10)-A1", square.A1, piece.New(piece.Color(5), piece.Type(10)),
+			squareChanges{square.A1: pieceChanges{piece.New(piece.White, piece.Rook): false}},
+		},
+		{"Color(5)-Type(10)-A8", square.A8, piece.New(piece.Color(5), piece.Type(10)),
+			squareChanges{square.A8: pieceChanges{piece.New(piece.Black, piece.Rook): false}},
+		},
+		{"NoColor-None-NoSquare", square.NoSquare, piece.New(piece.NoColor, piece.None),
+			squareChanges{},
+		},
+		{"NoColor-None-NoSquare", square.NoSquare, piece.New(piece.NoColor, piece.None),
+			squareChanges{},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			p := New()
+			defer func() {
+				if err := recover(); err != nil {
+					t.Errorf("For initial board, *Position.Put(%v, %v) should not panic, but panicked with: %v", tc.pc, tc.sq, err)
+				}
+			}()
+			p.Put(tc.pc, tc.sq)
+			ch := changedSquares(New(), p)
+			if !reflect.DeepEqual(ch, tc.wantChanged) {
+				t.Errorf("For initial board and *Position.Put(%v, %v), board changes are %v, want %v", tc.pc, tc.sq, ch, tc.wantChanged)
+			}
+		})
+	}
+}
+
+func TestPositionQuickPut(t *testing.T) {
+	testCases := []struct {
+		name        string
+		sq          square.Square
+		pc          piece.Piece
+		wantChanged squareChanges
+	}{
+		// Pawns.
+		{"White-Pawn-A3", square.A3, piece.New(piece.White, piece.Pawn),
+			squareChanges{square.A3: pieceChanges{piece.New(piece.White, piece.Pawn): true}},
+		},
+		{"Black-Pawn-A6", square.A6, piece.New(piece.Black, piece.Pawn),
+			squareChanges{square.A6: pieceChanges{piece.New(piece.Black, piece.Pawn): true}},
+		},
+		{"White-Pawn-A2", square.A2, piece.New(piece.White, piece.Pawn),
+			squareChanges{},
+		},
+		{"Black-Pawn-A7", square.A7, piece.New(piece.Black, piece.Pawn),
+			squareChanges{},
+		},
+		{"White-Pawn-A1", square.A1, piece.New(piece.White, piece.Pawn),
+			squareChanges{square.A1: pieceChanges{piece.New(piece.White, piece.Pawn): true}},
+		},
+		{"Black-Pawn-A8", square.A8, piece.New(piece.Black, piece.Pawn),
+			squareChanges{square.A8: pieceChanges{piece.New(piece.Black, piece.Pawn): true}},
+		},
+		{"White-Pawn-B1", square.B1, piece.New(piece.White, piece.Pawn),
+			squareChanges{square.B1: pieceChanges{piece.New(piece.White, piece.Pawn): true}},
+		},
+		{"Black-Pawn-B8", square.B8, piece.New(piece.Black, piece.Pawn),
+			squareChanges{square.B8: pieceChanges{piece.New(piece.Black, piece.Pawn): true}},
+		},
+		{"White-Pawn-C1", square.C1, piece.New(piece.White, piece.Pawn),
+			squareChanges{square.C1: pieceChanges{piece.New(piece.White, piece.Pawn): true}},
+		},
+		{"Black-Pawn-C8", square.C8, piece.New(piece.Black, piece.Pawn),
+			squareChanges{square.C8: pieceChanges{piece.New(piece.Black, piece.Pawn): true}},
+		},
+		{"White-Pawn-D1", square.D1, piece.New(piece.White, piece.Pawn),
+			squareChanges{square.D1: pieceChanges{piece.New(piece.White, piece.Pawn): true}},
+		},
+		{"Black-Pawn-D8", square.D8, piece.New(piece.Black, piece.Pawn),
+			squareChanges{square.D8: pieceChanges{piece.New(piece.Black, piece.Pawn): true}},
+		},
+		{"White-Pawn-E1", square.E1, piece.New(piece.White, piece.Pawn),
+			squareChanges{square.E1: pieceChanges{piece.New(piece.White, piece.Pawn): true}},
+		},
+		{"Black-Pawn-E8", square.E8, piece.New(piece.Black, piece.Pawn),
+			squareChanges{square.E8: pieceChanges{piece.New(piece.Black, piece.Pawn): true}},
+		},
+		{"White-Pawn-H6", square.H6, piece.New(piece.White, piece.Pawn),
+			squareChanges{square.H6: pieceChanges{piece.New(piece.White, piece.Pawn): true}},
+		},
+		{"Black-Pawn-H3", square.H3, piece.New(piece.Black, piece.Pawn),
+			squareChanges{square.H3: pieceChanges{piece.New(piece.Black, piece.Pawn): true}},
+		},
+		{"White-Pawn-H7", square.H7, piece.New(piece.White, piece.Pawn),
+			squareChanges{square.H7: pieceChanges{piece.New(piece.White, piece.Pawn): true}},
+		},
+		{"Black-Pawn-H2", square.H2, piece.New(piece.Black, piece.Pawn),
+			squareChanges{square.H2: pieceChanges{piece.New(piece.Black, piece.Pawn): true}},
+		},
+		{"White-Pawn-H8", square.H8, piece.New(piece.White, piece.Pawn),
+			squareChanges{square.H8: pieceChanges{piece.New(piece.White, piece.Pawn): true}},
+		},
+		{"Black-Pawn-H1", square.H1, piece.New(piece.Black, piece.Pawn),
+			squareChanges{square.H1: pieceChanges{piece.New(piece.Black, piece.Pawn): true}},
+		},
+		{"White-Pawn-G8", square.G8, piece.New(piece.White, piece.Pawn),
+			squareChanges{square.G8: pieceChanges{piece.New(piece.White, piece.Pawn): true}},
+		},
+		{"Black-Pawn-G1", square.G1, piece.New(piece.Black, piece.Pawn),
+			squareChanges{square.G1: pieceChanges{piece.New(piece.Black, piece.Pawn): true}},
+		},
+		{"White-Pawn-F8", square.F8, piece.New(piece.White, piece.Pawn),
+			squareChanges{square.F8: pieceChanges{piece.New(piece.White, piece.Pawn): true}},
+		},
+		{"Black-Pawn-F1", square.F1, piece.New(piece.Black, piece.Pawn),
+			squareChanges{square.F1: pieceChanges{piece.New(piece.Black, piece.Pawn): true}},
+		},
+		{"White-Pawn-E8", square.E8, piece.New(piece.White, piece.Pawn),
+			squareChanges{square.E8: pieceChanges{piece.New(piece.White, piece.Pawn): true}},
+		},
+		{"Black-Pawn-E1", square.E1, piece.New(piece.Black, piece.Pawn),
+			squareChanges{square.E1: pieceChanges{piece.New(piece.Black, piece.Pawn): true}},
+		},
+		{"White-Pawn-D8", square.D8, piece.New(piece.White, piece.Pawn),
+			squareChanges{square.D8: pieceChanges{piece.New(piece.White, piece.Pawn): true}},
+		},
+		{"Black-Pawn-D1", square.D1, piece.New(piece.Black, piece.Pawn),
+			squareChanges{square.D1: pieceChanges{piece.New(piece.Black, piece.Pawn): true}},
+		},
+
+		// Rooks.
+		{"White-Rook-A3", square.A3, piece.New(piece.White, piece.Rook),
+			squareChanges{square.A3: pieceChanges{piece.New(piece.White, piece.Rook): true}},
+		},
+		{"Black-Rook-A6", square.A6, piece.New(piece.Black, piece.Rook),
+			squareChanges{square.A6: pieceChanges{piece.New(piece.Black, piece.Rook): true}},
+		},
+		{"White-Rook-A2", square.A2, piece.New(piece.White, piece.Rook),
+			squareChanges{square.A2: pieceChanges{piece.New(piece.White, piece.Rook): true}},
+		},
+		{"Black-Rook-A7", square.A7, piece.New(piece.Black, piece.Rook),
+			squareChanges{square.A7: pieceChanges{piece.New(piece.Black, piece.Rook): true}},
+		},
+		{"White-Rook-A1", square.A1, piece.New(piece.White, piece.Rook),
+			squareChanges{},
+		},
+		{"Black-Rook-A8", square.A8, piece.New(piece.Black, piece.Rook),
+			squareChanges{},
+		},
+		{"White-Rook-B1", square.B1, piece.New(piece.White, piece.Rook),
+			squareChanges{square.B1: pieceChanges{piece.New(piece.White, piece.Rook): true}},
+		},
+		{"Black-Rook-B8", square.B8, piece.New(piece.Black, piece.Rook),
+			squareChanges{square.B8: pieceChanges{piece.New(piece.Black, piece.Rook): true}},
+		},
+		{"White-Rook-C1", square.C1, piece.New(piece.White, piece.Rook),
+			squareChanges{square.C1: pieceChanges{piece.New(piece.White, piece.Rook): true}},
+		},
+		{"Black-Rook-C8", square.C8, piece.New(piece.Black, piece.Rook),
+			squareChanges{square.C8: pieceChanges{piece.New(piece.Black, piece.Rook): true}},
+		},
+		{"White-Rook-D1", square.D1, piece.New(piece.White, piece.Rook),
+			squareChanges{square.D1: pieceChanges{piece.New(piece.White, piece.Rook): true}},
+		},
+		{"Black-Rook-D8", square.D8, piece.New(piece.Black, piece.Rook),
+			squareChanges{square.D8: pieceChanges{piece.New(piece.Black, piece.Rook): true}},
+		},
+		{"White-Rook-E1", square.E1, piece.New(piece.White, piece.Rook),
+			squareChanges{square.E1: pieceChanges{piece.New(piece.White, piece.Rook): true}},
+		},
+		{"Black-Rook-E8", square.E8, piece.New(piece.Black, piece.Rook),
+			squareChanges{square.E8: pieceChanges{piece.New(piece.Black, piece.Rook): true}},
+		},
+		{"White-Rook-H6", square.H6, piece.New(piece.White, piece.Rook),
+			squareChanges{square.H6: pieceChanges{piece.New(piece.White, piece.Rook): true}},
+		},
+		{"Black-Rook-H3", square.H3, piece.New(piece.Black, piece.Rook),
+			squareChanges{square.H3: pieceChanges{piece.New(piece.Black, piece.Rook): true}},
+		},
+		{"White-Rook-H7", square.H7, piece.New(piece.White, piece.Rook),
+			squareChanges{square.H7: pieceChanges{piece.New(piece.White, piece.Rook): true}},
+		},
+		{"Black-Rook-H2", square.H2, piece.New(piece.Black, piece.Rook),
+			squareChanges{square.H2: pieceChanges{piece.New(piece.Black, piece.Rook): true}},
+		},
+		{"White-Rook-H8", square.H8, piece.New(piece.White, piece.Rook),
+			squareChanges{square.H8: pieceChanges{piece.New(piece.White, piece.Rook): true}},
+		},
+		{"Black-Rook-H1", square.H1, piece.New(piece.Black, piece.Rook),
+			squareChanges{square.H1: pieceChanges{piece.New(piece.Black, piece.Rook): true}},
+		},
+		{"White-Rook-G8", square.G8, piece.New(piece.White, piece.Rook),
+			squareChanges{square.G8: pieceChanges{piece.New(piece.White, piece.Rook): true}},
+		},
+		{"Black-Rook-G1", square.G1, piece.New(piece.Black, piece.Rook),
+			squareChanges{square.G1: pieceChanges{piece.New(piece.Black, piece.Rook): true}},
+		},
+		{"White-Rook-F8", square.F8, piece.New(piece.White, piece.Rook),
+			squareChanges{square.F8: pieceChanges{piece.New(piece.White, piece.Rook): true}},
+		},
+		{"Black-Rook-F1", square.F1, piece.New(piece.Black, piece.Rook),
+			squareChanges{square.F1: pieceChanges{piece.New(piece.Black, piece.Rook): true}},
+		},
+		{"White-Rook-E8", square.E8, piece.New(piece.White, piece.Rook),
+			squareChanges{square.E8: pieceChanges{piece.New(piece.White, piece.Rook): true}},
+		},
+		{"Black-Rook-E1", square.E1, piece.New(piece.Black, piece.Rook),
+			squareChanges{square.E1: pieceChanges{piece.New(piece.Black, piece.Rook): true}},
+		},
+		{"White-Rook-D8", square.D8, piece.New(piece.White, piece.Rook),
+			squareChanges{square.D8: pieceChanges{piece.New(piece.White, piece.Rook): true}},
+		},
+		{"Black-Rook-D1", square.D1, piece.New(piece.Black, piece.Rook),
+			squareChanges{square.D1: pieceChanges{piece.New(piece.Black, piece.Rook): true}},
+		},
+
+		// Knights.
+		{"White-Knight-B3", square.B3, piece.New(piece.White, piece.Knight),
+			squareChanges{square.B3: pieceChanges{piece.New(piece.White, piece.Knight): true}},
+		},
+		{"Black-Knight-B6", square.B6, piece.New(piece.Black, piece.Knight),
+			squareChanges{square.B6: pieceChanges{piece.New(piece.Black, piece.Knight): true}},
+		},
+		{"White-Knight-B2", square.B2, piece.New(piece.White, piece.Knight),
+			squareChanges{square.B2: pieceChanges{piece.New(piece.White, piece.Knight): true}},
+		},
+		{"Black-Knight-B7", square.B7, piece.New(piece.Black, piece.Knight),
+			squareChanges{square.B7: pieceChanges{piece.New(piece.Black, piece.Knight): true}},
+		},
+		{"White-Knight-A1", square.A1, piece.New(piece.White, piece.Knight),
+			squareChanges{square.A1: pieceChanges{piece.New(piece.White, piece.Knight): true}},
+		},
+		{"Black-Knight-A8", square.A8, piece.New(piece.Black, piece.Knight),
+			squareChanges{square.A8: pieceChanges{piece.New(piece.Black, piece.Knight): true}},
+		},
+		{"White-Knight-B1", square.B1, piece.New(piece.White, piece.Knight),
+			squareChanges{},
+		},
+		{"Black-Knight-B8", square.B8, piece.New(piece.Black, piece.Knight),
+			squareChanges{},
+		},
+		{"White-Knight-C1", square.C1, piece.New(piece.White, piece.Knight),
+			squareChanges{square.C1: pieceChanges{piece.New(piece.White, piece.Knight): true}},
+		},
+		{"Black-Knight-C8", square.C8, piece.New(piece.Black, piece.Knight),
+			squareChanges{square.C8: pieceChanges{piece.New(piece.Black, piece.Knight): true}},
+		},
+		{"White-Knight-D1", square.D1, piece.New(piece.White, piece.Knight),
+			squareChanges{square.D1: pieceChanges{piece.New(piece.White, piece.Knight): true}},
+		},
+		{"Black-Knight-D8", square.D8, piece.New(piece.Black, piece.Knight),
+			squareChanges{square.D8: pieceChanges{piece.New(piece.Black, piece.Knight): true}},
+		},
+		{"White-Knight-E1", square.E1, piece.New(piece.White, piece.Knight),
+			squareChanges{square.E1: pieceChanges{piece.New(piece.White, piece.Knight): true}},
+		},
+		{"Black-Knight-E8", square.E8, piece.New(piece.Black, piece.Knight),
+			squareChanges{square.E8: pieceChanges{piece.New(piece.Black, piece.Knight): true}},
+		},
+		{"White-Knight-G6", square.G6, piece.New(piece.White, piece.Knight),
+			squareChanges{square.G6: pieceChanges{piece.New(piece.White, piece.Knight): true}},
+		},
+		{"Black-Knight-G3", square.G3, piece.New(piece.Black, piece.Knight),
+			squareChanges{square.G3: pieceChanges{piece.New(piece.Black, piece.Knight): true}},
+		},
+		{"White-Knight-G7", square.G7, piece.New(piece.White, piece.Knight),
+			squareChanges{square.G7: pieceChanges{piece.New(piece.White, piece.Knight): true}},
+		},
+		{"Black-Knight-G2", square.G2, piece.New(piece.Black, piece.Knight),
+			squareChanges{square.G2: pieceChanges{piece.New(piece.Black, piece.Knight): true}},
+		},
+		{"White-Knight-H8", square.H8, piece.New(piece.White, piece.Knight),
+			squareChanges{square.H8: pieceChanges{piece.New(piece.White, piece.Knight): true}},
+		},
+		{"Black-Knight-H1", square.H1, piece.New(piece.Black, piece.Knight),
+			squareChanges{square.H1: pieceChanges{piece.New(piece.Black, piece.Knight): true}},
+		},
+		{"White-Knight-G8", square.G8, piece.New(piece.White, piece.Knight),
+			squareChanges{square.G8: pieceChanges{piece.New(piece.White, piece.Knight): true}},
+		},
+		{"Black-Knight-G1", square.G1, piece.New(piece.Black, piece.Knight),
+			squareChanges{square.G1: pieceChanges{piece.New(piece.Black, piece.Knight): true}},
+		},
+		{"White-Knight-F8", square.F8, piece.New(piece.White, piece.Knight),
+			squareChanges{square.F8: pieceChanges{piece.New(piece.White, piece.Knight): true}},
+		},
+		{"Black-Knight-F1", square.F1, piece.New(piece.Black, piece.Knight),
+			squareChanges{square.F1: pieceChanges{piece.New(piece.Black, piece.Knight): true}},
+		},
+		{"White-Knight-E8", square.E8, piece.New(piece.White, piece.Knight),
+			squareChanges{square.E8: pieceChanges{piece.New(piece.White, piece.Knight): true}},
+		},
+		{"Black-Knight-E1", square.E1, piece.New(piece.Black, piece.Knight),
+			squareChanges{square.E1: pieceChanges{piece.New(piece.Black, piece.Knight): true}},
+		},
+		{"White-Knight-D8", square.D8, piece.New(piece.White, piece.Knight),
+			squareChanges{square.D8: pieceChanges{piece.New(piece.White, piece.Knight): true}},
+		},
+		{"Black-Knight-D1", square.D1, piece.New(piece.Black, piece.Knight),
+			squareChanges{square.D1: pieceChanges{piece.New(piece.Black, piece.Knight): true}},
+		},
+
+		// Bishops.
+		{"White-Bishop-C3", square.C3, piece.New(piece.White, piece.Bishop),
+			squareChanges{square.C3: pieceChanges{piece.New(piece.White, piece.Bishop): true}},
+		},
+		{"Black-Bishop-C6", square.C6, piece.New(piece.Black, piece.Bishop),
+			squareChanges{square.C6: pieceChanges{piece.New(piece.Black, piece.Bishop): true}},
+		},
+		{"White-Bishop-C2", square.C2, piece.New(piece.White, piece.Bishop),
+			squareChanges{square.C2: pieceChanges{piece.New(piece.White, piece.Bishop): true}},
+		},
+		{"Black-Bishop-C7", square.C7, piece.New(piece.Black, piece.Bishop),
+			squareChanges{square.C7: pieceChanges{piece.New(piece.Black, piece.Bishop): true}},
+		},
+		{"White-Bishop-A1", square.A1, piece.New(piece.White, piece.Bishop),
+			squareChanges{square.A1: pieceChanges{piece.New(piece.White, piece.Bishop): true}},
+		},
+		{"Black-Bishop-A8", square.A8, piece.New(piece.Black, piece.Bishop),
+			squareChanges{square.A8: pieceChanges{piece.New(piece.Black, piece.Bishop): true}},
+		},
+		{"White-Bishop-B1", square.B1, piece.New(piece.White, piece.Bishop),
+			squareChanges{square.B1: pieceChanges{piece.New(piece.White, piece.Bishop): true}},
+		},
+		{"Black-Bishop-B8", square.B8, piece.New(piece.Black, piece.Bishop),
+			squareChanges{square.B8: pieceChanges{piece.New(piece.Black, piece.Bishop): true}},
+		},
+		{"White-Bishop-C1", square.C1, piece.New(piece.White, piece.Bishop),
+			squareChanges{},
+		},
+		{"Black-Bishop-C8", square.C8, piece.New(piece.Black, piece.Bishop),
+			squareChanges{},
+		},
+		{"White-Bishop-D1", square.D1, piece.New(piece.White, piece.Bishop),
+			squareChanges{square.D1: pieceChanges{piece.New(piece.White, piece.Bishop): true}},
+		},
+		{"Black-Bishop-D8", square.D8, piece.New(piece.Black, piece.Bishop),
+			squareChanges{square.D8: pieceChanges{piece.New(piece.Black, piece.Bishop): true}},
+		},
+		{"White-Bishop-E1", square.E1, piece.New(piece.White, piece.Bishop),
+			squareChanges{square.E1: pieceChanges{piece.New(piece.White, piece.Bishop): true}},
+		},
+		{"Black-Bishop-E8", square.E8, piece.New(piece.Black, piece.Bishop),
+			squareChanges{square.E8: pieceChanges{piece.New(piece.Black, piece.Bishop): true}},
+		},
+		{"White-Bishop-F6", square.F6, piece.New(piece.White, piece.Bishop),
+			squareChanges{square.F6: pieceChanges{piece.New(piece.White, piece.Bishop): true}},
+		},
+		{"Black-Bishop-F3", square.F3, piece.New(piece.Black, piece.Bishop),
+			squareChanges{square.F3: pieceChanges{piece.New(piece.Black, piece.Bishop): true}},
+		},
+		{"White-Bishop-F7", square.F7, piece.New(piece.White, piece.Bishop),
+			squareChanges{square.F7: pieceChanges{piece.New(piece.White, piece.Bishop): true}},
+		},
+		{"Black-Bishop-F2", square.F2, piece.New(piece.Black, piece.Bishop),
+			squareChanges{square.F2: pieceChanges{piece.New(piece.Black, piece.Bishop): true}},
+		},
+		{"White-Bishop-H8", square.H8, piece.New(piece.White, piece.Bishop),
+			squareChanges{square.H8: pieceChanges{piece.New(piece.White, piece.Bishop): true}},
+		},
+		{"Black-Bishop-H1", square.H1, piece.New(piece.Black, piece.Bishop),
+			squareChanges{square.H1: pieceChanges{piece.New(piece.Black, piece.Bishop): true}},
+		},
+		{"White-Bishop-G8", square.G8, piece.New(piece.White, piece.Bishop),
+			squareChanges{square.G8: pieceChanges{piece.New(piece.White, piece.Bishop): true}},
+		},
+		{"Black-Bishop-G1", square.G1, piece.New(piece.Black, piece.Bishop),
+			squareChanges{square.G1: pieceChanges{piece.New(piece.Black, piece.Bishop): true}},
+		},
+		{"White-Bishop-F8", square.F8, piece.New(piece.White, piece.Bishop),
+			squareChanges{square.F8: pieceChanges{piece.New(piece.White, piece.Bishop): true}},
+		},
+		{"Black-Bishop-F1", square.F1, piece.New(piece.Black, piece.Bishop),
+			squareChanges{square.F1: pieceChanges{piece.New(piece.Black, piece.Bishop): true}},
+		},
+		{"White-Bishop-E8", square.E8, piece.New(piece.White, piece.Bishop),
+			squareChanges{square.E8: pieceChanges{piece.New(piece.White, piece.Bishop): true}},
+		},
+		{"Black-Bishop-E1", square.E1, piece.New(piece.Black, piece.Bishop),
+			squareChanges{square.E1: pieceChanges{piece.New(piece.Black, piece.Bishop): true}},
+		},
+		{"White-Bishop-D8", square.D8, piece.New(piece.White, piece.Bishop),
+			squareChanges{square.D8: pieceChanges{piece.New(piece.White, piece.Bishop): true}},
+		},
+		{"Black-Bishop-D1", square.D1, piece.New(piece.Black, piece.Bishop),
+			squareChanges{square.D1: pieceChanges{piece.New(piece.Black, piece.Bishop): true}},
+		},
+
+		// Queens.
+		{"White-Queen-D3", square.D3, piece.New(piece.White, piece.Queen),
+			squareChanges{square.D3: pieceChanges{piece.New(piece.White, piece.Queen): true}},
+		},
+		{"Black-Queen-D6", square.D6, piece.New(piece.Black, piece.Queen),
+			squareChanges{square.D6: pieceChanges{piece.New(piece.Black, piece.Queen): true}},
+		},
+		{"White-Queen-D2", square.D2, piece.New(piece.White, piece.Queen),
+			squareChanges{square.D2: pieceChanges{piece.New(piece.White, piece.Queen): true}},
+		},
+		{"Black-Queen-D7", square.D7, piece.New(piece.Black, piece.Queen),
+			squareChanges{square.D7: pieceChanges{piece.New(piece.Black, piece.Queen): true}},
+		},
+		{"White-Queen-A1", square.A1, piece.New(piece.White, piece.Queen),
+			squareChanges{square.A1: pieceChanges{piece.New(piece.White, piece.Queen): true}},
+		},
+		{"Black-Queen-A8", square.A8, piece.New(piece.Black, piece.Queen),
+			squareChanges{square.A8: pieceChanges{piece.New(piece.Black, piece.Queen): true}},
+		},
+		{"White-Queen-B1", square.B1, piece.New(piece.White, piece.Queen),
+			squareChanges{square.B1: pieceChanges{piece.New(piece.White, piece.Queen): true}},
+		},
+		{"Black-Queen-B8", square.B8, piece.New(piece.Black, piece.Queen),
+			squareChanges{square.B8: pieceChanges{piece.New(piece.Black, piece.Queen): true}},
+		},
+		{"White-Queen-C1", square.C1, piece.New(piece.White, piece.Queen),
+			squareChanges{square.C1: pieceChanges{piece.New(piece.White, piece.Queen): true}},
+		},
+		{"Black-Queen-C8", square.C8, piece.New(piece.Black, piece.Queen),
+			squareChanges{square.C8: pieceChanges{piece.New(piece.Black, piece.Queen): true}},
+		},
+		{"White-Queen-D1", square.D1, piece.New(piece.White, piece.Queen),
+			squareChanges{},
+		},
+		{"Black-Queen-D8", square.D8, piece.New(piece.Black, piece.Queen),
+			squareChanges{},
+		},
+		{"White-Queen-E1", square.E1, piece.New(piece.White, piece.Queen),
+			squareChanges{square.E1: pieceChanges{piece.New(piece.White, piece.Queen): true}},
+		},
+		{"Black-Queen-E8", square.E8, piece.New(piece.Black, piece.Queen),
+			squareChanges{square.E8: pieceChanges{piece.New(piece.Black, piece.Queen): true}},
+		},
+		{"White-Queen-D6", square.D6, piece.New(piece.White, piece.Queen),
+			squareChanges{square.D6: pieceChanges{piece.New(piece.White, piece.Queen): true}},
+		},
+		{"Black-Queen-D3", square.D3, piece.New(piece.Black, piece.Queen),
+			squareChanges{square.D3: pieceChanges{piece.New(piece.Black, piece.Queen): true}},
+		},
+		{"White-Queen-D7", square.D7, piece.New(piece.White, piece.Queen),
+			squareChanges{square.D7: pieceChanges{piece.New(piece.White, piece.Queen): true}},
+		},
+		{"Black-Queen-D2", square.D2, piece.New(piece.Black, piece.Queen),
+			squareChanges{square.D2: pieceChanges{piece.New(piece.Black, piece.Queen): true}},
+		},
+		{"White-Queen-H8", square.H8, piece.New(piece.White, piece.Queen),
+			squareChanges{square.H8: pieceChanges{piece.New(piece.White, piece.Queen): true}},
+		},
+		{"Black-Queen-H1", square.H1, piece.New(piece.Black, piece.Queen),
+			squareChanges{square.H1: pieceChanges{piece.New(piece.Black, piece.Queen): true}},
+		},
+		{"White-Queen-G8", square.G8, piece.New(piece.White, piece.Queen),
+			squareChanges{square.G8: pieceChanges{piece.New(piece.White, piece.Queen): true}},
+		},
+		{"Black-Queen-G1", square.G1, piece.New(piece.Black, piece.Queen),
+			squareChanges{square.G1: pieceChanges{piece.New(piece.Black, piece.Queen): true}},
+		},
+		{"White-Queen-F8", square.F8, piece.New(piece.White, piece.Queen),
+			squareChanges{square.F8: pieceChanges{piece.New(piece.White, piece.Queen): true}},
+		},
+		{"Black-Queen-F1", square.F1, piece.New(piece.Black, piece.Queen),
+			squareChanges{square.F1: pieceChanges{piece.New(piece.Black, piece.Queen): true}},
+		},
+		{"White-Queen-E8", square.E8, piece.New(piece.White, piece.Queen),
+			squareChanges{square.E8: pieceChanges{piece.New(piece.White, piece.Queen): true}},
+		},
+		{"Black-Queen-E1", square.E1, piece.New(piece.Black, piece.Queen),
+			squareChanges{square.E1: pieceChanges{piece.New(piece.Black, piece.Queen): true}},
+		},
+		{"White-Queen-D8", square.D8, piece.New(piece.White, piece.Queen),
+			squareChanges{square.D8: pieceChanges{piece.New(piece.White, piece.Queen): true}},
+		},
+		{"Black-Queen-D1", square.D1, piece.New(piece.Black, piece.Queen),
+			squareChanges{square.D1: pieceChanges{piece.New(piece.Black, piece.Queen): true}},
+		},
+
+		// Kings.
+		{"White-King-E3", square.E3, piece.New(piece.White, piece.King),
+			squareChanges{square.E3: pieceChanges{piece.New(piece.White, piece.King): true}},
+		},
+		{"Black-King-E6", square.E6, piece.New(piece.Black, piece.King),
+			squareChanges{square.E6: pieceChanges{piece.New(piece.Black, piece.King): true}},
+		},
+		{"White-King-E2", square.E2, piece.New(piece.White, piece.King),
+			squareChanges{square.E2: pieceChanges{piece.New(piece.White, piece.King): true}},
+		},
+		{"Black-King-E7", square.E7, piece.New(piece.Black, piece.King),
+			squareChanges{square.E7: pieceChanges{piece.New(piece.Black, piece.King): true}},
+		},
+		{"White-King-A1", square.A1, piece.New(piece.White, piece.King),
+			squareChanges{square.A1: pieceChanges{piece.New(piece.White, piece.King): true}},
+		},
+		{"Black-King-A8", square.A8, piece.New(piece.Black, piece.King),
+			squareChanges{square.A8: pieceChanges{piece.New(piece.Black, piece.King): true}},
+		},
+		{"White-King-B1", square.B1, piece.New(piece.White, piece.King),
+			squareChanges{square.B1: pieceChanges{piece.New(piece.White, piece.King): true}},
+		},
+		{"Black-King-B8", square.B8, piece.New(piece.Black, piece.King),
+			squareChanges{square.B8: pieceChanges{piece.New(piece.Black, piece.King): true}},
+		},
+		{"White-King-C1", square.C1, piece.New(piece.White, piece.King),
+			squareChanges{square.C1: pieceChanges{piece.New(piece.White, piece.King): true}},
+		},
+		{"Black-King-C8", square.C8, piece.New(piece.Black, piece.King),
+			squareChanges{square.C8: pieceChanges{piece.New(piece.Black, piece.King): true}},
+		},
+		{"White-King-D1", square.D1, piece.New(piece.White, piece.King),
+			squareChanges{square.D1: pieceChanges{piece.New(piece.White, piece.King): true}},
+		},
+		{"Black-King-D8", square.D8, piece.New(piece.Black, piece.King),
+			squareChanges{square.D8: pieceChanges{piece.New(piece.Black, piece.King): true}},
+		},
+		{"White-King-E1", square.E1, piece.New(piece.White, piece.King),
+			squareChanges{},
+		},
+		{"Black-King-E8", square.E8, piece.New(piece.Black, piece.King),
+			squareChanges{},
+		},
+		{"White-King-E6", square.E6, piece.New(piece.White, piece.King),
+			squareChanges{square.E6: pieceChanges{piece.New(piece.White, piece.King): true}},
+		},
+		{"Black-King-E3", square.E3, piece.New(piece.Black, piece.King),
+			squareChanges{square.E3: pieceChanges{piece.New(piece.Black, piece.King): true}},
+		},
+		{"White-King-E7", square.E7, piece.New(piece.White, piece.King),
+			squareChanges{square.E7: pieceChanges{piece.New(piece.White, piece.King): true}},
+		},
+		{"Black-King-E2", square.E2, piece.New(piece.Black, piece.King),
+			squareChanges{square.E2: pieceChanges{piece.New(piece.Black, piece.King): true}},
+		},
+		{"White-King-H8", square.H8, piece.New(piece.White, piece.King),
+			squareChanges{square.H8: pieceChanges{piece.New(piece.White, piece.King): true}},
+		},
+		{"Black-King-H1", square.H1, piece.New(piece.Black, piece.King),
+			squareChanges{square.H1: pieceChanges{piece.New(piece.Black, piece.King): true}},
+		},
+		{"White-King-G8", square.G8, piece.New(piece.White, piece.King),
+			squareChanges{square.G8: pieceChanges{piece.New(piece.White, piece.King): true}},
+		},
+		{"Black-King-G1", square.G1, piece.New(piece.Black, piece.King),
+			squareChanges{square.G1: pieceChanges{piece.New(piece.Black, piece.King): true}},
+		},
+		{"White-King-F8", square.F8, piece.New(piece.White, piece.King),
+			squareChanges{square.F8: pieceChanges{piece.New(piece.White, piece.King): true}},
+		},
+		{"Black-King-F1", square.F1, piece.New(piece.Black, piece.King),
+			squareChanges{square.F1: pieceChanges{piece.New(piece.Black, piece.King): true}},
+		},
+		{"White-King-E8", square.E8, piece.New(piece.White, piece.King),
+			squareChanges{square.E8: pieceChanges{piece.New(piece.White, piece.King): true}},
+		},
+		{"Black-King-E1", square.E1, piece.New(piece.Black, piece.King),
+			squareChanges{square.E1: pieceChanges{piece.New(piece.Black, piece.King): true}},
+		},
+		{"White-King-D8", square.D8, piece.New(piece.White, piece.King),
+			squareChanges{square.D8: pieceChanges{piece.New(piece.White, piece.King): true}},
+		},
+		{"Black-King-D1", square.D1, piece.New(piece.Black, piece.King),
+			squareChanges{square.D1: pieceChanges{piece.New(piece.Black, piece.King): true}},
+		},
+
+		// Non-standard squares and pieces.
+		{"White-Pawn-NoSquare", square.NoSquare, piece.New(piece.White, piece.Pawn),
+			squareChanges{},
+		},
+		{"Black-Pawn-NoSquare", square.NoSquare, piece.New(piece.Black, piece.Pawn),
+			squareChanges{},
+		},
+		{"White-Pawn-Square(100)", square.Square(100), piece.New(piece.White, piece.Pawn),
+			squareChanges{},
+		},
+		{"Black-Pawn-Square(100)", square.Square(100), piece.New(piece.Black, piece.Pawn),
+			squareChanges{},
+		},
+		{"White-None-A1", square.A1, piece.New(piece.White, piece.None),
+			squareChanges{},
+		},
+		{"Black-None-A8", square.A8, piece.New(piece.Black, piece.None),
+			squareChanges{},
+		},
+		{"White-Type(10)-A1", square.A1, piece.New(piece.White, piece.Type(10)),
+			squareChanges{},
+		},
+		{"Black-Type(10)-A8", square.A8, piece.New(piece.Black, piece.Type(10)),
+			squareChanges{},
+		},
+		{"NoColor-Pawn-A1", square.A1, piece.New(piece.NoColor, piece.Pawn),
+			squareChanges{},
+		},
+		{"NoColor-Pawn-A8", square.A8, piece.New(piece.NoColor, piece.Pawn),
+			squareChanges{},
+		},
+		{"Color(5)-Pawn-A1", square.A1, piece.New(piece.Color(5), piece.Pawn),
+			squareChanges{},
+		},
+		{"Color(5)-Pawn-A8", square.A8, piece.New(piece.Color(5), piece.Pawn),
+			squareChanges{},
+		},
+		{"NoColor-None-A1", square.A1, piece.New(piece.NoColor, piece.None),
+			squareChanges{},
+		},
+		{"NoColor-None-A8", square.A8, piece.New(piece.NoColor, piece.None),
+			squareChanges{},
+		},
+		{"NoColor-Type(10)-A1", square.A1, piece.New(piece.NoColor, piece.Type(10)),
+			squareChanges{},
+		},
+		{"NoColor-Type(10)-A8", square.A8, piece.New(piece.NoColor, piece.Type(10)),
+			squareChanges{},
+		},
+		{"Color(5)-None-A1", square.A1, piece.New(piece.Color(5), piece.None),
+			squareChanges{},
+		},
+		{"Color(5)-None-A8", square.A8, piece.New(piece.Color(5), piece.None),
+			squareChanges{},
+		},
+		{"Color(5)-Type(10)-A1", square.A1, piece.New(piece.Color(5), piece.Type(10)),
+			squareChanges{},
+		},
+		{"Color(5)-Type(10)-A8", square.A8, piece.New(piece.Color(5), piece.Type(10)),
+			squareChanges{},
+		},
+		{"NoColor-None-NoSquare", square.NoSquare, piece.New(piece.NoColor, piece.None),
+			squareChanges{},
+		},
+		{"NoColor-None-Square(100)", square.Square(100), piece.New(piece.NoColor, piece.None),
+			squareChanges{},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			p := New()
+			defer func() {
+				if err := recover(); err != nil {
+					t.Errorf("For initial board, *Position.QuickPut(%v, %v) should not panic, but panicked with: %v", tc.pc, tc.sq, err)
+				}
+			}()
+			p.QuickPut(tc.pc, tc.sq)
+			ch := changedSquares(New(), p)
+			if !reflect.DeepEqual(ch, tc.wantChanged) {
+				t.Errorf("For initial board and *Position.QuickPut(%v, %v), board changes are %v, want %v", tc.pc, tc.sq, ch, tc.wantChanged)
+			}
+		})
+	}
+}
+
 func TestPutOnOccSquare(t *testing.T) {
 	b := New()
 	b.Clear()
@@ -64,14 +2267,99 @@ func TestPutOnOccSquare(t *testing.T) {
 	}
 }
 
+type testFindGroup struct {
+	Name      string
+	Position  testPosition
+	TestCases []testFindTestCase
+}
+
+type testFindTestCase struct {
+	Name  string
+	Piece piece.Piece
+	Want  map[square.Square]struct{}
+}
+
 func TestFind(t *testing.T) {
-	b := New()
-	s := b.Find(piece.New(piece.White, piece.King))
-	if len(s) != 1 {
-		t.Fail()
+	testFindGroups := []testFindGroup{
+		{
+			"ZeroOrOneResult",
+			testPosition{
+				square.E1: piece.New(piece.White, piece.King),
+				square.E2: piece.New(piece.White, piece.Pawn),
+				square.E8: piece.New(piece.Black, piece.King),
+				square.D7: piece.New(piece.Black, piece.Pawn),
+			},
+			[]testFindTestCase{
+				{"WhiteQueen", piece.New(piece.White, piece.Queen), map[square.Square]struct{}{}},
+				{"BlackKnight", piece.New(piece.Black, piece.Knight), map[square.Square]struct{}{}},
+				{"WhiteBishop", piece.New(piece.White, piece.Bishop), map[square.Square]struct{}{}},
+				{"BlackRook", piece.New(piece.Black, piece.Rook), map[square.Square]struct{}{}},
+				{"WhiteKnight", piece.New(piece.White, piece.Knight), map[square.Square]struct{}{}},
+				{"WhiteKing", piece.New(piece.White, piece.King), map[square.Square]struct{}{square.E1: struct{}{}}},
+				{"WhitePawn", piece.New(piece.White, piece.Pawn), map[square.Square]struct{}{square.E2: struct{}{}}},
+			},
+		},
+		{
+			"TwoOrFourResults",
+			testPosition{
+				square.A2: piece.New(piece.White, piece.Pawn),
+				square.B2: piece.New(piece.White, piece.Pawn),
+				square.C2: piece.New(piece.White, piece.Pawn),
+				square.D2: piece.New(piece.White, piece.Pawn),
+				square.G7: piece.New(piece.Black, piece.Pawn),
+				square.H7: piece.New(piece.Black, piece.Pawn),
+			},
+			[]testFindTestCase{
+				{"WhitePawns", piece.New(piece.White, piece.Pawn), map[square.Square]struct{}{square.D2: struct{}{}, square.C2: struct{}{}, square.B2: struct{}{}, square.A2: struct{}{}}},
+				{"BlackPawns", piece.New(piece.Black, piece.Pawn), map[square.Square]struct{}{square.H7: struct{}{}, square.G7: struct{}{}}},
+			},
+		},
+		{
+			"EightOrOneResults",
+			testPosition(nil), // Initial chess board.
+			[]testFindTestCase{
+				{"WhitePawns", piece.New(piece.White, piece.Pawn), map[square.Square]struct{}{square.H2: struct{}{}, square.G2: struct{}{}, square.F2: struct{}{}, square.E2: struct{}{}, square.D2: struct{}{}, square.C2: struct{}{}, square.B2: struct{}{}, square.A2: struct{}{}}},
+				{"BlackPawns", piece.New(piece.Black, piece.Pawn), map[square.Square]struct{}{square.H7: struct{}{}, square.G7: struct{}{}, square.F7: struct{}{}, square.E7: struct{}{}, square.D7: struct{}{}, square.C7: struct{}{}, square.B7: struct{}{}, square.A7: struct{}{}}},
+				{"WhiteKing", piece.New(piece.White, piece.King), map[square.Square]struct{}{square.E1: struct{}{}}},
+			},
+		},
+		{
+			"FindNonStandardPieces",
+			testPosition(nil), // Initial chess board.
+			[]testFindTestCase{
+				{"WhiteTypeNone", piece.New(piece.White, piece.None), map[square.Square]struct{}{}},
+				{"WhiteType(piece.TYPE_COUNT)", piece.New(piece.White, piece.Type(piece.TYPE_COUNT)), map[square.Square]struct{}{}},
+				{"BlackTypeNone", piece.New(piece.Black, piece.None), map[square.Square]struct{}{}},
+				{"BlackType(piece.TYPE_COUNT)", piece.New(piece.Black, piece.Type(piece.TYPE_COUNT)), map[square.Square]struct{}{}},
+				{"NoColorTypeNone", piece.New(piece.NoColor, piece.None), map[square.Square]struct{}{}},
+				{"NoColorTypeKing", piece.New(piece.NoColor, piece.King), map[square.Square]struct{}{}},
+				{"NoColorType(piece.TYPE_COUNT)", piece.New(piece.NoColor, piece.Type(piece.TYPE_COUNT)), map[square.Square]struct{}{}},
+				{"Color(5)TypeNone", piece.New(piece.Color(5), piece.None), map[square.Square]struct{}{}},
+				{"Color(5)TypeQueen", piece.New(piece.Color(5), piece.Queen), map[square.Square]struct{}{}},
+				{"Color(5)Type(piece.TYPE_COUNT)", piece.New(piece.Color(5), piece.Type(piece.TYPE_COUNT)), map[square.Square]struct{}{}},
+			},
+		},
 	}
-	if _, ok := s[square.E1]; !ok {
-		t.Fail()
+	for _, group := range testFindGroups {
+		t.Run(group.Name, func(t *testing.T) {
+			// Get position.
+			p, err := testCasePosition(group.Position, nil)
+			if err != nil {
+				t.Fatalf("Position preparation error: %s", err)
+			}
+
+			for _, tc := range group.TestCases {
+				t.Run(tc.Name, func(t *testing.T) {
+					// Call Find function with test case input on Position.
+					s := p.Find(tc.Piece)
+
+					// Compare results with expected values.
+					if !reflect.DeepEqual(s, tc.Want) {
+						t.Errorf("*Position.Find(%s): got \n%#v,\n\twant \n%#v\n", tc.Piece, s, tc.Want)
+					}
+				})
+			}
+		})
 	}
 }
 
@@ -79,6 +2367,9 @@ func TestFind(t *testing.T) {
 func (b *Position) printBitBoards() {
 	for c := range b.bitBoard {
 		for j := range b.bitBoard[c] {
+			if j == int(piece.None) { // Skip piece.None.
+				continue
+			}
 			fmt.Println(piece.New(piece.Color(c), piece.Type(j)))
 			fmt.Println(BitBoard(b.bitBoard[c][j]))
 		}
@@ -113,32 +2404,254 @@ func TestKandBvKandOpB(t *testing.T) {
 	}
 }
 
-/*
-func TestBoardPrint(t *testing.T) {
-	expected := `+---+---+---+---+---+---+---+---+
-| r | n | b | q | k | b | n | r |
-+---+---+---+---+---+---+---+---+
-| p | p | p | p | p | p | p | p |
-+---+---+---+---+---+---+---+---+
-|   |   |   |   |   |   |   |   |
-+---+---+---+---+---+---+---+---+
-|   |   |   |   |   |   |   |   |
-+---+---+---+---+---+---+---+---+
-|   |   |   |   |   |   |   |   |
-+---+---+---+---+---+---+---+---+
-|   |   |   |   |   |   |   |   |
-+---+---+---+---+---+---+---+---+
-| P | P | P | P | P | P | P | P |
-+---+---+---+---+---+---+---+---+
-| R | N | B | Q | K | B | N | R |
-+---+---+---+---+---+---+---+---+
-`
-	got := New().String()
-	if got != expected {
-		t.Error(got)
+func TestString(t *testing.T) {
+
+	testCases := []struct {
+		Name     string
+		Position testPosition
+		Changes  positionChanger
+		Want     string
+	}{
+		{"InitialPosition", nil, nil, `   a b c d e f g h
+ ┌─────────────────┐
+8│ r n b q k b n r │8
+7│ p p p p p p p p │7
+6│ . . . . . . . . │6
+5│ . . . . . . . . │5
+4│ . . . . . . . . │4
+3│ . . . . . . . . │3
+2│ P P P P P P P P │2
+1│ R N B Q K B N R │1
+ └─────────────────┘
+   a b c d e f g h
+
+MoveNumber: 1
+ActiveColor: White
+CastlingRights:
+  White: O-O-O O-O
+  Black: O-O-O O-O
+EnPassant:
+LastMove:
+FiftyMoveCount: 0
+ThreeFoldCount: 0
+MovesLeft:
+  White: 0
+  Black: 0
+Clocks:
+  White: 0s
+  Black: 0s`,
+		},
+		{"InitialPosition-ShortPawnMove-e2e3", nil, makeMove("e2e3"), `   a b c d e f g h
+ ┌─────────────────┐
+8│ r n b q k b n r │8
+7│ p p p p p p p p │7
+6│ . . . . . . . . │6
+5│ . . . . . . . . │5
+4│ . . . . . . . . │4
+3│ . . . . P . . . │3
+2│ P P P P . P P P │2
+1│ R N B Q K B N R │1
+ └─────────────────┘
+   a b c d e f g h
+
+MoveNumber: 1
+ActiveColor: Black
+CastlingRights:
+  White: O-O-O O-O
+  Black: O-O-O O-O
+EnPassant:
+LastMove: e2e3
+FiftyMoveCount: 0
+ThreeFoldCount: 1
+MovesLeft:
+  White: -1
+  Black: 0
+Clocks:
+  White: 0s
+  Black: 0s`,
+		},
+		{"InitialPosition-LongPawnMove-e2e4", nil, makeMove("e2e4"), `   a b c d e f g h
+ ┌─────────────────┐
+8│ r n b q k b n r │8
+7│ p p p p p p p p │7
+6│ . . . . . . . . │6
+5│ . . . . . . . . │5
+4│ . . . . P . . . │4
+3│ . . . . . . . . │3
+2│ P P P P . P P P │2
+1│ R N B Q K B N R │1
+ └─────────────────┘
+   a b c d e f g h
+
+MoveNumber: 1
+ActiveColor: Black
+CastlingRights:
+  White: O-O-O O-O
+  Black: O-O-O O-O
+EnPassant: e3
+LastMove: e2e4
+FiftyMoveCount: 0
+ThreeFoldCount: 1
+MovesLeft:
+  White: -1
+  Black: 0
+Clocks:
+  White: 0s
+  Black: 0s`,
+		},
+		{"InitialPosition-2xLongPawnMove-e2e4-e7e5", nil,
+			multi(
+				makeMove("e2e4"),
+				makeMove("e7e5"),
+			),
+			`   a b c d e f g h
+ ┌─────────────────┐
+8│ r n b q k b n r │8
+7│ p p p p . p p p │7
+6│ . . . . . . . . │6
+5│ . . . . p . . . │5
+4│ . . . . P . . . │4
+3│ . . . . . . . . │3
+2│ P P P P . P P P │2
+1│ R N B Q K B N R │1
+ └─────────────────┘
+   a b c d e f g h
+
+MoveNumber: 2
+ActiveColor: White
+CastlingRights:
+  White: O-O-O O-O
+  Black: O-O-O O-O
+EnPassant: e6
+LastMove: e7e5
+FiftyMoveCount: 0
+ThreeFoldCount: 1
+MovesLeft:
+  White: -1
+  Black: -1
+Clocks:
+  White: 0s
+  Black: 0s`,
+		},
+		{"InitialPosition-CastlingRights", nil,
+			multi(
+				castling(piece.White, board.ShortSide, false),
+				castling(piece.White, board.LongSide, false),
+				castling(piece.Black, board.LongSide, false),
+			),
+			`   a b c d e f g h
+ ┌─────────────────┐
+8│ r n b q k b n r │8
+7│ p p p p p p p p │7
+6│ . . . . . . . . │6
+5│ . . . . . . . . │5
+4│ . . . . . . . . │4
+3│ . . . . . . . . │3
+2│ P P P P P P P P │2
+1│ R N B Q K B N R │1
+ └─────────────────┘
+   a b c d e f g h
+
+MoveNumber: 1
+ActiveColor: White
+CastlingRights:
+  White:
+  Black: O-O
+EnPassant:
+LastMove:
+FiftyMoveCount: 0
+ThreeFoldCount: 0
+MovesLeft:
+  White: 0
+  Black: 0
+Clocks:
+  White: 0s
+  Black: 0s`,
+		},
+		{"InitialPosition-Clocks", nil,
+			multi(
+				clock(piece.White, 10*time.Minute),
+				clock(piece.Black, 5*time.Second),
+			),
+			`   a b c d e f g h
+ ┌─────────────────┐
+8│ r n b q k b n r │8
+7│ p p p p p p p p │7
+6│ . . . . . . . . │6
+5│ . . . . . . . . │5
+4│ . . . . . . . . │4
+3│ . . . . . . . . │3
+2│ P P P P P P P P │2
+1│ R N B Q K B N R │1
+ └─────────────────┘
+   a b c d e f g h
+
+MoveNumber: 1
+ActiveColor: White
+CastlingRights:
+  White: O-O-O O-O
+  Black: O-O-O O-O
+EnPassant:
+LastMove:
+FiftyMoveCount: 0
+ThreeFoldCount: 0
+MovesLeft:
+  White: 0
+  Black: 0
+Clocks:
+  White: 10m0s
+  Black: 5s`,
+		},
+		{"InitialPosition-FiftyMoveCount-10", nil, func(p Position) (Position, error) {
+			out := *Copy(&p)
+			out.FiftyMoveCount = 10
+			return out, nil
+		},
+			`   a b c d e f g h
+ ┌─────────────────┐
+8│ r n b q k b n r │8
+7│ p p p p p p p p │7
+6│ . . . . . . . . │6
+5│ . . . . . . . . │5
+4│ . . . . . . . . │4
+3│ . . . . . . . . │3
+2│ P P P P P P P P │2
+1│ R N B Q K B N R │1
+ └─────────────────┘
+   a b c d e f g h
+
+MoveNumber: 1
+ActiveColor: White
+CastlingRights:
+  White: O-O-O O-O
+  Black: O-O-O O-O
+EnPassant:
+LastMove:
+FiftyMoveCount: 10
+ThreeFoldCount: 0
+MovesLeft:
+  White: 0
+  Black: 0
+Clocks:
+  White: 0s
+  Black: 0s`,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			// Get position.
+			p, err := testCasePosition(tc.Position, tc.Changes)
+			if err != nil {
+				t.Fatalf("Position preparation error: %s", err)
+			}
+
+			if s := p.String(); s != tc.Want {
+				t.Errorf("Position.String() =\n%s\n.\nWant\n%s\n.", s, tc.Want)
+			}
+		})
 	}
 }
-*/
 
 func TestCapture(t *testing.T) {
 	b := New()
@@ -206,6 +2719,59 @@ func TestBitBoardPrint(t *testing.T) {
 		t.Error(got)
 	}
 
+}
+
+func TestCheck(t *testing.T) {
+	onlyWhiteCheckTestPosition := testPosition{
+		square.E1: piece.New(piece.White, piece.King),
+		square.E8: piece.New(piece.Black, piece.King),
+		square.E7: piece.New(piece.Black, piece.Rook),
+	}
+	onlyBlackCheckTestPosition := testPosition{
+		square.E1: piece.New(piece.White, piece.King),
+		square.E2: piece.New(piece.White, piece.Rook),
+		square.E8: piece.New(piece.Black, piece.King),
+	}
+	bothChecksTestPosition := testPosition{
+		square.E1: piece.New(piece.White, piece.King),
+		square.G6: piece.New(piece.White, piece.Bishop),
+		square.E8: piece.New(piece.Black, piece.King),
+		square.C3: piece.New(piece.Black, piece.Bishop),
+	}
+
+	testCases := []struct {
+		Name     string
+		Position testPosition
+		col      piece.Color
+		want     bool
+	}{
+		{"InitialTestPosition-White", InitialTestPosition, piece.White, false},
+		{"InitialTestPosition-Black", InitialTestPosition, piece.Black, false},
+		{"InitialTestPosition-NoColor", InitialTestPosition, piece.NoColor, false},
+		{"InitialTestPosition-Color(5)", InitialTestPosition, piece.Color(5), false},
+		{"onlyWhiteCheckTestPosition-White", onlyWhiteCheckTestPosition, piece.White, true},
+		{"onlyWhiteCheckTestPosition-Black", onlyWhiteCheckTestPosition, piece.Black, false},
+		{"onlyBlackCheckTestPosition-White", onlyBlackCheckTestPosition, piece.White, false},
+		{"onlyBlackCheckTestPosition-Black", onlyBlackCheckTestPosition, piece.Black, true},
+		{"bothChecksTestPosition-White", bothChecksTestPosition, piece.White, true},
+		{"bothChecksTestPosition-Black", bothChecksTestPosition, piece.Black, true},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			p := tc.Position.Position()
+			defer func() {
+				if err := recover(); err != nil {
+					t.Logf("Position:\n%v", p)
+					t.Errorf("Position.Check(%#v) should not panic, but panicked with: %v", tc.col, err)
+				}
+			}()
+			if ch := p.Check(tc.col); ch != tc.want {
+				t.Logf("Position:\n%v", p)
+				t.Errorf("Position.Check(%v) = %v, want %v", tc.col, ch, tc.want)
+			}
+		})
+	}
 }
 
 func TestSAN(t *testing.T) {
@@ -647,4 +3213,79 @@ var testSANGroups = []testSANGroup{
 			{"CaptureMove-Black", multi(pos(square.D7, piece.New(piece.White, piece.Rook)), active(piece.Black)), "e8d7", "Kxd7"},
 		},
 	},
+}
+
+// Various boards for testing purposes.
+var (
+	InitialTestPosition                   = testPosition(nil)
+	TwoPawnsAtTwoOpositeKingsTestPosition = testPosition{
+		square.E1: piece.New(piece.White, piece.King),
+		square.E7: piece.New(piece.White, piece.Pawn),
+		square.E8: piece.New(piece.Black, piece.King),
+		square.E2: piece.New(piece.Black, piece.Pawn),
+	}
+	TwoKingsFourRooksTestPosition = testPosition{
+		square.E1: piece.New(piece.White, piece.King),
+		square.A1: piece.New(piece.White, piece.Rook),
+		square.H1: piece.New(piece.White, piece.Rook),
+		square.E8: piece.New(piece.Black, piece.King),
+		square.A8: piece.New(piece.Black, piece.Rook),
+		square.H8: piece.New(piece.Black, piece.Rook),
+	}
+	EnPassantCaptureTestPosition = testPosition{
+		square.E1: piece.New(piece.White, piece.King),
+		square.B5: piece.New(piece.White, piece.Pawn),
+		square.F4: piece.New(piece.White, piece.Pawn),
+		square.E8: piece.New(piece.Black, piece.King),
+		square.C5: piece.New(piece.Black, piece.Pawn),
+		square.G4: piece.New(piece.Black, piece.Pawn),
+	}
+	PromotionTestPosition = testPosition{
+		square.E1: piece.New(piece.White, piece.King),
+		square.A1: piece.New(piece.White, piece.Rook),
+		square.B7: piece.New(piece.White, piece.Pawn),
+		square.C6: piece.New(piece.White, piece.Pawn),
+		square.G2: piece.New(piece.White, piece.Pawn),
+		square.E8: piece.New(piece.Black, piece.King),
+		square.A8: piece.New(piece.Black, piece.Rook),
+		square.B2: piece.New(piece.Black, piece.Pawn),
+		square.C3: piece.New(piece.Black, piece.Pawn),
+		square.G7: piece.New(piece.Black, piece.Pawn),
+	}
+)
+
+func BenchmarkPositionPut(b *testing.B) {
+	newSquares := [square.LastSquare + 1]piece.Piece{}
+	tpe, col := piece.Type(0), piece.Color(0)
+	for sq := square.Square(0); sq <= square.LastSquare; sq += 1 {
+		newSquares[sq] = piece.New(col, tpe)
+		tpe, col = (tpe+1)%(piece.TYPE_COUNT), (col+1)%(piece.Black+1)
+	}
+
+	pos := New()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		pos = New()
+		for sq := square.Square(0); sq <= square.LastSquare; sq += 1 {
+			pos.Put(newSquares[sq], sq)
+		}
+	}
+}
+
+func BenchmarkPositionQuickPut(b *testing.B) {
+	newSquares := [square.LastSquare + 1]piece.Piece{}
+	tpe, col := piece.Type(0), piece.Color(0)
+	for sq := square.Square(0); sq <= square.LastSquare; sq += 1 {
+		newSquares[sq] = piece.New(col, tpe)
+		tpe, col = (tpe+1)%(piece.TYPE_COUNT), (col+1)%(piece.Black+1)
+	}
+
+	pos := New()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		pos = New()
+		for sq := square.Square(0); sq <= square.LastSquare; sq += 1 {
+			pos.QuickPut(newSquares[sq], sq)
+		}
+	}
 }

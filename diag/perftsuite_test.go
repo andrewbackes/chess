@@ -3,13 +3,14 @@ package diag
 import (
 	"errors"
 	"fmt"
-	"github.com/andrewbackes/chess/epd"
-	"github.com/andrewbackes/chess/position"
 	"os"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/andrewbackes/chess/epd"
+	"github.com/andrewbackes/chess/position"
 )
 
 func TestPerftSuite(t *testing.T) {
@@ -126,4 +127,49 @@ func checkPerft(p *position.Position, depth int, nodes uint64) error {
 		return errors.New("incorrect node count")
 	}
 	return nil
+}
+
+func BenchmarkPerftSuite(b *testing.B) {
+	f, err := os.Open("perftsuite.epd")
+	if err != nil {
+		b.Fatal(err)
+	}
+	tests, err := epd.Read(f)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	maxdepth := 3
+	tests = tests[:10]
+	if strings.ToLower(os.Getenv("BENCH_DEEP_PERFT_SUITE")) == "true" {
+		maxdepth = 5
+	} else if testing.Short() {
+		tests = tests[:5]
+		maxdepth = 1
+	}
+	for i, test := range tests {
+		if len(test.Operations) > maxdepth+1 {
+			test.Operations = test.Operations[:maxdepth+1]
+		}
+
+		b.Run(fmt.Sprintf("EPD_%02d", i+1), func(b *testing.B) {
+			benchPerftSuite(b, test)
+		})
+	}
+}
+
+func benchPerftSuite(b *testing.B, test *epd.EPD) {
+	for depth := range test.Operations {
+		if depth == 0 {
+			// Perft with any position and depth 0 always returns 1. Don't need to bench.
+			continue
+		}
+
+		b.Run(fmt.Sprint("Depth ", depth), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				// No need to check result, this is done in TestPerftSuite.
+				Perft(test.Position, depth)
+			}
+		})
+	}
 }
